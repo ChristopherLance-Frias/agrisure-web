@@ -1,8 +1,10 @@
 <template>
   <div class="damage-page">
     <div class="page-header">
-      <h2 class="page-title">Damage Reports</h2>
-      <p class="page-sub">Review and validate crop damage reports submitted by farmers</p>
+      <div class="header-inner">
+        <h2 class="page-title">Damage Reports</h2>
+        <p class="page-sub">Review and validate crop damage reports submitted by farmers</p>
+      </div>
     </div>
 
     <div v-if="hasConfiguredSeason" class="season-card">
@@ -19,23 +21,55 @@
           <span class="season-name">{{ formatDate(currentSeason.deadline_date) }}</span>
         </div>
       </div>
+
+      <div class="season-toggle">
+        <button
+          class="toggle-btn"
+          :class="{ active: activeSeasonView === 'current' }"
+          @click="switchSeasonView('current')"
+        >
+          Current Season
+        </button>
+
+        <button
+          class="toggle-btn"
+          :class="{ active: activeSeasonView === 'history' }"
+          @click="switchSeasonView('history')"
+        >
+          Previous Seasons
+        </button>
+      </div>
     </div>
 
-    <div class="tab-bar">
+    <div class="status-tab-bar">
       <button
-        class="tab-btn"
-        :class="{ active: activeReportTab === 'current' }"
-        @click="switchTab('current')"
+        class="status-tab"
+        :class="{ active: activeStatusTab === 'submitted_to_mao' }"
+        @click="switchStatusTab('submitted_to_mao')"
       >
-        Current Season
+        <span class="tab-dot amber"></span>
+        Submitted to MAO
+        <span class="tab-count">{{ countByStatus('submitted_to_mao') }}</span>
       </button>
 
       <button
-        class="tab-btn"
-        :class="{ active: activeReportTab === 'history' }"
-        @click="switchTab('history')"
+        class="status-tab"
+        :class="{ active: activeStatusTab === 'validated_by_mao' }"
+        @click="switchStatusTab('validated_by_mao')"
       >
-        Previous Seasons
+        <span class="tab-dot green"></span>
+        Validated by MAO
+        <span class="tab-count">{{ countByStatus('validated_by_mao') }}</span>
+      </button>
+
+      <button
+        class="status-tab"
+        :class="{ active: activeStatusTab === 'rejected' }"
+        @click="switchStatusTab('rejected')"
+      >
+        <span class="tab-dot red"></span>
+        Rejected
+        <span class="tab-count">{{ countByStatus('rejected') }}</span>
       </button>
     </div>
 
@@ -61,15 +95,8 @@
         </option>
       </select>
 
-      <select v-model="filterStatus" class="filter-select">
-        <option value="">All Statuses</option>
-        <option value="submitted_to_mao">Submitted to MAO</option>
-        <option value="validated_by_mao">Validated by MAO</option>
-        <option value="rejected">Rejected</option>
-      </select>
-
       <select
-        v-if="activeReportTab === 'history'"
+        v-if="activeSeasonView === 'history'"
         v-model="historySeasonId"
         class="filter-select"
       >
@@ -137,7 +164,7 @@
       <table v-else class="report-table">
         <thead>
           <tr>
-            <th>
+            <th v-if="canBulkAct">
               <input
                 type="checkbox"
                 :checked="allFilteredSelected"
@@ -166,7 +193,7 @@
               }"
               @click="toggleExpand(report.id)"
             >
-              <td @click.stop>
+              <td v-if="canBulkAct" @click.stop>
                 <input
                   type="checkbox"
                   :checked="isSelected(report.id)"
@@ -186,7 +213,7 @@
                 </div>
 
                 <div class="farmer-sub">
-                  {{ report.insurance_application?.farmer_profile?.user?.email || '—' }}
+                  {{ report.insurance_application?.farm?.farmer_profile?.user?.email || '—' }}
                 </div>
               </td>
               <td>{{ report.insurance_application?.farm?.farm_name || '—' }}</td>
@@ -243,14 +270,14 @@
                           <div class="detail-item">
                             <span class="detail-label">Phone</span>
                             <span class="detail-val">
-                              {{ report.insurance_application?.farmer_profile?.user?.phone_number || '—' }}
+                              {{ report.insurance_application?.farm?.farmer_profile?.user?.phone_number || '—' }}
                             </span>
                           </div>
 
                           <div class="detail-item">
                             <span class="detail-label">Address</span>
                             <span class="detail-val">
-                              {{ report.insurance_application?.farmer_profile?.address || '—' }}
+                              {{ report.insurance_application?.farm?.farmer_profile?.address || '—' }}
                             </span>
                           </div>
 
@@ -366,14 +393,14 @@
                           </template>
 
                           <template v-else-if="report.status === 'validated_by_mao'">
-                            <span class="success-text">
-                              ✓ Damage report validated. Claim created successfully.
+                            <span class="locked-pill approved">
+                              🔒 Validated — Locked. Claim already created.
                             </span>
                           </template>
 
                           <template v-else-if="report.status === 'rejected'">
-                            <span class="updating-text">
-                              Damage report rejected.
+                            <span class="locked-pill rejected">
+                              🔒 Rejected — Locked. This report can no longer be changed.
                             </span>
                           </template>
 
@@ -397,7 +424,7 @@
     </div>
 
     <transition name="float-bar">
-      <div v-if="selectedIds.length > 0" class="bulk-action-bar floating">
+      <div v-if="canBulkAct && selectedIds.length > 0" class="bulk-action-bar floating">
         <div class="bulk-left">
           <strong>{{ selectedIds.length }}</strong>
           <span>damage report(s) selected</span>
@@ -450,7 +477,8 @@ export default {
 
   data() {
     return {
-      activeReportTab: 'current',
+      activeSeasonView: 'current',
+      activeStatusTab: 'submitted_to_mao',
 
       reports: [],
       historyReports: [],
@@ -465,7 +493,6 @@ export default {
 
       searchName: '',
       filterCause: '',
-      filterStatus: '',
       suspiciousOnly: false,
 
       lightboxImage: null,
@@ -493,9 +520,13 @@ export default {
     },
 
     activeReports() {
-      return this.activeReportTab === 'current'
+      return this.activeSeasonView === 'current'
         ? this.reports
         : this.historyReports
+    },
+
+    canBulkAct() {
+      return this.activeStatusTab === 'submitted_to_mao'
     },
 
     causeOptions() {
@@ -530,9 +561,7 @@ export default {
           !self.filterCause ||
           report.damage_cause === self.filterCause
 
-        var matchStatus =
-          !self.filterStatus ||
-          report.status === self.filterStatus
+        var matchStatus = report.status === self.activeStatusTab
 
         var matchSuspicious =
           !self.suspiciousOnly ||
@@ -540,7 +569,7 @@ export default {
 
         var appSeasonId = report.insurance_application?.season?.id || null;
         var matchSeason =
-          self.activeReportTab === 'current' ||
+          self.activeSeasonView === 'current' ||
           !self.historySeasonId ||
           appSeasonId == self.historySeasonId
 
@@ -643,19 +672,27 @@ export default {
           this.errorMessage = 'Failed to load damage reports. Check your connection.'
         }
         console.error(err)
-      } finally {
+      } finally{
         this.isLoading = false
       }
     },
-    
-    switchTab(tab) {
-      this.activeReportTab = tab
+
+    switchSeasonView(view) {
+      this.activeSeasonView = view
       this.expandedId = null
       this.clearSelection()
       this.resetFilters()
     },
 
+    switchStatusTab(status) {
+      this.activeStatusTab = status
+      this.expandedId = null
+      this.clearSelection()
+    },
+
     toggleSelection(id) {
+      if (!this.canBulkAct) return
+
       if (this.selectedIds.includes(id)) {
         this.selectedIds = this.selectedIds.filter(function(selectedId) {
           return selectedId !== id
@@ -667,6 +704,8 @@ export default {
 
     toggleSelectAllFiltered() {
       var self = this
+
+      if (!this.canBulkAct) return
 
       if (this.allFilteredSelected) {
         var filteredIds = this.filtered.map(function(report) {
@@ -718,11 +757,12 @@ export default {
     },
 
     async updateStatus(report, newStatus) {
+      if (report.status !== 'submitted_to_mao') return
       if (newStatus === report.status) return
 
       var confirmMessages = {
-        validated_by_mao: 'Validate this damage report and create a claim?',
-        rejected: 'Reject this damage report?',
+        validated_by_mao: 'Validate this damage report and create a claim? This cannot be undone.',
+        rejected: 'Reject this damage report? This cannot be undone.',
       }
 
       if (confirmMessages[newStatus] && !confirm(confirmMessages[newStatus])) {
@@ -765,7 +805,7 @@ export default {
     },
 
     farmerName(report) {
-      const u = report.insurance_application?.farmer_profile?.user
+      const u = report.insurance_application?.farm?.farmer_profile?.user
 
       if (!u) return '—'
 
@@ -833,7 +873,6 @@ export default {
     resetFilters() {
       this.searchName = ''
       this.filterCause = ''
-      this.filterStatus = ''
       this.historySeasonId = ''
       this.suspiciousOnly = false
     },
@@ -843,34 +882,46 @@ export default {
 
 <style scoped>
 .damage-page {
-  padding: 28px 32px 100px;
+  padding: 0 32px 100px;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
-  background: #f0f4f0;
+  background: #F0F4F0;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin: 0 -32px 22px;
+  padding: 32px;
+  background: linear-gradient(120deg, #1A3320 0%, #1E3A8A 100%);
+}
+
+.header-inner {
+  max-width: 100%;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
-  color: #1a3320;
+  color: #FFFFFF;
   margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
 
 .page-sub {
   font-size: 13px;
-  color: #6b7280;
+  color: rgba(255,255,255,0.72);
 }
 
 .season-card {
-  background: white;
+  background: #FFFFFF;
   border-radius: 14px;
   padding: 16px 20px;
   margin-bottom: 18px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 .season-info {
@@ -881,7 +932,7 @@ export default {
 
 .season-icon {
   font-size: 22px;
-  background: #ecfdf5;
+  background: #F0FDF4;
   padding: 10px;
   border-radius: 10px;
 }
@@ -901,29 +952,100 @@ export default {
 .season-name {
   font-size: 14px;
   font-weight: 700;
-  color: #1a3320;
+  color: #1A3320;
 }
 
-.tab-bar {
+.season-toggle {
   display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid #d1d5db;
+  background: #F0F4F0;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
 }
 
-.tab-btn {
+.toggle-btn {
   border: none;
   background: transparent;
-  padding: 10px 14px;
-  font-size: 13px;
+  padding: 7px 14px;
+  font-size: 12px;
   font-weight: 700;
-  color: #6b7280;
+  color: #1E3A8A;
   cursor: pointer;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
-.tab-btn.active {
-  color: #16a34a;
-  border-bottom: 2px solid #16a34a;
+.toggle-btn.active {
+  background: #FFFFFF;
+  color: #1A3320;
+  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
+}
+
+.status-tab-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.status-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #FFFFFF;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E3A8A;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.status-tab:hover {
+  border-color: #34A853;
+}
+
+.status-tab.active {
+  background: linear-gradient(120deg, #1A3320, #34A853);
+  border-color: transparent;
+  color: #FFFFFF;
+}
+
+.tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tab-dot.amber {
+  background: #D97706;
+}
+
+.tab-dot.green {
+  background: #34A853;
+}
+
+.tab-dot.red {
+  background: #DC2626;
+}
+
+.status-tab.active .tab-dot {
+  background: #FFFFFF;
+}
+
+.tab-count {
+  background: rgba(26,51,32,0.08);
+  color: inherit;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.status-tab.active .tab-count {
+  background: rgba(255,255,255,0.25);
 }
 
 .filters-row {
@@ -955,13 +1077,13 @@ export default {
   border-radius: 9px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
-  background: white;
+  background: #FFFFFF;
   outline: none;
   box-sizing: border-box;
 }
 
 .search-input:focus {
-  border-color: #34a853;
+  border-color: #34A853;
 }
 
 .filter-select {
@@ -970,14 +1092,14 @@ export default {
   border-radius: 9px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
-  background: white;
+  background: #FFFFFF;
   outline: none;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .filter-select:focus {
-  border-color: #34a853;
+  border-color: #34A853;
 }
 
 .suspicious-toggle {
@@ -988,14 +1110,14 @@ export default {
   border: 1.5px solid #e2e8f0;
   border-radius: 9px;
   font-size: 13px;
-  background: white;
+  background: #FFFFFF;
   cursor: pointer;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .suspicious-toggle input {
-  accent-color: #34a853;
+  accent-color: #EA580C;
   cursor: pointer;
 }
 
@@ -1005,19 +1127,19 @@ export default {
   border-radius: 9px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
-  background: white;
+  background: #FFFFFF;
   color: #6b7280;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .btn-reset:hover {
-  border-color: #34a853;
-  color: #1a3320;
+  border-color: #34A853;
+  color: #1A3320;
 }
 
 .bulk-action-bar {
-  background: #ecfdf5;
+  background: #F0FDF4;
   border: 1px solid #bbf7d0;
   border-radius: 12px;
   padding: 12px 16px;
@@ -1037,9 +1159,9 @@ export default {
   z-index: 600;
   margin-bottom: 0;
   width: min(720px, calc(100% - 48px));
-  background: white;
+  background: #FFFFFF;
   border: 1px solid #d1fae5;
-  border-left: 4px solid #34a853;
+  border-left: 4px solid #34A853;
   box-shadow: 0 10px 30px rgba(26, 51, 32, 0.22), 0 2px 8px rgba(26, 51, 32, 0.12);
 }
 
@@ -1058,7 +1180,7 @@ export default {
   display: flex;
   gap: 6px;
   align-items: center;
-  color: #166534;
+  color: #1A3320;
   font-size: 13px;
 }
 
@@ -1076,14 +1198,14 @@ export default {
 }
 
 .stat-card {
-  background: white;
+  background: #FFFFFF;
   border-radius: 12px;
   padding: 12px 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 100px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
 }
 
 .stat-label {
@@ -1096,23 +1218,23 @@ export default {
 .stat-value {
   font-size: 22px;
   font-weight: 700;
-  color: #1a3320;
+  color: #1A3320;
 }
 
 .stat-value.mao {
-  color: #d97706;
+  color: #D97706;
 }
 
 .stat-value.approved {
-  color: #34a853;
+  color: #34A853;
 }
 
 .stat-value.rejected {
-  color: #dc2626;
+  color: #DC2626;
 }
 
 .stat-value.suspicious {
-  color: #ea580c;
+  color: #EA580C;
 }
 
 .state-box {
@@ -1121,7 +1243,7 @@ export default {
   justify-content: center;
   gap: 10px;
   padding: 48px;
-  background: white;
+  background: #FFFFFF;
   border-radius: 14px;
   font-size: 14px;
   color: #4a7c59;
@@ -1135,7 +1257,7 @@ export default {
   width: 24px;
   height: 24px;
   border: 3px solid rgba(52,168,83,0.2);
-  border-top-color: #34a853;
+  border-top-color: #34A853;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -1148,9 +1270,9 @@ export default {
 }
 
 .table-wrap {
-  background: white;
+  background: #FFFFFF;
   border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
   overflow: hidden;
 }
 
@@ -1168,7 +1290,7 @@ export default {
 }
 
 .report-table thead tr {
-  background: #f8faf8;
+  background: #F0F4F0;
   border-bottom: 1.5px solid #e5e7eb;
 }
 
@@ -1183,17 +1305,17 @@ export default {
 }
 
 .main-row {
-  border-bottom: 1px solid #f0f4f0;
+  border-bottom: 1px solid #F0F4F0;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .main-row:hover {
-  background: #f8faf8;
+  background: #F0F4F0;
 }
 
 .main-row.expanded {
-  background: #f0fdf4;
+  background: #F0FDF4;
   border-bottom: none;
 }
 
@@ -1207,7 +1329,7 @@ export default {
 
 .report-table td {
   padding: 13px 14px;
-  color: #1a3320;
+  color: #1A3320;
   vertical-align: middle;
 }
 
@@ -1225,12 +1347,12 @@ export default {
 
 .expand-icon.open {
   transform: rotate(90deg);
-  color: #34a853;
+  color: #34A853;
 }
 
 .farmer-name {
   font-weight: 600;
-  color: #1a3320;
+  color: #1A3320;
 }
 
 .farmer-sub {
@@ -1250,7 +1372,7 @@ export default {
 
 .flag-badge.suspicious {
   background: #ffedd5;
-  color: #ea580c;
+  color: #EA580C;
 }
 
 .flag-badge.ok {
@@ -1269,7 +1391,7 @@ export default {
 
 .status-badge.submitted_to_mao {
   background: #fef3c7;
-  color: #d97706;
+  color: #D97706;
 }
 
 .status-badge.validated_by_mao {
@@ -1279,12 +1401,12 @@ export default {
 
 .status-badge.rejected {
   background: #fee2e2;
-  color: #dc2626;
+  color: #DC2626;
 }
 
 .detail-row td {
   padding: 0;
-  background: #f0fdf4;
+  background: #F0FDF4;
   border-bottom: 1.5px solid #d1fae5;
 }
 
@@ -1348,7 +1470,7 @@ export default {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #34a853;
+  color: #34A853;
   margin-bottom: 12px;
   padding-bottom: 6px;
   border-bottom: 1px solid #d1fae5;
@@ -1376,7 +1498,7 @@ export default {
 .detail-val {
   font-size: 13px;
   font-weight: 600;
-  color: #1a3320;
+  color: #1A3320;
 }
 
 .coords {
@@ -1404,6 +1526,25 @@ export default {
   font-weight: 600;
 }
 
+.locked-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+}
+
+.locked-pill.approved {
+  background: #F0FDF4;
+  color: #1A3320;
+  border: 1px solid #bbf7d0;
+}
+
+.locked-pill.rejected {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+}
+
 .action-btn {
   border: none;
   border-radius: 8px;
@@ -1411,15 +1552,15 @@ export default {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  color: white;
+  color: #FFFFFF;
 }
 
 .action-btn.approved {
-  background: #16a34a;
+  background: linear-gradient(120deg, #1A3320, #34A853);
 }
 
 .action-btn.rejected {
-  background: #dc2626;
+  background: #DC2626;
 }
 
 .action-btn:disabled {
@@ -1451,7 +1592,7 @@ export default {
   right: 28px;
   background: rgba(255,255,255,0.15);
   border: none;
-  color: white;
+  color: #FFFFFF;
   font-size: 18px;
   width: 36px;
   height: 36px;
@@ -1468,7 +1609,12 @@ export default {
 
 @media (max-width: 768px) {
   .damage-page {
-    padding: 16px 16px 100px;
+    padding: 0 16px 100px;
+  }
+
+  .page-header {
+    margin: 0 -16px 18px;
+    padding: 24px 16px;
   }
 
   .report-table {
