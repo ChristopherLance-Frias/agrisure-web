@@ -9,16 +9,8 @@
 
     <div v-if="hasConfiguredSeason" class="season-card">
       <div class="season-info">
-        <div class="season-icon open">⏱</div>
-
-        <div class="season-text">
-          <span class="season-label">Current Insurance Season</span>
-          <span class="season-name">{{ currentSeason.season_name }}</span>
-        </div>
-
-        <div class="season-text">
-          <span class="season-label">Deadline</span>
-          <span class="season-name">{{ formatDate(currentSeason.deadline_date) }}</span>
+        <div class="season-icon" :class="currentSeason.status || 'closed'">
+          {{ currentSeason.status === 'application_open' ? '⏱' : '🔒' }}
         </div>
       </div>
 
@@ -31,13 +23,21 @@
           Current Season
         </button>
 
-        <button
-          class="toggle-btn"
+        <select
+          class="toggle-select"
           :class="{ active: activeSeasonView === 'history' }"
-          @click="switchSeasonView('history')"
+          v-model="historySeasonId"
+          @change="selectPreviousSeason"
         >
-          Previous Seasons
-        </button>
+          <option value="">Previous Seasons</option>
+          <option
+            v-for="season in previousSeasons"
+            :key="season.id"
+            :value="season.id"
+          >
+            {{ season.season_name || season.name }}
+          </option>
+        </select>
       </div>
     </div>
 
@@ -92,21 +92,6 @@
         <option value="">All Causes</option>
         <option v-for="c in causeOptions" :key="c" :value="c">
           {{ c }}
-        </option>
-      </select>
-
-      <select
-        v-if="activeSeasonView === 'history'"
-        v-model="historySeasonId"
-        class="filter-select"
-      >
-        <option value="">All Previous Seasons</option>
-        <option
-          v-for="season in previousSeasons"
-          :key="season.id"
-          :value="season.id"
-        >
-          {{ season.season_name }}
         </option>
       </select>
 
@@ -470,7 +455,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'http://192.168.254.121:8000'
 
 export default {
   name: 'DamageReportsPage',
@@ -504,16 +489,11 @@ export default {
 
   computed: {
     hasConfiguredSeason() {
-      return !!(
-        this.currentSeason &&
-        this.currentSeason.status === 'open' &&
-        this.currentSeason.is_default === false
-      )
+      return !!this.currentSeason;
     },
 
     previousSeasons() {
       var currentId = this.currentSeason ? this.currentSeason.id : null
-
       return this.seasons.filter(function(season) {
         return season.id !== currentId
       })
@@ -537,7 +517,6 @@ export default {
           })
           .filter(Boolean)
       )
-
       return Array.from(set).sort()
     },
 
@@ -567,7 +546,8 @@ export default {
           !self.suspiciousOnly ||
           report.is_suspicious
 
-        var appSeasonId = report.insurance_application?.season?.id || null;
+        var appSeasonId = report.insurance_application?.insurance_season_id || null;
+
         var matchSeason =
           self.activeSeasonView === 'current' ||
           !self.historySeasonId ||
@@ -579,9 +559,7 @@ export default {
 
     allFilteredSelected() {
       var self = this
-
       if (this.filtered.length === 0) return false
-
       return this.filtered.every(function(report) {
         return self.selectedIds.includes(report.id)
       })
@@ -606,19 +584,27 @@ export default {
       }
     },
 
-    async fetchCurrentSeason() {
+   async fetchCurrentSeason() {
       try {
         var response = await axios.get(
           API_BASE + '/api/insurance-seasons/current',
           this.authHeaders()
         )
 
-        this.currentSeason = response.data.season
+        // Extract from the raw array payload you provided
+        var data = response.data;
+        if (Array.isArray(data)) {
+          this.currentSeason = data.find(s => s.is_default === true || s.is_default === 1) || data[0] || null;
+        } else if (data && Array.isArray(data.season)) {
+          this.currentSeason = data.season.find(s => s.is_default === true || s.is_default === 1) || data.season[0] || null;
+        } else {
+          this.currentSeason = data || null;
+        }
 
         await this.fetchSeasons()
         await this.fetchReports()
       } catch (err) {
-        console.error(err)
+        console.error("Error fetching current season:", err)
         await this.fetchReports()
       }
     },
@@ -629,7 +615,6 @@ export default {
           API_BASE + '/api/insurance-seasons',
           this.authHeaders()
         )
-
         this.seasons = Array.isArray(response.data)
           ? response.data
           : response.data.data || []
@@ -655,15 +640,24 @@ export default {
         var currentId = this.currentSeason ? this.currentSeason.id : null
 
         this.reports = allReports.filter(function(report) {
-          if (!currentId) return true
-          var appSeasonId = report.insurance_application?.season?.id || null
-          return appSeasonId == currentId
+          // Check both standard relationship and direct foreign key fallbacks if relation isn't eager loaded
+          var appSeasonId = report.insurance_application?.insurance_season_id
+                            || report.insurance_season_id
+                            || null;
+
+          if (currentId) {
+            return String(appSeasonId) === String(currentId)
+          } return true;
         })
 
         this.historyReports = allReports.filter(function(report) {
-          if (!currentId) return false
-          var appSeasonId = report.insurance_application?.season?.id || null
-          return appSeasonId && appSeasonId != currentId
+          var appSeasonId = report.insurance_application?.insurance_season_id
+                            || report.insurance_season_id
+                            || null;
+
+          if (currentId) {
+            return String(appSeasonId) !== String(currentId)
+          } return false;
         })
       } catch (err) {
         if (err.response && err.response.data && err.response.data.message) {
@@ -672,7 +666,7 @@ export default {
           this.errorMessage = 'Failed to load damage reports. Check your connection.'
         }
         console.error(err)
-      } finally{
+      } finally {
         this.isLoading = false
       }
     },
@@ -684,6 +678,12 @@ export default {
       this.resetFilters()
     },
 
+    selectPreviousSeason() {
+      this.activeSeasonView = 'history'
+      this.expandedId = null
+      this.clearSelection()
+    },
+
     switchStatusTab(status) {
       this.activeStatusTab = status
       this.expandedId = null
@@ -692,7 +692,6 @@ export default {
 
     toggleSelection(id) {
       if (!this.canBulkAct) return
-
       if (this.selectedIds.includes(id)) {
         this.selectedIds = this.selectedIds.filter(function(selectedId) {
           return selectedId !== id
@@ -704,14 +703,12 @@ export default {
 
     toggleSelectAllFiltered() {
       var self = this
-
       if (!this.canBulkAct) return
 
       if (this.allFilteredSelected) {
         var filteredIds = this.filtered.map(function(report) {
           return report.id
         })
-
         this.selectedIds = this.selectedIds.filter(function(id) {
           return !filteredIds.includes(id)
         })
@@ -734,18 +731,15 @@ export default {
 
     async bulkUpdateStatus(status) {
       if (this.selectedIds.length === 0) return
-
       if (!confirm('Update ' + this.selectedIds.length + ' selected damage report(s)?')) {
         return
       }
 
       this.bulkUpdating = true
-
       try {
         for (var i = 0; i < this.selectedIds.length; i++) {
           await this.updateStatusById(this.selectedIds[i], status)
         }
-
         this.clearSelection()
         await this.fetchReports()
       } catch (err) {
@@ -774,7 +768,6 @@ export default {
 
       try {
         await this.updateStatusById(report.id, newStatus)
-
         report.status = newStatus
         this.updateSuccessId = report.id
 
@@ -806,17 +799,8 @@ export default {
 
     farmerName(report) {
       const u = report.insurance_application?.farm?.farmer_profile?.user
-
       if (!u) return '—'
-
-      return [
-        u.first_name,
-        u.middle_name,
-        u.last_name,
-        u.extension_name
-      ]
-        .filter(Boolean)
-        .join(' ')
+      return [u.first_name, u.middle_name, u.last_name, u.extension_name].filter(Boolean).join(' ')
     },
 
     imageUrl(path) {
@@ -838,7 +822,6 @@ export default {
         validated_by_mao: 'Validated by MAO',
         rejected: 'Rejected',
       }
-
       return map[status] || status || '—'
     },
 
@@ -850,7 +833,6 @@ export default {
 
     formatDate(date) {
       if (!date) return '—'
-
       return new Date(date).toLocaleDateString('en-PH', {
         year: 'numeric',
         month: 'short',
@@ -860,7 +842,6 @@ export default {
 
     formatDateTime(date) {
       if (!date) return '—'
-
       return new Date(date).toLocaleString('en-PH', {
         year: 'numeric',
         month: 'short',
@@ -937,6 +918,10 @@ export default {
   border-radius: 10px;
 }
 
+.season-icon.completed, .season-icon.closed {
+  background: #f1f5f9;
+}
+
 .season-text {
   display: flex;
   flex-direction: column;
@@ -976,6 +961,25 @@ export default {
 }
 
 .toggle-btn.active {
+  background: #FFFFFF;
+  color: #1A3320;
+  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
+}
+
+.toggle-select {
+  border: none;
+  background: transparent;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E3A8A;
+  cursor: pointer;
+  border-radius: 8px;
+  white-space: nowrap;
+  outline: none;
+}
+
+.toggle-select.active {
   background: #FFFFFF;
   color: #1A3320;
   box-shadow: 0 1px 3px rgba(26,51,32,0.15);

@@ -7,6 +7,7 @@
       </div>
     </div>
 
+    <!-- Active Season Display Window -->
     <div v-if="hasConfiguredSeason" class="season-card">
       <div class="season-info">
         <div class="season-icon open">⏱</div>
@@ -28,6 +29,7 @@
       </div>
     </div>
 
+    <!-- Setup Prompt Card fallback -->
     <div v-else class="setup-card">
       <div class="setup-icon">📅</div>
       <h3>Season Setup Required</h3>
@@ -57,6 +59,7 @@
       </div>
     </div>
 
+    <!-- Settings Modification Modal Popup -->
     <div v-if="showSeasonModal" class="modal-overlay" @click.self="closeSeasonModal">
       <div class="modal-box">
         <h3 class="modal-title">Season Settings</h3>
@@ -357,7 +360,7 @@
                 </span>
               </td>
 
-              <td>{{ app.season?.season_name || currentSeasonName(app) }}</td>
+              <td>{{ app.insurance_season?.season_name || currentSeasonName(app) }}</td>
               <td>{{ formatDate(app.application_date) }}</td>
             </tr>
 
@@ -370,7 +373,7 @@
                         <strong>Available Action:</strong>
                       </span>
 
-                      <!-- submitted_to_mao / needs_revision: single forward action only -->
+                      <!-- Single target workflows -->
                       <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
                         <button
                           class="btn-action-approve"
@@ -380,7 +383,6 @@
                         </button>
                       </template>
 
-                      <!-- approved_for_pcic: PCIC forwarding is a batch action; nudge toward checkbox -->
                       <template v-if="app.status === 'approved_for_pcic'">
                         <span class="action-hint">
                           ℹ️ PCIC requires batch transmittal. Select this application's checkbox
@@ -388,7 +390,6 @@
                         </span>
                       </template>
 
-                      <!-- submitted_to_pcic: only insured / reject -->
                       <template v-if="app.status === 'submitted_to_pcic'">
                         <button
                           class="btn-action-finalize"
@@ -405,7 +406,6 @@
                         </button>
                       </template>
 
-                      <!-- insured / rejected: terminal, no actions -->
                       <template v-if="app.status === 'insured' || app.status === 'rejected'">
                         <span class="action-hint">This application has reached a final status.</span>
                       </template>
@@ -525,6 +525,7 @@
       </table>
     </div>
 
+    <!-- Hidden Printable Transmittal Element -->
     <div v-if="isPrintingPcicBatch" id="print-area" class="print-area pcic-batch-layout">
       <div class="print-letterhead">
         <h1>Office of the Municipal Agriculture Office</h1>
@@ -574,7 +575,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'http://192.168.254.121:8000'
 
 export default {
   name: 'CropInsuranceApplicationPage',
@@ -621,7 +622,6 @@ export default {
         deadline_date: '',
       },
 
-      // Auto-refresh
       autoRefresh: true,
       isRefreshing: false,
       lastRefreshedAt: null,
@@ -631,10 +631,11 @@ export default {
   },
 
   computed: {
+    // FIXED: Synchronized targeting criteria matching controller logic string configurations
     hasConfiguredSeason() {
       return !!(
         this.currentSeason &&
-        this.currentSeason.status === 'open' &&
+        (this.currentSeason.status === 'application_open' || this.currentSeason.status === 'application_closed') &&
         this.currentSeason.is_default === false
       )
     },
@@ -675,10 +676,8 @@ export default {
       })
     },
 
-    // Only non-terminal rows can ever be selected
     selectableFiltered() {
       var self = this
-
       return this.filtered.filter(function(app) {
         return !self.isTerminal(app.status)
       })
@@ -686,11 +685,9 @@ export default {
 
     allFilteredSelected() {
       var self = this
-
       if (this.selectableFiltered.length === 0) {
         return false
       }
-
       return this.selectableFiltered.every(function(app) {
         return self.selectedIds.includes(app.id)
       })
@@ -698,25 +695,20 @@ export default {
 
     selectedApplications() {
       var self = this
-
       return this.activeApplications.filter(function(app) {
         return self.selectedIds.includes(app.id)
       })
     },
 
-    // The single shared status across the current selection, or null if mixed/empty
     selectedStatus() {
       var apps = this.selectedApplications
-
       if (apps.length === 0) {
         return null
       }
-
       var firstStatus = apps[0].status
       var allSame = apps.every(function(app) {
         return app.status === firstStatus
       })
-
       return allSame ? firstStatus : null
     },
 
@@ -728,13 +720,10 @@ export default {
   },
 
   watch: {
-    // Drop selections that fall out of view (filter/search/tab change) or
-    // become invalid (status changed elsewhere)
     filtered() {
       var selectableIds = this.selectableFiltered.map(function(app) {
         return app.id
       })
-
       this.selectedIds = this.selectedIds.filter(function(id) {
         return selectableIds.includes(id)
       })
@@ -753,7 +742,6 @@ export default {
   methods: {
     authHeaders() {
       var token = localStorage.getItem('mao_token')
-
       return {
         headers: {
           Authorization: 'Bearer ' + token,
@@ -764,11 +752,8 @@ export default {
 
     startAutoRefresh() {
       this.stopAutoRefresh()
-
       if (!this.autoRefresh) return
-
       var self = this
-
       this.refreshTimer = setInterval(function() {
         self.silentRefresh()
       }, this.refreshIntervalSeconds * 1000)
@@ -789,9 +774,6 @@ export default {
       }
     },
 
-    // Runs on the interval. Skips quietly while the user has a modal open,
-    // a print job running, or a batch action in flight so it never yanks
-    // the screen out from under them mid-task.
     async silentRefresh() {
       if (this.showSeasonModal || this.savingSeason) return
       if (this.batchProcessing) return
@@ -799,7 +781,6 @@ export default {
       if (this.isRefreshing) return
 
       this.isRefreshing = true
-
       try {
         await this.refreshCurrentTab()
         this.lastRefreshedAt = new Date()
@@ -810,13 +791,9 @@ export default {
       }
     },
 
-    // Manual button always refreshes, even mid-selection, and also
-    // resyncs the season card since that can change server-side too.
     async manualRefresh() {
       if (this.isRefreshing) return
-
       this.isRefreshing = true
-
       try {
         await this.fetchSeasons()
         await this.refreshCurrentTab()
@@ -830,7 +807,6 @@ export default {
 
     formatTime(date) {
       if (!date) return ''
-
       return date.toLocaleTimeString('en-PH', {
         hour: '2-digit',
         minute: '2-digit',
@@ -841,18 +817,13 @@ export default {
       return status === 'insured' || status === 'rejected'
     },
 
-    // A checkbox is disabled if there's already a selection underway with a
-    // different status than this row, preventing mixed-status selections
-    // before they happen rather than warning about them afterward.
     isCheckboxDisabled(app) {
       if (this.selectedIds.length === 0) {
         return false
       }
-
       if (this.isSelected(app.id)) {
         return false
       }
-
       return this.selectedStatus !== null && this.selectedStatus !== app.status
     },
 
@@ -862,7 +833,6 @@ export default {
           API_BASE + '/api/insurance-seasons/current',
           this.authHeaders()
         )
-
         this.currentSeason = response.data.season
         await this.fetchSeasons()
 
@@ -887,7 +857,6 @@ export default {
           API_BASE + '/api/insurance-seasons',
           this.authHeaders()
         )
-
         this.seasons = Array.isArray(response.data)
           ? response.data
           : response.data.data || []
@@ -899,17 +868,14 @@ export default {
     async fetchApplications() {
       this.isLoading = true
       this.errorMessage = ''
-
       try {
         var response = await axios.get(
           API_BASE + '/api/insurance-applications',
           this.authHeaders()
         )
-
         var apps = Array.isArray(response.data)
           ? response.data
           : response.data.data || []
-
         var currentId = this.currentSeason ? this.currentSeason.id : null
 
         this.applications = apps.filter(function(app) {
@@ -926,13 +892,11 @@ export default {
     async fetchApplicationHistory() {
       this.isLoading = true
       this.errorMessage = ''
-
       try {
         var response = await axios.get(
           API_BASE + '/api/insurance-applications-history',
           this.authHeaders()
         )
-
         this.historyApplications = Array.isArray(response.data)
           ? response.data
           : response.data.data || []
@@ -944,7 +908,6 @@ export default {
       }
     },
 
-    // Maps a target status to its backend route segment
     routeForStatus(status) {
       var routeMap = {
         approved_for_pcic: 'approve-for-pcic',
@@ -953,25 +916,21 @@ export default {
         insured: 'approve',
         rejected: 'reject',
       }
-
       return routeMap[status] || null
     },
 
     async updateAppStatus(appId, status) {
       var action = this.routeForStatus(status)
-
       if (!action) {
         alert('Invalid status action.')
         return
       }
-
       try {
         await axios.put(
           API_BASE + '/api/insurance-applications/' + appId + '/' + action,
           {},
           this.authHeaders()
         )
-
         await this.refreshCurrentTab()
       } catch (error) {
         console.error(error)
@@ -979,27 +938,21 @@ export default {
       }
     },
 
-    // Fires all updates in parallel, refreshes once, and keeps any failed
-    // ids selected so the user can retry instead of starting over.
     async bulkUpdateStatus(status) {
       if (this.selectedIds.length === 0) return
       if (this.batchProcessing) return
 
       var action = this.routeForStatus(status)
-
       if (!action) {
         alert('Invalid status action.')
         return
       }
-
       var count = this.selectedIds.length
-
       if (!confirm('Apply this action to ' + count + ' selected application(s)?')) {
         return
       }
 
       this.batchProcessing = true
-
       var idsToProcess = this.selectedIds.slice()
       var failedIds = []
       var self = this
@@ -1024,10 +977,7 @@ export default {
         await this.refreshCurrentTab()
 
         if (failedIds.length > 0) {
-          alert(
-            failedIds.length + ' of ' + idsToProcess.length +
-            ' application(s) failed to update. They remain selected so you can retry.'
-          )
+          alert(failedIds.length + ' application(s) failed. They remain selected.')
           this.selectedIds = failedIds
         } else {
           this.selectedIds = []
@@ -1052,7 +1002,6 @@ export default {
       this.pcicBatchList = this.activeApplications.filter(function(app) {
         return app.status === 'approved_for_pcic'
       })
-
       this.runPrint()
     },
 
@@ -1061,16 +1010,13 @@ export default {
         alert('Select applications with "To be submitted to PCIC" status only.')
         return
       }
-
       this.pcicBatchList = this.selectedPcicReady
       this.runPrint()
     },
 
     runPrint() {
       this.isPrintingPcicBatch = true
-
       var self = this
-
       this.$nextTick(function() {
         window.print()
         setTimeout(function() {
@@ -1091,23 +1037,17 @@ export default {
 
     toggleSelectAllFiltered() {
       var self = this
-
       if (this.allFilteredSelected) {
         var selectableIds = this.selectableFiltered.map(function(app) {
           return app.id
         })
-
         this.selectedIds = this.selectedIds.filter(function(id) {
           return !selectableIds.includes(id)
         })
       } else {
-        // Select-all only grabs rows matching the currently selected status
-        // (or all selectable rows if nothing is selected yet)
         var targetStatus = this.selectedStatus
-
         this.selectableFiltered.forEach(function(app) {
           var matchesTarget = !targetStatus || app.status === targetStatus
-
           if (matchesTarget && !self.selectedIds.includes(app.id)) {
             self.selectedIds.push(app.id)
           }
@@ -1128,7 +1068,6 @@ export default {
       this.expandedId = null
       this.clearSelection()
       this.resetFilters()
-
       if (tab === 'history') {
         this.fetchApplicationHistory()
       } else {
@@ -1139,7 +1078,6 @@ export default {
     openSeasonModal() {
       this.seasonModalError = ''
       this.showSeasonModal = true
-
       var dateStr = this.currentSeason && this.currentSeason.deadline_date
         ? this.currentSeason.deadline_date.slice(0, 10)
         : ''
@@ -1157,12 +1095,12 @@ export default {
       this.seasonModalError = ''
     },
 
+    // FIXED: Form payload sends 'application_open' flag status identifier string
     async saveSeason() {
       if (!this.seasonForm.season_name.trim()) {
         this.seasonModalError = 'Please enter a season name.'
         return
       }
-
       if (!this.seasonForm.deadline_date) {
         this.seasonModalError = 'Please select a deadline date.'
         return
@@ -1177,17 +1115,15 @@ export default {
           {
             season_name: this.seasonForm.season_name,
             deadline_date: this.seasonForm.deadline_date,
+            status: 'application_open',
             is_default: false,
           },
           this.authHeaders()
         )
-
         await this.fetchCurrentSeason()
         this.showSeasonModal = false
       } catch (err) {
-        this.seasonModalError =
-          err.response?.data?.message ||
-          'Failed to save season.'
+        this.seasonModalError = err.response?.data?.message || 'Failed to save season.'
       } finally {
         this.savingSeason = false
       }
@@ -1195,21 +1131,17 @@ export default {
 
     async closeSeason() {
       if (!this.currentSeason) return
-
       if (!confirm('Close "' + this.currentSeason.season_name + '"?')) {
         return
       }
-
       try {
         await axios.post(
           API_BASE + '/api/insurance-seasons/current/close',
           {},
           this.authHeaders()
         )
-
         this.applications = []
         this.historyApplications = []
-
         await this.fetchCurrentSeason()
       } catch (err) {
         console.error(err)
@@ -1222,14 +1154,8 @@ export default {
     },
 
     farmerName(app) {
-      var user = app.farm
-        ? app.farm.farmer_profile
-          ? app.farm.farmer_profile.user
-          : null
-        : null
-
+      var user = app.farm?.farmer_profile?.user || null
       if (!user) return '—'
-
       return [
         user.first_name,
         user.middle_name,
@@ -1247,7 +1173,6 @@ export default {
       var season = this.seasons.find(function(s) {
         return s.id == app.insurance_season_id
       })
-
       return season ? season.season_name : '—'
     },
 
@@ -1260,7 +1185,6 @@ export default {
         insured: 'Insured',
         rejected: 'Rejected',
       }
-
       return map[status] || status || '—'
     },
 
@@ -1272,7 +1196,6 @@ export default {
 
     formatDate(date) {
       if (!date) return '—'
-
       return new Date(date).toLocaleDateString('en-PH', {
         year: 'numeric',
         month: 'short',
@@ -1298,7 +1221,6 @@ export default {
   color: #263238;
 }
 
-/* Header */
 .page-header {
   margin-bottom: 1.5rem;
 }
@@ -1316,7 +1238,6 @@ export default {
   margin: 0;
 }
 
-/* Season card */
 .season-card {
   background: #FFFFFF;
   border-radius: 14px;
@@ -1392,7 +1313,6 @@ export default {
   color: #2E7D32;
   border: 1px solid #66BB6A;
 }
-
 .btn-season-secondary:hover { background: #eaf5ea; }
 
 .btn-season-danger {
@@ -1400,7 +1320,6 @@ export default {
   color: #b3261e;
   border: 1px solid #f3c6c6;
 }
-
 .btn-season-danger:hover { background: #fdf0f0; }
 
 .btn-season-primary {
@@ -1408,11 +1327,9 @@ export default {
   color: #FFFFFF;
   width: 100%;
 }
-
 .btn-season-primary:hover { background: #256428; }
 .btn-season-primary:disabled { background: #a9c9ab; cursor: not-allowed; }
 
-/* Setup card */
 .setup-card {
   background: #FFFFFF;
   border-radius: 14px;
@@ -1423,18 +1340,8 @@ export default {
 }
 
 .setup-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
-
-.setup-card h3 {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
-  color: #263238;
-}
-
-.setup-card p {
-  margin: 0 0 1.2rem;
-  color: #5c6b64;
-  font-size: 0.88rem;
-}
+.setup-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: #263238; }
+.setup-card p { margin: 0 0 1.2rem; color: #5c6b64; font-size: 0.88rem; }
 
 .setup-form {
   max-width: 360px;
@@ -1445,7 +1352,6 @@ export default {
   text-align: left;
 }
 
-/* Modal field / inputs (shared) */
 .modal-field {
   display: flex;
   flex-direction: column;
@@ -1474,13 +1380,8 @@ export default {
   box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
 }
 
-.modal-error {
-  color: #b3261e;
-  font-size: 0.8rem;
-  margin: 0;
-}
+.modal-error { color: #b3261e; font-size: 0.8rem; margin: 0; }
 
-/* Modal overlay */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1502,11 +1403,7 @@ export default {
   gap: 1rem;
 }
 
-.modal-title {
-  margin: 0;
-  font-size: 1.05rem;
-  color: #263238;
-}
+.modal-title { margin: 0; font-size: 1.05rem; color: #263238; }
 
 .modal-actions {
   display: flex;
@@ -1526,20 +1423,11 @@ export default {
   font-family: inherit;
 }
 
-.btn-modal-cancel {
-  background: #F5F7F5;
-  color: #5c6b64;
-}
-
-.btn-modal-save {
-  background: #2E7D32;
-  color: #FFFFFF;
-}
-
+.btn-modal-cancel { background: #F5F7F5; color: #5c6b64; }
+.btn-modal-save { background: #2E7D32; color: #FFFFFF; }
 .btn-modal-save:hover { background: #256428; }
 .btn-modal-save:disabled { background: #a9c9ab; cursor: not-allowed; }
 
-/* Section divider */
 .section-divider {
   display: flex;
   align-items: center;
@@ -1563,7 +1451,6 @@ export default {
   color: #5c6b64;
 }
 
-/* Tabs */
 .tab-bar {
   display: flex;
   gap: 4px;
@@ -1588,12 +1475,8 @@ export default {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.tab-btn.active {
-  background: #2E7D32;
-  color: #FFFFFF;
-}
+.tab-btn.active { background: #2E7D32; color: #FFFFFF; }
 
-/* Auto-refresh bar */
 .refresh-bar {
   display: flex;
   align-items: center;
@@ -1603,21 +1486,8 @@ export default {
   margin-bottom: 1rem;
 }
 
-.refresh-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #5c6b64;
-}
-
-.refresh-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #93a29a;
-  flex-shrink: 0;
-}
+.refresh-status { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #5c6b64; }
+.refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: #93a29a; flex-shrink: 0; }
 
 .refresh-dot.live {
   background: #2E7D32;
@@ -1632,12 +1502,7 @@ export default {
 }
 
 .refresh-last { color: #93a29a; }
-
-.refresh-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.refresh-controls { display: flex; align-items: center; gap: 12px; }
 
 .btn-icon-refresh {
   display: inline-flex;
@@ -1653,7 +1518,6 @@ export default {
   cursor: pointer;
   font-family: inherit;
 }
-
 .btn-icon-refresh:hover { background: #eaf5ea; }
 .btn-icon-refresh:disabled { color: #93a29a; cursor: not-allowed; background: #FFFFFF; }
 
@@ -1670,11 +1534,7 @@ export default {
   flex-shrink: 0;
 }
 
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
 
 .toggle-slider {
   position: absolute;
@@ -1697,15 +1557,9 @@ export default {
   transition: transform 0.2s ease;
 }
 
-.toggle-switch input:checked + .toggle-slider {
-  background-color: #2E7D32;
-}
+.toggle-switch input:checked + .toggle-slider { background-color: #2E7D32; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
 
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(17px);
-}
-
-/* Filters row */
 .filters-row {
   display: flex;
   align-items: center;
@@ -1749,7 +1603,6 @@ export default {
   cursor: pointer;
   font-family: inherit;
 }
-
 .btn-reset:hover { background: #f0f4f0; }
 
 .btn-print-pcic {
@@ -1764,10 +1617,8 @@ export default {
   font-family: inherit;
   white-space: nowrap;
 }
-
 .btn-print-pcic:hover { background: #e0960f; }
 
-/* Status filter buttons (replaces the old select) */
 .status-filter-row {
   display: flex;
   gap: 8px;
@@ -1790,7 +1641,6 @@ export default {
   font-family: inherit;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-
 .status-filter-tag:hover { border-color: #66BB6A; }
 
 .sf-count {
@@ -1813,7 +1663,6 @@ export default {
 .status-filter-tag.sf-insured.active { background: #2E7D32; }
 .status-filter-tag.sf-rejected.active { background: #b3261e; }
 
-/* Bulk action bar (floats above content once a selection is made) */
 .bulk-action-bar {
   display: flex;
   align-items: center;
@@ -1840,54 +1689,18 @@ export default {
   border-left: 4px solid #2E7D32;
 }
 
-.bulk-action-bar.floating.mixed {
-  border-left-color: #F9A825;
-  background: #FFFFFF;
-}
+.bulk-action-bar.floating.mixed { border-left-color: #F9A825; background: #FFFFFF; }
+.bulk-action-bar.mixed { background: #fdf1d6; border-color: #f3d38a; }
 
-.bulk-action-bar.mixed {
-  background: #fdf1d6;
-  border-color: #f3d38a;
-}
-
-/* Slide-up / fade transition for the floating bar */
 .float-bar-enter-active,
-.float-bar-leave-active {
-  transition: transform 0.22s ease, opacity 0.22s ease;
-}
-
+.float-bar-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
 .float-bar-enter-from,
-.float-bar-leave-to {
-  transform: translateX(-50%) translateY(16px);
-  opacity: 0;
-}
+.float-bar-leave-to { transform: translateX(-50%) translateY(16px); opacity: 0; }
 
-.bulk-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: #263238;
-}
-
-.bulk-warning {
-  font-size: 0.82rem;
-  color: #7a5205;
-  flex: 1;
-}
-
-.bulk-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.bulk-terminal-note {
-  font-size: 0.82rem;
-  color: #5c6b64;
-  font-style: italic;
-}
+.bulk-left { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #263238; }
+.bulk-warning { font-size: 0.82rem; color: #7a5205; flex: 1; }
+.bulk-actions { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+.bulk-terminal-note { font-size: 0.82rem; color: #5c6b64; font-style: italic; }
 
 .btn-action-approve,
 .btn-action-submit-pcic,
@@ -1914,7 +1727,6 @@ export default {
 .btn-action-reject { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
 .btn-action-reject:hover { background: #fdf0f0; }
 
-/* Stats row */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -1940,12 +1752,7 @@ export default {
   letter-spacing: 0.02em;
 }
 
-.stat-value {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #263238;
-}
-
+.stat-value { font-size: 1.35rem; font-weight: 700; color: #263238; }
 .stat-value.mao { color: #1976D2; }
 .stat-value.pcic { color: #F9A825; }
 .stat-value.review { color: #6A4C93; }
@@ -1953,7 +1760,6 @@ export default {
 .stat-value.insured { color: #2E7D32; }
 .stat-value.rejected { color: #b3261e; }
 
-/* Loading / error / empty states */
 .state-box {
   background: #FFFFFF;
   border-radius: 14px;
@@ -1978,18 +1784,9 @@ export default {
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { text-align: center; padding: 2.5rem; color: #93a29a; font-size: 0.88rem; }
 
-.empty-state {
-  text-align: center;
-  padding: 2.5rem;
-  color: #93a29a;
-  font-size: 0.88rem;
-}
-
-/* Table */
 .table-wrap {
   background: #FFFFFF;
   border-radius: 14px;
@@ -1997,10 +1794,7 @@ export default {
   box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
 }
 
-.app-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+.app-table { width: 100%; border-collapse: collapse; }
 
 .app-table th {
   text-align: left;
@@ -2027,20 +1821,12 @@ export default {
 .main-row.expanded { background: #f2f9f2; }
 
 .expand-cell { width: 24px; }
-
-.expand-icon {
-  display: inline-block;
-  font-size: 0.7rem;
-  color: #93a29a;
-  transition: transform 0.15s ease;
-}
-
+.expand-icon { display: inline-block; font-size: 0.7rem; color: #93a29a; transition: transform 0.15s ease; }
 .expand-icon.open { transform: rotate(90deg); color: #2E7D32; }
 
 .farmer-name { font-weight: 600; color: #263238; }
 .farmer-sub { font-size: 0.75rem; color: #93a29a; }
 
-/* Status badges */
 .status-badge {
   display: inline-block;
   padding: 4px 11px;
@@ -2057,7 +1843,6 @@ export default {
 .status-badge.insured { background: #e5f4e6; color: #2E7D32; }
 .status-badge.rejected { background: #fde3e3; color: #b3261e; }
 
-/* Detail row */
 .detail-row td { padding: 0; border-top: none; }
 
 .detail-box {
@@ -2068,24 +1853,9 @@ export default {
 }
 
 .detail-actions-panel { margin-bottom: 1.2rem; }
-
-.action-sub-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.action-panel-label {
-  font-size: 0.8rem;
-  color: #5c6b64;
-}
-
-.action-hint {
-  font-size: 0.8rem;
-  color: #5c6b64;
-  font-style: italic;
-}
+.action-sub-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.action-panel-label { font-size: 0.8rem; color: #5c6b64; }
+.action-hint { font-size: 0.8rem; color: #5c6b64; font-style: italic; }
 
 .detail-grid-wrapper {
   display: grid;
@@ -2093,12 +1863,7 @@ export default {
   gap: 1.2rem;
 }
 
-.detail-section {
-  background: #FFFFFF;
-  border: 1px solid #eef2ef;
-  border-radius: 10px;
-  padding: 1rem;
-}
+.detail-section { background: #FFFFFF; border: 1px solid #eef2ef; border-radius: 10px; padding: 1rem; }
 
 .section-title {
   font-size: 0.78rem;
@@ -2109,73 +1874,24 @@ export default {
   margin-bottom: 0.8rem;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.detail-item { display: flex; flex-direction: column; gap: 2px; }
 .detail-item.full-width { grid-column: 1 / -1; }
+.detail-label { font-size: 0.7rem; color: #93a29a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+.detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
 
-.detail-label {
-  font-size: 0.7rem;
-  color: #93a29a;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.detail-val {
-  font-size: 0.85rem;
-  color: #263238;
-  font-weight: 500;
-}
-
-/* Print area */
 .print-area { display: none; }
 
 @media print {
   .insurance-page > *:not(.print-area) { display: none !important; }
-
-  .print-area {
-    display: block !important;
-    padding: 2rem;
-    font-family: 'DM Sans', sans-serif;
-    color: #263238;
-  }
-
+  .print-area { display: block !important; padding: 2rem; font-family: 'DM Sans', sans-serif; color: #263238; }
   .print-letterhead { text-align: center; margin-bottom: 1rem; }
   .print-letterhead h1 { font-size: 1.2rem; margin: 0 0 4px; }
   .print-letterhead h2 { font-size: 1rem; margin: 0 0 8px; font-weight: 600; }
   .print-letterhead p { font-size: 0.85rem; margin: 2px 0; }
-
-  .print-divider {
-    border-top: 2px solid #263238;
-    margin: 1rem 0;
-  }
-
-  .print-batch-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .print-batch-table th,
-  .print-batch-table td {
-    border: 1px solid #263238;
-    padding: 6px 8px;
-    font-size: 0.78rem;
-    text-align: left;
-  }
-
-  .print-batch-table th {
-    background: #F5F7F5;
-    font-weight: 700;
-  }
+  .print-divider { border-top: 2px solid #263238; margin: 1rem 0; }
+  .print-batch-table { width: 100%; border-collapse: collapse; }
+  .print-batch-table th, .print-batch-table td { border: 1px solid #263238; padding: 6px 8px; font-size: 0.78rem; text-align: left; }
+  .print-batch-table th { background: #F5F7F5; font-weight: 700; }
 }
 </style>
