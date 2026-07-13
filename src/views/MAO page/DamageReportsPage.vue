@@ -7,38 +7,30 @@
       </div>
     </div>
 
-    <div v-if="hasConfiguredSeason" class="season-card">
-      <div class="season-info">
-        <div class="season-icon" :class="currentSeason.status || 'closed'">
-          {{ currentSeason.status === 'application_open' ? '⏱' : '🔒' }}
-        </div>
-      </div>
+    <div v-if="hasConfiguredSeason" class="season-tabs-container">
+      <button
+        class="season-tab-btn"
+        :class="{ active: activeSeasonView === 'current' }"
+        @click="switchSeasonView('current')"
+      >
+        Current Season
+      </button>
 
-      <div class="season-toggle">
-        <button
-          class="toggle-btn"
-          :class="{ active: activeSeasonView === 'current' }"
-          @click="switchSeasonView('current')"
+      <select
+        class="season-tab-select"
+        :class="{ active: activeSeasonView === 'history' }"
+        v-model="historySeasonId"
+        @change="selectPreviousSeason"
+      >
+        <option value="">Previous Seasons</option>
+        <option
+          v-for="season in previousSeasons"
+          :key="season.id"
+          :value="season.id"
         >
-          Current Season
-        </button>
-
-        <select
-          class="toggle-select"
-          :class="{ active: activeSeasonView === 'history' }"
-          v-model="historySeasonId"
-          @change="selectPreviousSeason"
-        >
-          <option value="">Previous Seasons</option>
-          <option
-            v-for="season in previousSeasons"
-            :key="season.id"
-            :value="season.id"
-          >
-            {{ season.season_name || season.name }}
-          </option>
-        </select>
-      </div>
+          {{ season.season_name || season.name }}
+        </option>
+      </select>
     </div>
 
     <div class="status-tab-bar">
@@ -892,97 +884,70 @@ export default {
   color: rgba(255,255,255,0.72);
 }
 
-.season-card {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 16px 20px;
+.season-tabs-container {
+  display: flex;
+  gap: 6px;
   margin-bottom: 18px;
-  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-
-.season-info {
-  display: flex;
-  gap: 24px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 2px;
   align-items: center;
 }
 
-.season-icon {
-  font-size: 22px;
-  background: #F0FDF4;
-  padding: 10px;
-  border-radius: 10px;
-}
-
-.season-icon.completed, .season-icon.closed {
-  background: #f1f5f9;
-}
-
-.season-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.season-label {
-  font-size: 11px;
-  text-transform: uppercase;
+.season-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
   color: #6b7280;
-  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  transition: all 0.2s ease;
 }
 
-.season-name {
-  font-size: 14px;
-  font-weight: 700;
+.season-tab-btn:hover {
   color: #1A3320;
-}
-
-.season-toggle {
-  display: flex;
   background: #F0F4F0;
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
 }
 
-.toggle-btn {
-  border: none;
-  background: transparent;
-  padding: 7px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #1E3A8A;
-  cursor: pointer;
-  border-radius: 8px;
-  white-space: nowrap;
-}
-
-.toggle-btn.active {
-  background: #FFFFFF;
+.season-tab-btn.active {
   color: #1A3320;
-  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
 }
 
-.toggle-select {
+.season-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #34A853;
+  border-radius: 99px;
+}
+
+.season-tab-select {
   border: none;
   background: transparent;
-  padding: 7px 14px;
-  font-size: 12px;
+  padding: 10px 18px;
+  font-size: 13px;
   font-weight: 700;
-  color: #1E3A8A;
+  color: #6b7280;
   cursor: pointer;
-  border-radius: 8px;
-  white-space: nowrap;
+  border-radius: 8px 8px 0 0;
   outline: none;
+  transition: all 0.2s ease;
 }
 
-.toggle-select.active {
-  background: #FFFFFF;
+.season-tab-select:hover {
   color: #1A3320;
-  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
+  background: #F0F4F0;
+}
+
+.season-tab-select.active {
+  color: #1A3320;
+  border-bottom: 4px solid #34A853;
+  margin-bottom: -2px;
 }
 
 .status-tab-bar {
