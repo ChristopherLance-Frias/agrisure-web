@@ -382,7 +382,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.254.121:8000'
+const API_BASE = 'http://192.168.100.173:8000'
 
 const BATCHABLE_STATUSES = {
   validated_by_mao: {

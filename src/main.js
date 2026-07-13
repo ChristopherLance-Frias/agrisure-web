@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
-axios.defaults.baseURL = 'http://192.168.254.121:8000'
+axios.defaults.baseURL = 'http://192.168.100.173:8000'
 
 // Restore MAO token
 const maoToken = localStorage.getItem('mao_token')

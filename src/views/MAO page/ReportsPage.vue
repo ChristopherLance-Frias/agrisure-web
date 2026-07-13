@@ -453,7 +453,7 @@ import axios from 'axios'
 import ChartCanvas from './ChartCanvas.vue'
 
 // Match your team's exact API Base configurations
-const API_BASE = 'http://192.168.254.121:8000'
+const API_BASE = 'http://192.168.100.173:8000'
 
 export default {
   name: 'ReportsPage',
