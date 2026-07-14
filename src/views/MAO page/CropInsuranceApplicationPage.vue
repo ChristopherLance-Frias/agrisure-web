@@ -25,7 +25,8 @@
 
       <div class="season-actions">
         <button class="btn-season-secondary" @click="openSeasonModal">Season Settings</button>
-        <button class="btn-season-danger" @click="closeSeason">Close Season</button>
+        <button v-if="currentSeason.status === 'application_open'" class="btn-season-danger" @click="closeSeason">Close Season</button>
+        <button v-else class="btn-season-primary" @click="openNewSeasonModal">Start New Season</button>
       </div>
     </div>
 
@@ -62,7 +63,7 @@
     <!-- Settings Modification Modal Popup -->
     <div v-if="showSeasonModal" class="modal-overlay" @click.self="closeSeasonModal">
       <div class="modal-box">
-        <h3 class="modal-title">Season Settings</h3>
+        <h3 class="modal-title">{{ isStartingNewSeason ? 'Start New Season' : 'Season Settings' }}</h3>
 
         <div class="modal-field">
           <label>Season Name</label>
@@ -82,7 +83,7 @@
           </button>
 
           <button class="btn-modal-save" @click="saveSeason" :disabled="savingSeason">
-            {{ savingSeason ? 'Saving...' : 'Save Changes' }}
+            {{ savingSeason ? 'Saving...' : (isStartingNewSeason ? 'Create Season' : 'Save Changes') }}
           </button>
         </div>
       </div>
@@ -616,6 +617,7 @@ export default {
       showSeasonModal: false,
       seasonModalError: '',
       savingSeason: false,
+      isStartingNewSeason: false,
 
       seasonForm: {
         season_name: 'Wet Season ' + new Date().getFullYear(),
@@ -631,13 +633,9 @@ export default {
   },
 
   computed: {
-    // FIXED: Synchronized targeting criteria matching controller logic string configurations
+    // FIXED: Uses deadline_date setup logic to prevent structural override blocks
     hasConfiguredSeason() {
-      return !!(
-        this.currentSeason &&
-        (this.currentSeason.status === 'application_open' || this.currentSeason.status === 'application_closed') &&
-        this.currentSeason.is_default === false
-      )
+      return !!(this.currentSeason && this.currentSeason.deadline_date)
     },
 
     previousSeasons() {
@@ -836,7 +834,7 @@ export default {
         this.currentSeason = response.data.season
         await this.fetchSeasons()
 
-        if (this.currentSeason && this.currentSeason.is_default === true) {
+        if (this.currentSeason && !this.currentSeason.deadline_date) {
           this.seasonForm = {
             season_name: 'Wet Season ' + new Date().getFullYear(),
             deadline_date: '',
@@ -1075,8 +1073,19 @@ export default {
       }
     },
 
+    openNewSeasonModal() {
+      this.seasonModalError = ''
+      this.isStartingNewSeason = true
+      this.showSeasonModal = true
+      this.seasonForm = {
+        season_name: 'Wet Season ' + new Date().getFullYear(),
+        deadline_date: '',
+      }
+    },
+
     openSeasonModal() {
       this.seasonModalError = ''
+      this.isStartingNewSeason = false
       this.showSeasonModal = true
       var dateStr = this.currentSeason && this.currentSeason.deadline_date
         ? this.currentSeason.deadline_date.slice(0, 10)
@@ -1095,7 +1104,7 @@ export default {
       this.seasonModalError = ''
     },
 
-    // FIXED: Form payload sends 'application_open' flag status identifier string
+    // FIXED: Properly routes targeting actions into POST new vs PUT current
     async saveSeason() {
       if (!this.seasonForm.season_name.trim()) {
         this.seasonModalError = 'Please enter a season name.'
@@ -1110,16 +1119,26 @@ export default {
       this.seasonModalError = ''
 
       try {
-        await axios.put(
-          API_BASE + '/api/insurance-seasons/current',
-          {
-            season_name: this.seasonForm.season_name,
-            deadline_date: this.seasonForm.deadline_date,
-            status: 'application_open',
-            is_default: false,
-          },
-          this.authHeaders()
-        )
+        if (this.isStartingNewSeason) {
+          await axios.post(
+            API_BASE + '/api/insurance-seasons/new',
+            {
+              season_name: this.seasonForm.season_name,
+              deadline_date: this.seasonForm.deadline_date,
+            },
+            this.authHeaders()
+          )
+        } else {
+          await axios.put(
+            API_BASE + '/api/insurance-seasons/current',
+            {
+              season_name: this.seasonForm.season_name,
+              deadline_date: this.seasonForm.deadline_date,
+              status: 'application_open',
+            },
+            this.authHeaders()
+          )
+        }
         await this.fetchCurrentSeason()
         this.showSeasonModal = false
       } catch (err) {

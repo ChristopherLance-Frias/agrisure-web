@@ -801,7 +801,7 @@ export default {
       } finally {
         this.loadingLists = false
       }
-    },
+    },      
 
     async fetchBarangayAccounts() {
       try {

@@ -485,10 +485,12 @@ export default {
     },
 
     previousSeasons() {
-      var currentId = this.currentSeason ? this.currentSeason.id : null
-      return this.seasons.filter(function(season) {
-        return season.id !== currentId
-      })
+      const currentId = this.currentSeason ? String(this.currentSeason.id) : null;
+      return this.seasons.filter((season) => {
+        const isCurrentId = String(season.id) === currentId;
+        const isDefaultSeason = season.is_default === true || season.is_default === 1 || season.is_default === '1';
+        return !isCurrentId && !isDefaultSeason;
+      });
     },
 
     activeReports() {
@@ -502,58 +504,51 @@ export default {
     },
 
     causeOptions() {
-      var set = new Set(
+      const set = new Set(
         this.activeReports
-          .map(function(r) {
-            return r.damage_cause
-          })
+          .map((r) => r.damage_cause)
           .filter(Boolean)
       )
       return Array.from(set).sort()
     },
 
     suspiciousCount() {
-      return this.activeReports.filter(function(r) {
-        return r.is_suspicious
-      }).length
+      return this.activeReports.filter((r) => r.is_suspicious).length
     },
 
     filtered() {
-      var self = this
+      return this.activeReports.filter((report) => {
+        const name = this.farmerName(report).toLowerCase()
 
-      return this.activeReports.filter(function(report) {
-        var name = self.farmerName(report).toLowerCase()
+        const matchName =
+          !this.searchName ||
+          name.indexOf(this.searchName.toLowerCase()) !== -1
 
-        var matchName =
-          !self.searchName ||
-          name.indexOf(self.searchName.toLowerCase()) !== -1
+        const matchCause =
+          !this.filterCause ||
+          report.damage_cause === this.filterCause
 
-        var matchCause =
-          !self.filterCause ||
-          report.damage_cause === self.filterCause
+        const matchStatus = report.status === this.activeStatusTab
 
-        var matchStatus = report.status === self.activeStatusTab
-
-        var matchSuspicious =
-          !self.suspiciousOnly ||
+        const matchSuspicious =
+          !this.suspiciousOnly ||
           report.is_suspicious
 
-        var appSeasonId = report.insurance_application?.insurance_season_id || null;
+        const appSeasonId = report.insurance_application?.insurance_season_id || null;
 
-        var matchSeason =
-          self.activeSeasonView === 'current' ||
-          !self.historySeasonId ||
-          appSeasonId == self.historySeasonId
+        const matchSeason =
+          this.activeSeasonView === 'current' ||
+          !this.historySeasonId ||
+          appSeasonId == this.historySeasonId
 
         return matchName && matchCause && matchStatus && matchSuspicious && matchSeason
       })
     },
 
     allFilteredSelected() {
-      var self = this
       if (this.filtered.length === 0) return false
-      return this.filtered.every(function(report) {
-        return self.selectedIds.includes(report.id)
+      return this.filtered.every((report) => {
+        return this.selectedIds.includes(report.id)
       })
     },
   },
@@ -564,7 +559,7 @@ export default {
 
   methods: {
     authHeaders() {
-      var token =
+      const token =
         localStorage.getItem('mao_token') ||
         localStorage.getItem('token')
 
@@ -576,34 +571,26 @@ export default {
       }
     },
 
-   async fetchCurrentSeason() {
-      try {
-        var response = await axios.get(
-          API_BASE + '/api/insurance-seasons/current',
-          this.authHeaders()
-        )
+async fetchCurrentSeason() {
+  try {
+    const response = await axios.get(
+      API_BASE + '/api/insurance-seasons/current',
+      this.authHeaders()
+    )
 
-        // Extract from the raw array payload you provided
-        var data = response.data;
-        if (Array.isArray(data)) {
-          this.currentSeason = data.find(s => s.is_default === true || s.is_default === 1) || data[0] || null;
-        } else if (data && Array.isArray(data.season)) {
-          this.currentSeason = data.season.find(s => s.is_default === true || s.is_default === 1) || data.season[0] || null;
-        } else {
-          this.currentSeason = data || null;
-        }
+    this.currentSeason = response.data?.season || null
 
-        await this.fetchSeasons()
-        await this.fetchReports()
-      } catch (err) {
-        console.error("Error fetching current season:", err)
-        await this.fetchReports()
-      }
-    },
+    await this.fetchSeasons()
+    await this.fetchReports()
+  } catch (err) {
+    console.error("Error fetching current season:", err)
+    await this.fetchReports()
+  }
+},
 
     async fetchSeasons() {
       try {
-        var response = await axios.get(
+        const response = await axios.get(
           API_BASE + '/api/insurance-seasons',
           this.authHeaders()
         )
@@ -620,20 +607,19 @@ export default {
       this.errorMessage = ''
 
       try {
-        var response = await axios.get(
+        const response = await axios.get(
           API_BASE + '/api/damage-reports',
           this.authHeaders()
         )
 
-        var allReports = Array.isArray(response.data)
+        const allReports = Array.isArray(response.data)
           ? response.data
           : response.data.data || []
 
-        var currentId = this.currentSeason ? this.currentSeason.id : null
+        const currentId = this.currentSeason ? this.currentSeason.id : null
 
-        this.reports = allReports.filter(function(report) {
-          // Check both standard relationship and direct foreign key fallbacks if relation isn't eager loaded
-          var appSeasonId = report.insurance_application?.insurance_season_id
+        this.reports = allReports.filter((report) => {
+          const appSeasonId = report.insurance_application?.insurance_season_id
                             || report.insurance_season_id
                             || null;
 
@@ -642,8 +628,8 @@ export default {
           } return true;
         })
 
-        this.historyReports = allReports.filter(function(report) {
-          var appSeasonId = report.insurance_application?.insurance_season_id
+        this.historyReports = allReports.filter((report) => {
+          const appSeasonId = report.insurance_application?.insurance_season_id
                             || report.insurance_season_id
                             || null;
 
@@ -685,29 +671,22 @@ export default {
     toggleSelection(id) {
       if (!this.canBulkAct) return
       if (this.selectedIds.includes(id)) {
-        this.selectedIds = this.selectedIds.filter(function(selectedId) {
-          return selectedId !== id
-        })
+        this.selectedIds = this.selectedIds.filter((selectedId) => selectedId !== id)
       } else {
         this.selectedIds.push(id)
       }
     },
 
     toggleSelectAllFiltered() {
-      var self = this
       if (!this.canBulkAct) return
 
       if (this.allFilteredSelected) {
-        var filteredIds = this.filtered.map(function(report) {
-          return report.id
-        })
-        this.selectedIds = this.selectedIds.filter(function(id) {
-          return !filteredIds.includes(id)
-        })
+        const filteredIds = this.filtered.map((report) => report.id)
+        this.selectedIds = this.selectedIds.filter((id) => !filteredIds.includes(id))
       } else {
-        this.filtered.forEach(function(report) {
-          if (!self.selectedIds.includes(report.id)) {
-            self.selectedIds.push(report.id)
+        this.filtered.forEach((report) => {
+          if (!this.selectedIds.includes(report.id)) {
+            this.selectedIds.push(report.id)
           }
         })
       }
@@ -729,7 +708,7 @@ export default {
 
       this.bulkUpdating = true
       try {
-        for (var i = 0; i < this.selectedIds.length; i++) {
+        for (let i = 0; i < this.selectedIds.length; i++) {
           await this.updateStatusById(this.selectedIds[i], status)
         }
         this.clearSelection()
@@ -746,7 +725,7 @@ export default {
       if (report.status !== 'submitted_to_mao') return
       if (newStatus === report.status) return
 
-      var confirmMessages = {
+      const confirmMessages = {
         validated_by_mao: 'Validate this damage report and create a claim? This cannot be undone.',
         rejected: 'Reject this damage report? This cannot be undone.',
       }
@@ -763,10 +742,9 @@ export default {
         report.status = newStatus
         this.updateSuccessId = report.id
 
-        var self = this
-        setTimeout(function() {
-          if (self.updateSuccessId === report.id) {
-            self.updateSuccessId = null
+        setTimeout(() => {
+          if (this.updateSuccessId === report.id) {
+            this.updateSuccessId = null
           }
         }, 2000)
       } catch (err) {
@@ -809,7 +787,7 @@ export default {
     },
 
     statusLabel(status) {
-      var map = {
+      const map = {
         submitted_to_mao: 'Submitted to MAO',
         validated_by_mao: 'Validated by MAO',
         rejected: 'Rejected',
@@ -818,9 +796,7 @@ export default {
     },
 
     countByStatus(status) {
-      return this.activeReports.filter(function(r) {
-        return r.status === status
-      }).length
+      return this.activeReports.filter((r) => r.status === status).length
     },
 
     formatDate(date) {
