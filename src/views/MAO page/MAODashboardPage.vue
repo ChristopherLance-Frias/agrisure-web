@@ -128,18 +128,18 @@ export default {
   display: flex;
   min-height: 100vh;
   font-family: 'DM Sans', sans-serif;
-  background: #f0f4f0;
+  background: #F8FAF8; /* Off White background */
 }
 
 /* SIDEBAR */
 .sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: #0c1a0e;
+  background: #1B5E20; /* Dark Forest Green */
   display: flex;
   flex-direction: column;
   padding: 1.75rem 1rem;
-  border-right: 1px solid rgba(52,168,83,0.15);
+  border-right: 1px solid rgba(255,255,255,0.08);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -148,28 +148,28 @@ export default {
 .sidebar-brand {
   display: flex; align-items: center; gap: 12px;
   padding: 0 0.5rem 1.75rem;
-  border-bottom: 1px solid rgba(52,168,83,0.12);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
   margin-bottom: 1.25rem;
 }
 
 .logo-mark {
-  width: 40px; height: 40px; background: #34a853;
+  width: 40px; height: 40px; background: #FBC02D; /* Golden Yellow */
   border-radius: 10px; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 
 .logo-mark span {
   font-family: 'DM Serif Display', serif;
-  font-size: 20px; color: #fff;
+  font-size: 20px; color: #1B5E20; /* Dark Forest Green on gold */
 }
 
 .brand-text h1 {
   font-family: 'DM Serif Display', serif;
-  font-size: 15px; color: #e8f5e9; letter-spacing: 3px;
+  font-size: 15px; color: #F8FAF8; letter-spacing: 3px;
 }
 
 .brand-text p {
-  font-size: 9px; color: rgba(52,168,83,0.6);
+  font-size: 9px; color: rgba(248,250,248,0.6);
   letter-spacing: 2px; text-transform: uppercase;
 }
 
@@ -183,7 +183,7 @@ export default {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
   border-radius: 10px;
-  color: rgba(200,230,201,0.5);
+  color: rgba(248,250,248,0.55);
   font-size: 13.5px; font-weight: 500;
   text-decoration: none;
   cursor: pointer; transition: all 0.2s;
@@ -191,20 +191,20 @@ export default {
 }
 
 .nav-item:hover {
-  background: rgba(52,168,83,0.08);
-  color: #c8e6c9;
+  background: rgba(251,192,45,0.12); /* Golden Yellow tint */
+  color: #F8FAF8;
 }
 
 .nav-item.router-link-active {
-  background: rgba(52,168,83,0.15);
-  color: #5ddf80;
+  background: rgba(251,192,45,0.18);
+  color: #FBC02D; /* Golden Yellow active state */
 }
 
 /* FOOTER */
 .sidebar-footer {
   display: flex; align-items: center; gap: 10px;
   padding: 1rem 0.5rem 0;
-  border-top: 1px solid rgba(52,168,83,0.12);
+  border-top: 1px solid rgba(255,255,255,0.12);
   margin-top: 1rem;
 }
 
@@ -212,27 +212,27 @@ export default {
 
 .admin-avatar {
   width: 34px; height: 34px;
-  background: rgba(52,168,83,0.2);
+  background: rgba(251,192,45,0.2);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 600; color: #5ddf80;
+  font-size: 12px; font-weight: 600; color: #FBC02D;
   flex-shrink: 0;
 }
 
 .admin-name {
-  font-size: 12.5px; font-weight: 600; color: #c8e6c9;
+  font-size: 12.5px; font-weight: 600; color: #F8FAF8;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.admin-role { font-size: 10px; color: rgba(52,168,83,0.5); }
+.admin-role { font-size: 10px; color: rgba(248,250,248,0.55); }
 
 .btn-logout {
   background: none; border: none; cursor: pointer;
-  color: rgba(200,230,201,0.4); padding: 6px;
+  color: rgba(248,250,248,0.45); padding: 6px;
   border-radius: 8px; display: flex; align-items: center;
   transition: all 0.2s; flex-shrink: 0;
 }
-.btn-logout:hover { color: #e57373; background: rgba(229,115,115,0.1); }
+.btn-logout:hover { color: #D32F2F; background: rgba(211,47,47,0.1); } /* Error red */
 
 /* MAIN */
 .main-content {

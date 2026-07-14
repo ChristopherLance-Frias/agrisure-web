@@ -9,8 +9,8 @@
 
     <div class="season-card">
       <div class="season-info">
-        <div class="season-icon" :class="currentSeason ? currentSeason.status : 'closed'">
-          {{ currentSeason && currentSeason.status === 'application_open' ? '⏱' : '🔒' }}
+        <div class="season-icon" :class="currentSeason ? currentSeason.status : 'application_closed'">
+          {{ currentSeason && currentSeason.status === 'application_open' ? 'application open' : 'application closed' }}
         </div>
       </div>
 
@@ -519,11 +519,13 @@ export default {
     },
 
     previousSeasons() {
-      return this.seasons.filter(function(season) {
-        return season.status === 'completed'
-      })
+      const currentId = this.currentSeason ? String(this.currentSeason.id) : null;
+      return this.seasons.filter((season) => {
+        const isCurrentId = String(season.id) === currentId;
+        const isDefaultSeason = season.is_default === true || season.is_default === 1 || season.is_default === '1';
+        return !isCurrentId && !isDefaultSeason;
+      });
     },
-
     activeClaims() {
       var self = this
       var list = this.claims || []
@@ -986,7 +988,8 @@ export default {
 }
 
 .season-icon {
-  font-size: 22px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
   background: #F0FDF4;
   padding: 10px;
   border-radius: 10px;
