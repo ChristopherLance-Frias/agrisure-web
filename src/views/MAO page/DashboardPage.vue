@@ -1,255 +1,248 @@
 <template>
-  <div class="flex h-screen overflow-hidden bg-[#F7F9F7] font-sans text-[#263238]">
+  <div class="dashboard-layout">
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-[#1B5E20] text-white flex flex-col justify-between shrink-0 shadow-lg z-20">
-      <div>
-        <!-- Logo Section -->
-        <div class="h-16 flex items-center px-6 bg-opacity-20 bg-black border-b border-green-800">
-          <i class="fa-solid fa-wheat-awn text-[#FBC02D] text-2xl mr-3"></i>
-          <span class="text-xl font-bold tracking-wide text-white">
-            AgriSure 
-            <span class="text-xs font-normal text-green-200 block -mt-1">MAO Dashboard</span>
-          </span>
-        </div>
+   
 
-        <!-- Navigation Links -->
-        <nav class="mt-6 px-4 space-y-1">
-          <a
-            v-for="item in navItems"
-            :key="item.name"
-            :href="item.href"
-            :class="[
-              item.active 
-                ? 'bg-[#2E7D32] text-white shadow-sm' 
-                : 'text-green-100 hover:bg-green-800 hover:text-white',
-              'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all'
-            ]"
-          >
-            <i :class="[item.icon, 'w-6']"></i> {{ item.name }}
-          </a>
-        </nav>
-      </div>
-
-      <!-- Bottom Sidebar Actions -->
-      <div class="p-4 border-t border-green-800 space-y-1">
-        <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-green-100 hover:bg-green-800 hover:text-white transition-all">
-          <i class="fa-solid fa-gear w-6"></i> Settings
-        </a>
-        <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-red-200 hover:bg-red-700 hover:text-white transition-all">
-          <i class="fa-solid fa-right-from-bracket w-6"></i> Logout
-        </a>
-      </div>
-    </aside>
-
-    <!-- MAIN CONTENT CONTAINER -->
-    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
+    <!-- MAIN CONTENT AREA -->
+    <div class="main-wrapper">
 
       <!-- TOP BAR / HEADER -->
-      <header class="bg-white border-b border-[#E5E7EB] sticky top-0 z-10 shadow-sm px-8 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <button class="text-gray-500 hover:text-[#2E7D32] lg:hidden">
-            <i class="fa-solid fa-bars text-xl"></i>
-          </button>
-          <div>
-            <h1 class="text-xl font-bold text-[#263238]">Welcome back, {{ currentUser.name }}!</h1>
-            <p class="text-xs text-gray-500">Here's what's happening in AgriSure today.</p>
-          </div>
+      <header class="top-header">
+        <div class="header-title-group">
+          <h1>Dashboard Overview</h1>
+          <p>San Guillermo Municipal Agriculture Office</p>
         </div>
 
-        <div class="flex items-center space-x-4">
-          <!-- Season Dropdown -->
-          <div class="relative">
-            <select v-model="selectedSeason" class="bg-[#F7F9F7] border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-sm font-medium text-[#263238] focus:outline-none focus:border-[#2E7D32] cursor-pointer">
-              <option value="wet">🌾 Wet Season</option>
-              <option value="dry">☀️ Dry Season</option>
-            </select>
+        <div class="header-actions">
+          <!-- Search Bar -->
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input 
+              type="text" 
+              placeholder="Search farmer, claim, ID..." 
+              class="search-input"
+            />
           </div>
 
+          <!-- Season Dropdown -->
+          <select v-model="selectedSeason" class="season-select">
+            <option value="wet">🌾 Wet Season (2026)</option>
+            <option value="dry">☀️ Dry Season (2026)</option>
+          </select>
+
           <!-- Notifications Button -->
-          <button class="relative p-2 text-gray-500 hover:text-[#2E7D32] rounded-full hover:bg-gray-100">
-            <i class="fa-regular fa-bell text-lg"></i>
-            <span class="absolute top-1 right-1 w-2 h-2 bg-[#E53935] rounded-full"></span>
+          <button class="icon-btn">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-badge"></span>
           </button>
 
-          <!-- Profile Dropdown -->
-          <div class="flex items-center space-x-3 border-l border-[#E5E7EB] pl-4 cursor-pointer">
-            <div class="w-9 h-9 rounded-full bg-[#2E7D32] text-white flex items-center justify-center font-bold text-sm">
+          <div class="v-divider"></div>
+
+          <!-- User Profile -->
+          <div class="user-profile">
+            <div class="user-avatar">
               {{ currentUser.initials }}
             </div>
-            <div class="hidden md:block">
-              <p class="text-sm font-semibold text-[#263238] leading-tight">{{ currentUser.name }}</p>
-              <p class="text-xs text-gray-400">{{ currentUser.role }}</p>
+            <div class="user-info">
+              <p class="user-name">{{ currentUser.name }}</p>
+              <p class="user-role">{{ currentUser.role }}</p>
             </div>
-            <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
           </div>
         </div>
       </header>
 
       <!-- DASHBOARD BODY CONTAINER -->
-      <main class="p-8 space-y-8">
+      <main class="dashboard-body">
 
-        <!-- SECTION 1: TOP METRIC CARDS (5-Columns) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- METRICS ROW (5 Cards) -->
+        <div class="metrics-grid">
           <!-- Card 1: Farmers -->
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Farmers</p>
-                <h3 class="text-2xl font-bold text-[#263238] mt-1">{{ stats.farmers.count }}</h3>
-              </div>
-              <div class="p-2.5 bg-green-50 rounded-lg text-[#2E7D32]">
-                <i class="fa-solid fa-users text-lg"></i>
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Registered Farmers</span>
+              <div class="icon-badge green">
+                <i class="fa-solid fa-users"></i>
               </div>
             </div>
-            <p class="text-xs text-[#4CAF50] mt-3 font-medium flex items-center gap-1">
-              <i class="fa-solid fa-arrow-up"></i> {{ stats.farmers.change }}
-            </p>
+            <h3 class="card-value">{{ stats.farmers.count }}</h3>
+            <div class="card-footer green">
+              <span class="status-pill green">
+                <i class="fa-solid fa-arrow-trend-up"></i> {{ stats.farmers.change }}
+              </span>
+            </div>
           </div>
 
           <!-- Card 2: Applications -->
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Applications</p>
-                <h3 class="text-2xl font-bold text-[#263238] mt-1">{{ stats.applications.count }}</h3>
-              </div>
-              <div class="p-2.5 bg-blue-50 rounded-lg text-blue-600">
-                <i class="fa-solid fa-file-lines text-lg"></i>
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Applications</span>
+              <div class="icon-badge blue">
+                <i class="fa-solid fa-file-signature"></i>
               </div>
             </div>
-            <p class="text-xs text-[#FFB300] mt-3 font-medium flex items-center gap-1">
-              <i class="fa-solid fa-clock"></i> {{ stats.applications.pending }}
-            </p>
+            <h3 class="card-value">{{ stats.applications.count }}</h3>
+            <div class="card-footer amber">
+              <span class="status-pill amber">
+                <i class="fa-solid fa-clock"></i> {{ stats.applications.pending }}
+              </span>
+            </div>
           </div>
 
           <!-- Card 3: Claims -->
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Claims</p>
-                <h3 class="text-2xl font-bold text-[#263238] mt-1">{{ stats.claims.count }}</h3>
-              </div>
-              <div class="p-2.5 bg-amber-50 rounded-lg text-amber-600">
-                <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Active Claims</span>
+              <div class="icon-badge amber">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
               </div>
             </div>
-            <p class="text-xs text-amber-600 mt-3 font-medium flex items-center gap-1">
-              <i class="fa-solid fa-magnifying-glass"></i> {{ stats.claims.inspecting }}
-            </p>
+            <h3 class="card-value">{{ stats.claims.count }}</h3>
+            <div class="card-footer amber">
+              <span class="status-pill amber">
+                <i class="fa-solid fa-magnifying-glass"></i> {{ stats.claims.inspecting }}
+              </span>
+            </div>
           </div>
 
           <!-- Card 4: Damage Reports -->
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Damage Reports</p>
-                <h3 class="text-2xl font-bold text-[#263238] mt-1">{{ stats.damage.count }}</h3>
-              </div>
-              <div class="p-2.5 bg-red-50 rounded-lg text-[#E53935]">
-                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Damage Reports</span>
+              <div class="icon-badge red">
+                <i class="fa-solid fa-triangle-exclamation"></i>
               </div>
             </div>
-            <p class="text-xs text-[#E53935] mt-3 font-medium flex items-center gap-1">
-              <i class="fa-solid fa-circle-exclamation"></i> {{ stats.damage.critical }}
-            </p>
+            <h3 class="card-value">{{ stats.damage.count }}</h3>
+            <div class="card-footer red">
+              <span class="status-pill red">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ stats.damage.critical }}
+              </span>
+            </div>
           </div>
 
           <!-- Card 5: Inventory -->
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inventory</p>
-                <h3 class="text-2xl font-bold text-[#263238] mt-1">{{ stats.inventory.items }} <span class="text-xs font-normal text-gray-400">Items</span></h3>
-              </div>
-              <div class="p-2.5 bg-purple-50 rounded-lg text-purple-600">
-                <i class="fa-solid fa-boxes-stacked text-lg"></i>
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Inventory</span>
+              <div class="icon-badge purple">
+                <i class="fa-solid fa-boxes-stacked"></i>
               </div>
             </div>
-            <p class="text-xs text-[#E53935] mt-3 font-medium flex items-center gap-1">
-              <i class="fa-solid fa-box-open"></i> {{ stats.inventory.lowStock }}
-            </p>
+            <h3 class="card-value">
+              {{ stats.inventory.items }} <span class="unit-text">Items</span>
+            </h3>
+            <div class="card-footer red">
+              <span class="status-pill red">
+                <i class="fa-solid fa-box-open"></i> {{ stats.inventory.lowStock }}
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- SECTION 2: CHARTS & TASKS -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-base font-bold text-[#263238]">Application Trend (2026)</h2>
-              <button class="text-xs text-[#2E7D32] font-semibold hover:underline">View Detailed</button>
+        <!-- MAIN CHARTS ROW -->
+        <div class="row-grid-3">
+          <!-- Main Chart: Application Trend -->
+          <div class="panel col-span-2">
+            <div class="panel-header">
+              <div>
+                <h2>Application Volume Trend</h2>
+                <p>Monthly breakdown for calendar year 2026</p>
+              </div>
+              <button class="btn-secondary">View Full Analytics</button>
             </div>
-            <ApexChart type="bar" height="240" :options="chartConfigs.applicationTrend.options" :series="chartConfigs.applicationTrend.series" />
+            <ApexChart type="bar" height="250" :options="chartConfigs.applicationTrend.options" :series="chartConfigs.applicationTrend.series" />
           </div>
 
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm flex flex-col justify-between">
+          <!-- Pending Tasks Card -->
+          <div class="panel flex-column-between">
             <div>
-              <h2 class="text-base font-bold text-[#263238] mb-4">Pending Tasks</h2>
-              <ul class="space-y-3 text-sm">
-                <li v-for="task in pendingTasks" :key="task.id" class="flex items-center justify-between p-2.5 bg-[#F7F9F7] rounded-lg border border-gray-100">
-                  <span class="flex items-center gap-2">
-                    <span :class="['w-2.5 h-2.5 rounded-full', task.indicatorClass]"></span> {{ task.title }}
-                  </span>
-                  <span :class="[task.badgeClass, 'text-xs px-2 py-0.5 rounded-full font-bold']">{{ task.badgeText }}</span>
+              <div class="panel-header">
+                <h2>Urgent Pending Tasks</h2>
+                <span class="count-pill">5 Actionable</span>
+              </div>
+              <ul class="task-list">
+                <li v-for="task in pendingTasks" :key="task.id" class="task-item">
+                  <div class="task-info">
+                    <span :class="['dot', task.dotColor]"></span>
+                    <span class="task-title">{{ task.title }}</span>
+                  </div>
+                  <span :class="['task-badge', task.badgeColor]">{{ task.badgeText }}</span>
                 </li>
               </ul>
             </div>
+            <button class="btn-block">Manage Task Queue</button>
           </div>
         </div>
 
-        <!-- SECTION 3: ANALYTICS ROW -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-2">Damage Analytics by Cause</h2>
-            <ApexChart type="bar" height="220" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
+        <!-- ANALYTICS DUAL ROW -->
+        <div class="row-grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Damage Analytics by Cause</h2>
+              <span class="subtext">Total Incidents Reported</span>
+            </div>
+            <ApexChart type="bar" height="210" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
           </div>
 
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-2">Insurance Application Status</h2>
-            <ApexChart type="donut" height="220" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Insurance Application Status</h2>
+              <span class="subtext">Current Season Approval Rate</span>
+            </div>
+            <ApexChart type="donut" height="210" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
           </div>
         </div>
 
-        <!-- SECTION 4: INVENTORY & DISTRIBUTION -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-2">Inventory Stock Levels</h2>
-            <ApexChart type="bar" height="220" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
+        <!-- INVENTORY & DISTRIBUTION ROW -->
+        <div class="row-grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Inventory Stock Levels</h2>
+              <button class="link-btn">Restock Alert Log</button>
+            </div>
+            <ApexChart type="bar" height="210" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
           </div>
 
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-4">Distribution Summary</h2>
-            <div class="grid grid-cols-2 gap-4">
-              <div v-for="item in distributionSummary" :key="item.label" class="p-4 bg-[#F7F9F7] rounded-xl border border-[#E5E7EB]">
-                <p class="text-xs text-gray-500 font-semibold uppercase">{{ item.label }}</p>
-                <p :class="['text-3xl font-bold mt-1', item.colorClass]">{{ item.value }} <span v-if="item.unit" class="text-xs font-normal text-gray-400">{{ item.unit }}</span></p>
+          <div class="panel">
+            <h2 class="panel-title-spaced">Distribution Summary</h2>
+            <div class="summary-grid">
+              <div v-for="item in distributionSummary" :key="item.label" class="summary-card">
+                <p class="summary-label">{{ item.label }}</p>
+                <p :class="['summary-value', item.colorClass]">
+                  {{ item.value }} 
+                  <span v-if="item.unit" class="summary-unit">{{ item.unit }}</span>
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- SECTION 5: BARANGAY PERFORMANCE & WEATHER -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-4">Barangay Performance Summary</h2>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm">
-                <thead class="bg-[#F7F9F7] text-gray-500 uppercase text-xs">
+        <!-- BARANGAY PERFORMANCE & WEATHER WIDGET -->
+        <div class="row-grid-3">
+          <!-- Table Container -->
+          <div class="panel col-span-2">
+            <div class="panel-header">
+              <h2>Barangay Performance Summary</h2>
+              <button class="link-btn-muted">Export CSV</button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <th class="py-3 px-4 rounded-l-lg">Barangay</th>
-                    <th class="py-3 px-4">Farmers</th>
-                    <th class="py-3 px-4">Claims</th>
-                    <th class="py-3 px-4 rounded-r-lg">Damage Incidents</th>
+                    <th>Barangay</th>
+                    <th>Active Farmers</th>
+                    <th>Claims Filed</th>
+                    <th>Damage Severity</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-[#E5E7EB] text-[#263238]">
+                <tbody>
                   <tr v-for="bg in barangayData" :key="bg.name">
-                    <td class="py-3 px-4 font-semibold">{{ bg.name }}</td>
-                    <td class="py-3 px-4">{{ bg.farmers }}</td>
-                    <td class="py-3 px-4">{{ bg.claims }}</td>
-                    <td class="py-3 px-4">
-                      <span :class="[bg.damage > 5 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800', 'text-xs px-2 py-0.5 rounded-full']">
-                        {{ bg.damage }}
+                    <td class="font-bold">{{ bg.name }}</td>
+                    <td>{{ bg.farmers }}</td>
+                    <td>{{ bg.claims }}</td>
+                    <td>
+                      <span :class="['severity-badge', bg.damage > 5 ? 'warning' : 'success']">
+                        {{ bg.damage }} Incidents
                       </span>
                     </td>
                   </tr>
@@ -259,87 +252,96 @@
           </div>
 
           <!-- Weather Card -->
-          <div class="bg-gradient-to-br from-green-800 to-[#1B5E20] text-white rounded-xl p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <div class="flex justify-between items-start">
+          <div class="weather-card">
+            <div class="weather-bg-icon">
+              <i class="fa-solid fa-cloud-sun"></i>
+            </div>
+            
+            <div class="weather-content">
+              <div class="weather-top">
                 <div>
-                  <p class="text-xs font-semibold text-green-200 uppercase">San Guillermo Weather</p>
-                  <h3 class="text-3xl font-bold mt-1">{{ weather.temp }}</h3>
+                  <span class="weather-subtitle">San Guillermo Agro-Weather</span>
+                  <h3 class="weather-temp">{{ weather.temp }}</h3>
                 </div>
-                <i :class="[weather.icon, 'text-[#FBC02D] text-4xl']"></i>
+                <div class="weather-icon-box">
+                  <i :class="weather.icon"></i>
+                </div>
               </div>
-              <p class="text-sm text-green-100 mt-1">{{ weather.condition }}</p>
+              <p class="weather-condition">{{ weather.condition }}</p>
             </div>
 
-            <div class="space-y-2 mt-6 pt-4 border-t border-green-700/60 text-sm">
-              <div class="flex justify-between text-green-100">
-                <span><i class="fa-solid fa-droplet w-5"></i> Humidity</span>
-                <span class="font-bold text-white">{{ weather.humidity }}</span>
+            <div class="weather-stats">
+              <div class="weather-stat-row">
+                <span><i class="fa-solid fa-droplet"></i> Humidity</span>
+                <strong>{{ weather.humidity }}</strong>
               </div>
-              <div class="flex justify-between text-green-100">
-                <span><i class="fa-solid fa-cloud-showers-heavy w-5"></i> Rain Chance</span>
-                <span class="font-bold text-white">{{ weather.rainChance }}</span>
+              <div class="weather-stat-row">
+                <span><i class="fa-solid fa-cloud-showers-heavy"></i> Rain Probability</span>
+                <strong>{{ weather.rainChance }}</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- SECTION 6: ACTIVITIES & QUICK ACTIONS -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-4">Recent Activities</h2>
-            <ul class="space-y-3 text-sm">
-              <li v-for="act in recentActivities" :key="act.id" class="flex items-center gap-3">
-                <span :class="['w-2.5 h-2.5 rounded-full shrink-0', act.color]"></span>
-                <span class="text-gray-600" v-html="act.text"></span>
-                <span class="text-xs text-gray-400 ml-auto">{{ act.time }}</span>
+        <!-- ACTIVITIES & QUICK ACTIONS -->
+        <div class="row-grid-3">
+          <!-- Activities Feed -->
+          <div class="panel col-span-2">
+            <h2 class="panel-title-spaced">Recent Municipal Activity Log</h2>
+            <ul class="activity-list">
+              <li v-for="act in recentActivities" :key="act.id" class="activity-item">
+                <span :class="['activity-dot', act.colorClass]"></span>
+                <span class="activity-text" v-html="act.text"></span>
+                <span class="activity-time">{{ act.time }}</span>
               </li>
             </ul>
           </div>
 
-          <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-            <h2 class="text-base font-bold text-[#263238] mb-4">Quick Actions</h2>
-            <div class="flex flex-col gap-2">
-              <button class="w-full bg-[#2E7D32] text-white text-sm font-semibold py-2.5 px-4 rounded-lg hover:bg-green-800 transition-colors flex items-center justify-center gap-2">
-                <i class="fa-solid fa-user-plus text-xs"></i> Verify Farmer
+          <!-- Quick Actions Grid -->
+          <div class="panel">
+            <h2 class="panel-title-spaced">Quick Action Shortcuts</h2>
+            <div class="actions-grid">
+              <button class="btn-primary col-span-full">
+                <i class="fa-solid fa-user-check"></i> Verify New Farmer
               </button>
-              <button class="w-full bg-[#F7F9F7] border border-[#E5E7EB] text-[#263238] text-sm font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
-                <i class="fa-solid fa-truck-ramp-box text-xs text-[#2E7D32]"></i> Create Distribution
+              <button class="btn-outline">
+                <i class="fa-solid fa-truck-ramp-box icon-green"></i> Schedule Distribution
               </button>
-              <button class="w-full bg-[#F7F9F7] border border-[#E5E7EB] text-[#263238] text-sm font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
-                <i class="fa-solid fa-box text-xs text-[#2E7D32]"></i> Add Inventory
-              </button>
-              <button class="w-full bg-[#F7F9F7] border border-[#E5E7EB] text-[#263238] text-sm font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
-                <i class="fa-solid fa-file-signature text-xs text-[#2E7D32]"></i> Process Claim
+              <button class="btn-outline">
+                <i class="fa-solid fa-box icon-green"></i> Add Supplies
               </button>
             </div>
           </div>
         </div>
 
-        <!-- SECTION 7: FARM MAP INTERACTIVE PLACEHOLDER -->
-        <div class="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-          <div class="flex justify-between items-center mb-4">
+        <!-- MUNICIPAL FARM MAP PREVIEW -->
+        <div class="panel">
+          <div class="panel-header">
             <div>
-              <h2 class="text-base font-bold text-[#263238]">Municipal Farm Map</h2>
-              <p class="text-xs text-gray-500">Click any barangay status indicator to filter municipal data.</p>
+              <h2>Interactive Municipal Farm Map</h2>
+              <p>Select any barangay node below to filter regional data</p>
             </div>
-            <span class="text-xs font-semibold text-[#2E7D32] bg-green-50 px-3 py-1 rounded-full border border-green-200">Interactive Map Preview</span>
+            <span class="gis-badge">
+              GIS Module Connected
+            </span>
           </div>
           
-          <div class="w-full h-72 rounded-xl border border-dashed border-[#2E7D32] flex flex-col items-center justify-center relative overflow-hidden p-6 bg-[#E8F5E9]/30">
-            <div class="absolute inset-0 opacity-10 pointer-events-none flex items-center justify-center">
-              <i class="fa-solid fa-map-location-dot text-[200px] text-[#2E7D32]"></i>
+          <div class="map-placeholder">
+            <div class="map-bg-icon">
+              <i class="fa-solid fa-map-location-dot"></i>
             </div>
 
-            <div class="z-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div class="map-grid">
               <button 
                 v-for="bgy in barangayData" 
                 :key="bgy.name"
-                class="p-4 bg-white rounded-xl shadow-md border border-[#E5E7EB] hover:border-[#2E7D32] transition-all group"
+                class="map-card"
               >
-                <span :class="['inline-block w-3 h-3 rounded-full mb-1', bgy.statusBg]"></span>
-                <h4 class="font-bold text-sm text-[#263238] group-hover:text-[#2E7D32]">{{ bgy.name }}</h4>
-                <p class="text-xs text-gray-500">{{ bgy.farmers }} Active Farmers</p>
+                <div class="map-card-top">
+                  <span class="map-card-title">{{ bgy.name }}</span>
+                  <span :class="['status-dot', bgy.statusBg]"></span>
+                </div>
+                <p class="map-card-desc">{{ bgy.farmers }} Active Farmers</p>
               </button>
             </div>
           </div>
@@ -354,23 +356,13 @@
 import { ref, reactive } from 'vue';
 import ApexChart from 'vue3-apexcharts';
 
-// Reactive State
+// Current Logged-in User
 const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' });
 const selectedSeason = ref('wet');
 
-// Sidebar Nav Items
-const navItems = ref([
-  { name: 'Dashboard', icon: 'fa-solid fa-chart-line', href: '#', active: true },
-  { name: 'Farmer Verification', icon: 'fa-solid fa-user-check', href: '#', active: false },
-  { name: 'Insurance Applications', icon: 'fa-solid fa-file-invoice', href: '#', active: false },
-  { name: 'Farm Map', icon: 'fa-solid fa-map-location-dot', href: '#', active: false },
-  { name: 'Damage Reports', icon: 'fa-solid fa-triangle-exclamation', href: '#', active: false },
-  { name: 'Claims', icon: 'fa-solid fa-hand-holding-dollar', href: '#', active: false },
-  { name: 'Inventory', icon: 'fa-solid fa-boxes-stacked', href: '#', active: false },
-  { name: 'Reports', icon: 'fa-solid fa-file-lines', href: '#', active: false },
-]);
 
-// Top Stats Cards Data
+
+// Top Stats
 const stats = ref({
   farmers: { count: '2,845', change: '+24 this month' },
   applications: { count: '1,245', pending: '86 Pending Today' },
@@ -379,81 +371,1067 @@ const stats = ref({
   inventory: { items: '126', lowStock: '7 Low Stock Items' },
 });
 
-// Tasks Data
+// Urgent Tasks
 const pendingTasks = ref([
-  { id: 1, title: 'Verify Farmers', badgeText: '12', indicatorClass: 'bg-[#FFB300]', badgeClass: 'bg-amber-100 text-amber-800' },
-  { id: 2, title: 'Review Claims', badgeText: '5', indicatorClass: 'bg-[#FFB300]', badgeClass: 'bg-amber-100 text-amber-800' },
-  { id: 3, title: 'Low Fertilizer Stock', badgeText: 'Alert', indicatorClass: 'bg-[#E53935]', badgeClass: 'bg-red-100 text-red-800' },
-  { id: 4, title: 'Seed Distribution', badgeText: 'Tomorrow', indicatorClass: 'bg-[#4CAF50]', badgeClass: 'bg-green-100 text-green-800' },
-  { id: 5, title: 'Insurance Deadline', badgeText: '3 Days', indicatorClass: 'bg-[#FFB300]', badgeClass: 'bg-amber-100 text-amber-800' },
+  { id: 1, title: 'Verify Farmer Applications', badgeText: '12 Left', dotColor: 'dot-amber', badgeColor: 'badge-amber' },
+  { id: 2, title: 'Field Claims Inspection', badgeText: '5 Today', dotColor: 'dot-amber', badgeColor: 'badge-amber' },
+  { id: 3, title: 'Fertilizer Stock Low', badgeText: 'Action Req.', dotColor: 'dot-red', badgeColor: 'badge-red' },
+  { id: 4, title: 'Rice Seed Distribution', badgeText: 'Tomorrow', dotColor: 'dot-green', badgeColor: 'badge-green' },
 ]);
 
-// Barangay Performance Data
+// Barangay Performance Table Data
 const barangayData = ref([
-  { name: 'Centro', farmers: 245, claims: 120, damage: 4, statusBg: 'bg-[#4CAF50]' },
-  { name: 'Rizal', farmers: 193, claims: 98, damage: 8, statusBg: 'bg-[#FFB300]' },
-  { name: 'Mabini', farmers: 175, claims: 82, damage: 2, statusBg: 'bg-[#E53935]' },
-  { name: 'San Roque', farmers: 140, claims: 65, damage: 1, statusBg: 'bg-[#4CAF50]' },
+  { name: 'Centro', farmers: 245, claims: 120, damage: 4, statusBg: 'dot-green' },
+  { name: 'Rizal', farmers: 193, claims: 98, damage: 8, statusBg: 'dot-amber' },
+  { name: 'Mabini', farmers: 175, claims: 82, damage: 2, statusBg: 'dot-red' },
+  { name: 'San Roque', farmers: 140, claims: 65, damage: 1, statusBg: 'dot-green' },
 ]);
 
-// Weather Widget Data
-const weather = ref({ temp: '29°C', condition: 'Partly Cloudy', humidity: '81%', rainChance: '70%', icon: 'fa-solid fa-sun' });
+// Weather Overview
+const weather = ref({ temp: '29°C', condition: 'Partly Cloudy', humidity: '81%', rainChance: '70%', icon: 'fa-solid fa-cloud-sun' });
 
-// Distribution KPI Summary
+// Distribution KPIs
 const distributionSummary = ref([
-  { label: 'Completed Distributions', value: '14', colorClass: 'text-[#2E7D32]' },
-  { label: 'Upcoming Scheduled', value: '3', colorClass: 'text-[#FBC02D]' },
-  { label: 'Total Beneficiaries', value: '540', colorClass: 'text-[#263238]' },
-  { label: 'Supplies Distributed', value: '1,320', unit: 'units', colorClass: 'text-[#263238]' },
+  { label: 'Distributions Completed', value: '14', colorClass: 'text-green' },
+  { label: 'Upcoming Scheduled', value: '3', colorClass: 'text-amber' },
+  { label: 'Total Beneficiaries', value: '540', colorClass: 'text-dark' },
+  { label: 'Supplies Distributed', value: '1,320', unit: 'units', colorClass: 'text-dark' },
 ]);
 
-// Activities
+// Activity Log
 const recentActivities = ref([
-  { id: 1, color: 'bg-[#4CAF50]', text: '<strong class="text-[#263238]">Juan Dela Cruz</strong> submitted a new insurance application.', time: '10m ago' },
-  { id: 2, color: 'bg-[#4CAF50]', text: '<strong class="text-[#263238]">Maria Santos</strong> reported flood crop damage in Rizal.', time: '1h ago' },
-  { id: 3, color: 'bg-[#FFB300]', text: 'Inventory updated: <strong class="text-[#263238]">Urea Fertilizer</strong> stock reduced.', time: '3h ago' },
-  { id: 4, color: 'bg-blue-500', text: 'Insurance Claim <strong class="text-[#263238]">#CLM-2026-089</strong> approved.', time: '5h ago' },
+  { id: 1, colorClass: 'dot-green', text: '<strong style="color: #0f172a;">Juan Dela Cruz</strong> submitted a new insurance application.', time: '10m ago' },
+  { id: 2, colorClass: 'dot-red', text: '<strong style="color: #0f172a;">Maria Santos</strong> filed flood crop damage report for Barangay Rizal.', time: '1h ago' },
+  { id: 3, colorClass: 'dot-amber', text: 'Stock update: <strong style="color: #0f172a;">Urea Fertilizer</strong> reserve reduced below threshold.', time: '3h ago' },
+  { id: 4, colorClass: 'dot-blue', text: 'Insurance Claim <strong style="color: #0f172a;">#CLM-2026-089</strong> approved by Regional Office.', time: '5h ago' },
 ]);
 
-// Chart Configuration (ApexCharts)
+// ApexCharts Reactive Configurations
 const chartConfigs = reactive({
   applicationTrend: {
     series: [{ name: 'Applications', data: [45, 52, 38, 65, 89, 120, 95, 110] }],
     options: {
-      chart: { toolbar: { show: false } },
-      colors: ['#2E7D32'],
-      plotOptions: { bar: { borderRadius: 4, columnWidth: '45%' } },
-      xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'] },
-      grid: { borderColor: '#E5E7EB' }
+      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
+      colors: ['#047857'],
+      plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
+      xaxis: { 
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+      },
+      yaxis: { labels: { style: { colors: '#94a3b8', fontSize: '11px' } } },
+      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
     }
   },
   damageAnalytics: {
     series: [{ name: 'Incidents', data: [45, 28, 15, 8] }],
     options: {
-      chart: { toolbar: { show: false } },
-      plotOptions: { bar: { borderRadius: 4, horizontal: true, barHeight: '50%' } },
-      colors: ['#E53935'],
-      xaxis: { categories: ['Flood', 'Typhoon', 'Drought', 'Pest'] },
-      grid: { borderColor: '#E5E7EB' }
+      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
+      plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '45%' } },
+      colors: ['#e11d48'],
+      xaxis: { 
+        categories: ['Flood', 'Typhoon', 'Drought', 'Pest'],
+        labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+      },
+      yaxis: { labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } } },
+      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
     }
   },
   insuranceStatus: {
     series: [68, 20, 12],
     options: {
+      chart: { fontFamily: 'inherit' },
       labels: ['Approved', 'Pending', 'Rejected'],
-      colors: ['#4CAF50', '#FFB300', '#E53935'],
-      legend: { position: 'bottom' }
+      colors: ['#059669', '#d97706', '#e11d48'],
+      legend: { position: 'bottom', fontSize: '12px', labels: { colors: '#64748b' } },
+      stroke: { width: 0 }
     }
   },
   inventoryStatus: {
     series: [{ name: 'Stock Level (%)', data: [85, 60, 18, 75] }],
     options: {
-      chart: { toolbar: { show: false } },
-      plotOptions: { bar: { borderRadius: 4, horizontal: true, barHeight: '50%' } },
-      colors: ['#2E7D32'],
-      xaxis: { categories: ['Rice Seeds', 'Corn Seeds', 'Fertilizer', 'Pesticides'], max: 100 },
-      grid: { borderColor: '#E5E7EB' }
+      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
+      plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '45%' } },
+      colors: ['#059669'],
+      xaxis: { categories: ['Rice Seeds', 'Corn Seeds', 'Fertilizer', 'Pesticides'], max: 100, labels: { style: { colors: '#94a3b8', fontSize: '11px' } } },
+      yaxis: { labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } } },
+      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
     }
   }
 });
 </script>
+
+<style scoped>
+/* GENERAL STYLES & RESET */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #334155;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 256px;
+  background-color: #0f3822;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 30;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(6, 78, 59, 0.4);
+}
+
+.brand-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  background-color: rgba(2, 44, 34, 0.4);
+  border-bottom: 1px solid rgba(6, 95, 70, 0.4);
+}
+
+.brand-logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fbbf24, #fcd34d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #022c22;
+  font-weight: 900;
+  box-shadow: 0 4px 10px rgba(251, 191, 36, 0.2);
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  display: block;
+  line-height: 1;
+}
+
+.brand-subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #6ee7b7;
+  display: block;
+  margin-top: 4px;
+}
+
+.nav-container {
+  margin-top: 20px;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  color: rgba(167, 243, 208, 0.8);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.nav-item:hover {
+  background-color: rgba(6, 95, 70, 0.5);
+  color: #ffffff;
+}
+
+.nav-item.active {
+  background-color: rgba(5, 150, 105, 0.9);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(6, 78, 59, 0.3);
+}
+
+.nav-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 16px;
+  color: rgba(110, 231, 183, 0.7);
+}
+
+.nav-item.active .nav-icon {
+  color: #fcd34d;
+}
+
+.nav-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9999px;
+  background-color: #fbbf24;
+  color: #022c22;
+}
+
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid rgba(6, 95, 70, 0.4);
+  background-color: rgba(2, 44, 34, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  color: rgba(167, 243, 208, 0.7);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.footer-link:hover {
+  background-color: rgba(6, 95, 70, 0.4);
+  color: #ffffff;
+}
+
+.footer-link.logout {
+  color: rgba(fda4af, 0.8);
+}
+
+.footer-link.logout:hover {
+  background-color: rgba(76, 5, 25, 0.4);
+  color: #fecdd3;
+}
+
+.footer-icon {
+  width: 20px;
+  text-align: center;
+}
+
+/* MAIN CONTENT WRAPPER */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* TOP HEADER */
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title-group h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.header-title-group p {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.search-box {
+  position: relative;
+  width: 256px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.search-input {
+  width: 100%;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 6px 12px 6px 36px;
+  font-size: 12px;
+  color: #334155;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.search-input:focus {
+  background-color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+.season-select {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.season-select:hover {
+  background-color: #e2e8f0;
+}
+
+.icon-btn {
+  position: relative;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background-color: #f1f5f9;
+  color: #047857;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background-color: #f43f5e;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+}
+
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #e2e8f0;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #047857, #059669);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* BODY CONTAINER */
+.dashboard-body {
+  padding: 32px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* METRICS GRID */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .metrics-grid { grid-template-columns: repeat(1, 1fr); }
+}
+
+.metric-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.icon-badge {
+  padding: 8px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.icon-badge.green { background-color: #ecfdf5; color: #047857; }
+.icon-badge.blue { background-color: #eff6ff; color: #2563eb; }
+.icon-badge.amber { background-color: #fffbeb; color: #d97706; }
+.icon-badge.red { background-color: #fff1f2; color: #e11d48; }
+.icon-badge.purple { background-color: #faf5ff; color: #9333ea; }
+
+.card-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 8px;
+  letter-spacing: -0.02em;
+}
+
+.unit-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.card-footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status-pill.green { background-color: #ecfdf5; color: #047857; }
+.status-pill.amber { background-color: #fffbeb; color: #b45309; }
+.status-pill.red { background-color: #fff1f2; color: #be123c; }
+
+/* GRID LAYOUT HELPER CLASSES */
+.row-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.row-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .row-grid-3, .row-grid-2 { grid-template-columns: 1fr; }
+}
+
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+@media (max-width: 1024px) {
+  .col-span-2 { grid-column: span 1; }
+}
+
+/* PANELS */
+.panel {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.flex-column-between {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.panel-header p {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.subtext {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.panel-title-spaced {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 16px;
+}
+
+/* BUTTONS & LINKS */
+.btn-secondary {
+  font-size: 12px;
+  font-weight: 700;
+  color: #047857;
+  background-color: #ecfdf5;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #d1fae5;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 16px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  background-color: #f1f5f9;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-block:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-primary {
+  background-color: #047857;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: #065f46;
+}
+
+.btn-outline {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-outline:hover {
+  background-color: #f1f5f9;
+}
+
+.link-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #047857;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.link-btn:hover { text-decoration: underline; }
+
+.link-btn-muted {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.link-btn-muted:hover { color: #0f172a; }
+
+/* TASKS LIST */
+.count-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.task-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+}
+
+.task-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.task-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* DOTS & BADGE COLORS */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.dot-amber { background-color: #fbbf24; box-shadow: 0 0 0 4px #fef3c7; }
+.dot-red { background-color: #f43f5e; box-shadow: 0 0 0 4px #ffe4e6; }
+.dot-green { background-color: #10b981; box-shadow: 0 0 0 4px #d1fae5; }
+.dot-blue { background-color: #3b82f6; box-shadow: 0 0 0 4px #dbeafe; }
+
+.badge-amber { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.badge-red { background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.badge-green { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+
+/* SUMMARY GRID */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.summary-card {
+  padding: 14px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+}
+
+.summary-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 900;
+  margin-top: 4px;
+  letter-spacing: -0.02em;
+}
+
+.summary-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.text-green { color: #047857; }
+.text-amber { color: #d97706; }
+.text-dark { color: #1e293b; }
+
+/* DATA TABLES */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.data-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-weight: 500;
+}
+
+.font-bold { font-weight: 700; color: #0f172a; }
+
+.severity-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid;
+}
+
+.severity-badge.warning { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
+.severity-badge.success { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+
+/* WEATHER CARD */
+.weather-card {
+  background: linear-gradient(135deg, #0f3822, #154d2e, #064e3b);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.weather-bg-icon {
+  position: absolute;
+  right: -24px;
+  top: -24px;
+  font-size: 120px;
+  color: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.weather-content {
+  position: relative;
+  z-index: 10;
+}
+
+.weather-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.weather-subtitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6ee7b7;
+}
+
+.weather-temp {
+  font-size: 36px;
+  font-weight: 800;
+  margin-top: 4px;
+  letter-spacing: -0.02em;
+}
+
+.weather-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fcd34d;
+  font-size: 24px;
+}
+
+.weather-condition {
+  font-size: 12px;
+  color: #a7f3d0;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.weather-stats {
+  position: relative;
+  z-index: 10;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(4, 120, 87, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.weather-stat-row {
+  display: flex;
+  justify-content: space-between;
+  color: #a7f3d0;
+}
+
+.weather-stat-row strong { color: #ffffff; }
+
+/* ACTIVITIES */
+.activity-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 12px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.activity-text {
+  color: #475569;
+  line-height: 1.4;
+}
+
+.activity-time {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* QUICK ACTIONS GRID */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.col-span-full {
+  grid-column: 1 / -1;
+}
+
+.icon-green {
+  color: #047857;
+  font-size: 14px;
+}
+
+/* MAP PLACEHOLDER */
+.gis-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #065f46;
+  background-color: #ecfdf5;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(167, 243, 208, 0.6);
+}
+
+.map-placeholder {
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  border: 1px dashed rgba(110, 231, 183, 0.8);
+  background-color: rgba(236, 253, 245, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.map-bg-icon {
+  position: absolute;
+  font-size: 180px;
+  color: #064e3b;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.map-grid {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 768px;
+}
+
+@media (max-width: 768px) {
+  .map-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.map-card {
+  padding: 14px;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.map-card:hover {
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.map-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.map-card-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: #1e293b;
+}
+
+.map-card-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+</style>
