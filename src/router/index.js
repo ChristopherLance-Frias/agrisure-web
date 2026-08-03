@@ -1,18 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '../views/LandingPage.vue'
 import LoginPage from '../views/MAO page/MAOLoginPage.vue'
-import DashboardPage from '../views/MAO page/MAODashboardPage.vue'
+import DashboardPage from '../views/MAO page/MaoSideBar.vue'
 import MaoOtpPage from '../views/MAO page/MAOOtpPage.vue'
 
 const routes = [
-  // ── Entry point ──────────────────────────────────────────────
   {
     path: '/',
     name: 'portal-select',
     component: LandingPage,
   },
-
-  // ── MAO Admin ────────────────────────────────────────────────
   {
     path: '/login',
     name: 'login',
@@ -68,6 +65,12 @@ const routes = [
       name: 'reports',
       component: () => import('@/views/MAO page/ReportsPage.vue')
       },
+      {
+      path: 'dash',
+      name: 'dashboard',
+      component: () => import('@/views/MAO page/DashboardPage.vue')
+      },
+      
     ],
   },
 

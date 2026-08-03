@@ -63,6 +63,11 @@
   <!-- box icon svg -->
           <span>Inventory</span>
         </router-link>
+
+        <router-link :to="{ name: 'dashboard' }" class="nav-item">
+  <!-- box icon svg -->
+          <span>Dashboard</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
