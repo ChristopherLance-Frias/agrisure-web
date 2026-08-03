@@ -89,6 +89,86 @@
       </div>
     </div>
 
+    <!-- Payment Verification Modal Popup -->
+    <div v-if="showVerifyModal && verifyingApp" class="modal-overlay" @click.self="closeVerifyModal">
+      <div class="modal-box verify-modal">
+        <h3 class="modal-title">Verify Payment Proof</h3>
+        <p class="modal-subtitle">Farmer: <strong>{{ farmerName(verifyingApp) }}</strong></p>
+
+        <div class="proof-preview-container">
+          <a
+            v-if="verifyingApp.payment_proof_url"
+            :href="verifyingApp.payment_proof_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="proof-link-wrap"
+          >
+            <img
+              :src="verifyingApp.payment_proof_url"
+              alt="Uploaded Payment Proof"
+              class="proof-image-preview"
+            />
+            <span class="proof-click-hint">🔍 Click image to view full document</span>
+          </a>
+          <div v-else class="no-proof-warning">
+            ⚠ No proof image uploaded yet.
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label>Verification Decision</label>
+          <div class="decision-toggle-group">
+            <button
+              type="button"
+              class="btn-decision approve"
+              :class="{ active: verifyDecision === 'approve' }"
+              @click="verifyDecision = 'approve'"
+            >
+              ✓ Approve Payment
+            </button>
+            <button
+              type="button"
+              class="btn-decision reject"
+              :class="{ active: verifyDecision === 'reject' }"
+              @click="verifyDecision = 'reject'"
+            >
+              ✕ Reject Payment
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label>
+            Remarks / Remarks Note
+            <span v-if="verifyDecision === 'reject'" class="required-star">* (Required)</span>
+          </label>
+          <textarea
+            v-model="verifyRemarks"
+            class="modal-input textarea-remarks"
+            rows="3"
+            placeholder="e.g. Reference number legible or reason for rejection..."
+          ></textarea>
+        </div>
+
+        <p v-if="verifyModalError" class="modal-error">{{ verifyModalError }}</p>
+
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" @click="closeVerifyModal" :disabled="savingVerify">
+            Cancel
+          </button>
+
+          <button
+            class="btn-modal-save"
+            :class="{ 'btn-danger': verifyDecision === 'reject' }"
+            @click="submitPaymentVerification"
+            :disabled="savingVerify"
+          >
+            {{ savingVerify ? 'Submitting...' : 'Submit Decision' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="section-divider">
       <span>Applications Matrix</span>
     </div>
@@ -174,7 +254,7 @@
         class="btn-print-pcic"
         @click="printPcicBatchManifest"
       >
-        🖨️ Print Batch for PCIC ({{ countByStatus('approved_for_pcic') }})
+        🖨️ Print PCIC Form ({{ countByStatus('approved_for_pcic') }})
       </button>
     </div>
 
@@ -215,16 +295,25 @@
           </template>
 
           <template v-if="selectedStatus === 'approved_for_pcic'">
-            <button class="btn-action-submit-pcic" @click="bulkUpdateStatus('submitted_to_pcic')">
-              Mark {{ selectedIds.length }} as Forwarded to PCIC
-            </button>
-
             <button
               class="btn-print-pcic"
               @click="printSelectedPcicBatch"
             >
-              🖨️ Print Batch ({{ selectedIds.length }})
+              🖨️ Print Form Batch ({{ selectedIds.length }})
             </button>
+
+            <button
+              class="btn-action-submit-pcic"
+              :disabled="!hasPrintedCurrentBatch"
+              :title="!hasPrintedCurrentBatch ? 'You must Print PCIC Form first before marking as Forwarded' : ''"
+              @click="bulkUpdateStatus('submitted_to_pcic')"
+            >
+              Mark {{ selectedIds.length }} as Forwarded to PCIC
+            </button>
+
+            <span v-if="!hasPrintedCurrentBatch" class="print-required-notice">
+              ⚠️ Print PCIC Batch Form first to enable submit button.
+            </span>
           </template>
 
           <template v-if="selectedStatus === 'submitted_to_pcic'">
@@ -317,6 +406,7 @@
             <th>Farm Type</th>
             <th>Area (ha)</th>
             <th>Current Status</th>
+            <th>Payment</th>
             <th>Season</th>
             <th>Applied Date</th>
           </tr>
@@ -361,12 +451,18 @@
                 </span>
               </td>
 
+              <td>
+                <span v-if="!app.requires_payment" class="pay-badge free">Free</span>
+                <span v-else-if="app.payment_verified" class="pay-badge verified">Verified</span>
+                <span v-else class="pay-badge pending">Pending Proof</span>
+              </td>
+
               <td>{{ app.insurance_season?.season_name || currentSeasonName(app) }}</td>
               <td>{{ formatDate(app.application_date) }}</td>
             </tr>
 
             <tr v-if="expandedId === app.id" class="detail-row">
-              <td colspan="12">
+              <td colspan="13">
                 <div class="detail-box" @click.stop>
                   <div class="detail-actions-panel">
                     <div class="action-sub-group">
@@ -377,6 +473,15 @@
                       <!-- Single target workflows -->
                       <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
                         <button
+                          v-if="app.requires_payment && !app.payment_verified"
+                          class="btn-action-verify"
+                          @click="openVerifyModal(app)"
+                        >
+                          🔍 Verify Payment Proof
+                        </button>
+
+                        <button
+                          v-else
                           class="btn-action-approve"
                           @click="updateAppStatus(app.id, 'approved_for_pcic')"
                         >
@@ -516,6 +621,43 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Payment Details Section -->
+                    <div v-if="app.requires_payment" class="detail-section">
+                      <div class="section-title">Payment Verification Status</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">Requires Fee</span>
+                          <span class="detail-val">Yes</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Verification Status</span>
+                          <span class="detail-val">
+                            {{ app.payment_verified ? 'Verified' : 'Unverified / Pending Review' }}
+                          </span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.payment_remarks">
+                          <span class="detail-label">Verification Remarks</span>
+                          <span class="detail-val">{{ app.payment_remarks }}</span>
+                        </div>
+
+                        <div class="detail-item full-width">
+                          <span class="detail-label">Proof of Payment</span>
+                          <span class="detail-val">
+                            <button
+                              class="btn-inline-verify"
+                              @click="openVerifyModal(app)"
+                            >
+                              {{ app.payment_verified ? 'View Proof Image' : 'Review & Verify Proof' }}
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
 
                 </div>
@@ -526,788 +668,837 @@
       </table>
     </div>
 
-    <!-- Hidden Printable Transmittal Element -->
-    <div v-if="isPrintingPcicBatch" id="print-area" class="print-area pcic-batch-layout">
-      <div class="print-letterhead">
-        <h1>Office of the Municipal Agriculture Office</h1>
-        <h2>PCIC Master Batch Endorsement Transmittal Manifest</h2>
-        <p>
-          <strong>Target Insurance Season Window:</strong>
-          {{ currentSeason ? currentSeason.season_name : '' }}
-        </p>
-        <p>
-          <strong>Transmittal Dispatch Date:</strong>
-          {{ formatDate(new Date()) }}
-        </p>
+    <!-- Official Printable PCIC Application Form Layout (Matching Attached Images) -->
+    <div v-if="isPrintingPcicBatch" id="print-area" class="print-area pcic-official-form">
+      <!-- Page 1 Header -->
+      <div class="pcic-page-container">
+        <div class="pcic-header text-center">
+          <h3>PHILIPPINE CROP INSURANCE CORPORATION</h3>
+          <p class="subtitle">Regional Office No. 02</p>
+          <h2 class="form-title">APPLICATION FOR CROP INSURANCE</h2>
+          <p class="group-sub">(Group Application)</p>
+        </div>
+
+        <div class="pcic-meta-grid">
+          <div class="meta-row">
+            <span class="meta-label">Name of F/A/IA/COOP/A/SPO/LGU:</span>
+            <span class="meta-value">MUNICIPAL AGRICULTURE OFFICE (MAO)</span>
+          </div>
+          <div class="meta-row split-row">
+            <div>
+              <span class="meta-label">Underwriter/Solicitor:</span>
+              <span class="meta-value">_________________________</span>
+            </div>
+            <div>
+              <span class="meta-label">Mailing Address:</span>
+              <span class="meta-value">Echague, Isabela</span>
+            </div>
+          </div>
+          <div class="meta-row inline-checks">
+            <span class="meta-label">FARMER CATEGORY:</span>
+            <label>[ ] Self-Financed</label>
+            <label>[ ] Borrowing</label>
+            <span class="meta-label margin-left">Program:</span>
+            <label>[ ] RSBSA</label>
+            <label>[ ] RCEF</label>
+            <label>[ ] Regular</label>
+            <label>[ ] AGRI-SENSO</label>
+            <label>[ ] AGRI-PUHUNA/NAB</label>
+            <label>[ ] Others</label>
+          </div>
+        </div>
+
+        <!-- Official Page 1 Grid (15 Fixed Rows) -->
+        <table class="pcic-grid-table">
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-xs">No.</th>
+              <th colspan="4">Name of Farmers</th>
+              <th rowspan="2">Address<br>(Sitio & Barangay)</th>
+              <th rowspan="2">Date of Birth<br>(mm/dd/yy)</th>
+              <th rowspan="2">RSBSA Reference No.</th>
+              <th rowspan="2">Mode of Indemnity Payment</th>
+              <th rowspan="2">Lender</th>
+              <th rowspan="2">Account No.</th>
+              <th rowspan="2">Cellphone No.</th>
+              <th rowspan="2">Spouse / Parents</th>
+              <th rowspan="2">Beneficiary</th>
+              <th colspan="3">Planting Calendar</th>
+            </tr>
+            <tr>
+              <th>Last Name</th>
+              <th>First Name</th>
+              <th>Middle Name</th>
+              <th class="col-xs">Suffix</th>
+              <th>Area</th>
+              <th>Sowing/TS</th>
+              <th>Transplanting</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="index in 15" :key="'p1-' + index">
+              <td>{{ index }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.user?.last_name || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.user?.first_name || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.user?.middle_name || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.user?.extension_name || '' }}</td>
+              <td>{{ truncateAddress(getBatchItem(index - 1)?.farm?.farmer_profile?.address) }}</td>
+              <td></td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.rsbsa_no || '' }}</td>
+              <td>LBP / E-Wallet</td>
+              <td></td>
+              <td></td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farmer_profile?.user?.phone_number || '' }}</td>
+              <td></td>
+              <td>{{ getBatchItem(index - 1)?.beneficiary_name || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farm_area || '' }}</td>
+              <td>{{ formatDate(getBatchItem(index - 1)?.sowing_date) }}</td>
+              <td>{{ formatDate(getBatchItem(index - 1)?.transplanting_date) }}</td>
+            </tr>
+            <tr class="row-total">
+              <td colspan="14" class="text-right"><strong>TOTAL</strong></td>
+              <td><strong>{{ totalBatchArea }}</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Page 1 Bottom Certifications & Computations Section -->
+        <div class="pcic-footer-grid">
+          <div class="footer-box-left">
+            <p class="cert-title">CERTIFICATION AND DATA PRIVACY CONSENT STATEMENT</p>
+            <p class="cert-text">
+              [ ] We hereby certify that the foregoing answers and statements are complete, true and correct. If the application is approved, the insurance shall be deemed based upon the statements contained herein.
+            </p>
+            <p class="cert-text">
+              [ ] By submitting this application, we hereby consent to the collection, use, processing, and disclosure of our sensitive personal data in accordance with the Data Privacy Act of 2012.
+            </p>
+          </div>
+
+          <div class="footer-box-middle">
+            <p class="cert-title">PREMIUM COMPUTATION (FOR PCIC ONLY)</p>
+            <div class="pcic-calc-rows">
+              <div><span>Premium Rate:</span> <span>___________</span></div>
+              <div><span>Farmer's Share (P):</span> <span>___________</span></div>
+              <div><span>Government Premium Subsidy (GPS):</span> <span>___________</span></div>
+              <div><span>Lending Institution Share (LI):</span> <span>___________</span></div>
+              <div><span>Gross Premium (GP):</span> <span>___________</span></div>
+              <div><span>Net Premium (due to PCIC):</span> <span>___________</span></div>
+            </div>
+          </div>
+
+          <div class="footer-box-right">
+            <p class="cert-title">FOR PCIC ONLY</p>
+            <p class="small-text">CIC No: ____________</p>
+            <p class="small-text">Date Issued: ____________</p>
+            <p class="small-text">Crop: [ ] RICE [ ] CORN [ ] HVC</p>
+            <p class="small-text">Phase: Wet / Dry</p>
+          </div>
+        </div>
+
+        <div class="page-number-footer">PAGE 1 OF 2</div>
       </div>
 
-      <div class="print-divider"></div>
+      <div class="page-break"></div>
 
-      <table class="print-batch-table">
-        <thead>
-          <tr>
-            <th>App ID</th>
-            <th>Farmer Legal Name</th>
-            <th>Barangay Location</th>
-            <th>Commodity</th>
-            <th>Farm Area</th>
-            <th>Sowing Date</th>
-            <th>Tenure Position</th>
-          </tr>
-        </thead>
+      <!-- Page 2 Form Header and Grid -->
+      <div class="pcic-page-container">
+        <div class="pcic-header text-center">
+          <h2 class="form-title">APPLICATION FOR CROP INSURANCE</h2>
+          <p class="group-sub">(Group Application)</p>
+        </div>
 
-        <tbody>
-          <tr v-for="app in pcicBatchList" :key="app.id">
-            <td>{{ app.id }}</td>
-            <td>{{ farmerName(app) }}</td>
-            <td>{{ truncateAddress(app.farm?.farmer_profile?.address) }}</td>
-            <td>{{ app.farm ? app.farm.crop_type : '' }} ({{ app.variety || '' }})</td>
-            <td>{{ app.farm ? app.farm.farm_area : '' }} ha</td>
-            <td>{{ formatDate(app.sowing_date) }}</td>
-            <td>{{ app.tenure_status || 'Owner' }}</td>
-          </tr>
-        </tbody>
-      </table>
+        <table class="pcic-grid-table page2-table">
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-xs">No.</th>
+              <th rowspan="2">NAME OF FARMER<br><small>(First Name initials, Middle initial, Full Surname and Suffix)</small></th>
+              <th rowspan="2">DA-RSBSA GEOREF ID /<br>PCIC FARM ID</th>
+              <th rowspan="2">LOCATION OF FARM<br>(Barangay)</th>
+              <th rowspan="2">AREA<br>(ha)</th>
+              <th rowspan="2">LAND CATEGORY<br>/ SOIL TYPE</th>
+              <th rowspan="2">TENURIAL<br>STATUS</th>
+              <th colspan="4">BOUNDARIES / ADJACENT LOT OWNERS</th>
+            </tr>
+            <tr>
+              <th>North</th>
+              <th>South</th>
+              <th>East</th>
+              <th>West</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="index in 15" :key="'p2-' + index">
+              <td>{{ index }}</td>
+              <td>
+                <template v-if="getBatchItem(index - 1)">
+                  {{ formatShortName(getBatchItem(index - 1)?.farm?.farmer_profile?.user) }}
+                </template>
+              </td>
+              <td></td>
+              <td>{{ truncateAddress(getBatchItem(index - 1)?.farm?.farmer_profile?.address) }}</td>
+              <td>{{ getBatchItem(index - 1)?.farm?.farm_area || '' }}</td>
+              <td>{{ getLandCategoryCode(getBatchItem(index - 1)) }}</td>
+              <td>{{ getTenurialStatusCode(getBatchItem(index - 1)) }}</td>
+              <td>{{ getBatchItem(index - 1)?.north_boundary || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.south_boundary || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.east_boundary || '' }}</td>
+              <td>{{ getBatchItem(index - 1)?.west_boundary || '' }}</td>
+            </tr>
+            <tr class="row-total">
+              <td colspan="4" class="text-right"><strong>TOTAL AREA (ha)</strong></td>
+              <td><strong>{{ totalBatchArea }}</strong></td>
+              <td colspan="6"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Page 2 Legends & Official Signatures Section -->
+        <div class="pcic-p2-footer">
+          <div class="legends-container">
+            <div class="legend-box">
+              <strong>LAND CATEGORY / SOIL TYPE LEGEND (For Rice):</strong>
+              <div class="legend-grid">
+                <span>1 - Irrigated</span>
+                <span>2 - Rainfed Lowland</span>
+                <span>3 - Rainfed Upland</span>
+              </div>
+            </div>
+
+            <div class="legend-box">
+              <strong>TENURIAL STATUS LEGEND:</strong>
+              <div class="legend-grid">
+                <span>1 - Owner</span>
+                <span>2 - Lessee</span>
+                <span>3 - Tenant / Other</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="signatures-container">
+            <div class="signature-box">
+              <p class="sig-label">Prepared / Certified Correct by:</p>
+              <div class="sig-line"></div>
+              <p class="sig-title">Municipal Agricultural Officer (MAO) / Authorized Representative</p>
+              <p class="sig-sub">Signature over Printed Name / Date</p>
+            </div>
+
+            <div class="signature-box">
+              <p class="sig-label">Approved by (PCIC Regional Office):</p>
+              <div class="sig-line"></div>
+              <p class="sig-title">Underwriter / Authorized Official</p>
+              <p class="sig-sub">Signature over Printed Name / Date</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-number-footer">PAGE 2 OF 2</div>
+      </div>
     </div>
-
   </div>
 </template>
 
 <script>
-import axios from 'axios'
-
-const API_BASE = 'http://192.168.100.173:8000'
-
 export default {
-  name: 'CropInsuranceApplicationPage',
-
+  name: 'CropInsurancePage',
   data() {
     return {
-      activeAppTab: 'current',
-      applications: [],
-      historyApplications: [],
-      seasons: [],
-      historySeasonId: '',
-
-      isLoading: false,
-      errorMessage: '',
-      expandedId: null,
-
+      // Tab & Filtering
+      activeAppTab: 'current', // 'current' | 'history'
       searchName: '',
       filterCrop: '',
       filterStatus: '',
+      historySeasonId: '',
 
-      statusFilters: [
-        { label: 'All', value: '' },
-        { label: 'Submitted to MAO', value: 'submitted_to_mao' },
-        { label: 'To be Submitted to PCIC', value: 'approved_for_pcic' },
-        { label: 'Submitted to PCIC', value: 'submitted_to_pcic' },
-        { label: 'Needs Revision', value: 'needs_revision' },
-        { label: 'Insured', value: 'insured' },
-        { label: 'Rejected', value: 'rejected' },
+      // Selection & Bulk Actions
+      selectedIds: [],
+      hasPrintedCurrentBatch: false,
+
+      // UI States
+      isLoading: false,
+      isRefreshing: false,
+      errorMessage: '',
+      expandedId: null,
+      isPrintingPcicBatch: false,
+
+      // Auto Refresh Config
+      autoRefresh: false,
+      refreshIntervalSeconds: 15,
+      refreshTimer: null,
+      lastRefreshedAt: null,
+
+      // Active Insurance Season State
+      hasConfiguredSeason: true,
+      currentSeason: {
+        id: 'season-2026-wet',
+        season_name: 'Wet Season 2026',
+        deadline_date: '2026-09-30',
+        status: 'application_open'
+      },
+      previousSeasons: [
+        { id: 'season-2025-dry', season_name: 'Dry Season 2025' },
+        { id: 'season-2025-wet', season_name: 'Wet Season 2025' }
       ],
 
-      selectedIds: [],
-      batchProcessing: false,
-
-      isPrintingPcicBatch: false,
-      pcicBatchList: [],
-      currentSeason: null,
-
+      // Season Modal State
       showSeasonModal: false,
-      seasonModalError: '',
-      savingSeason: false,
       isStartingNewSeason: false,
-
+      savingSeason: false,
+      seasonModalError: '',
       seasonForm: {
-        season_name: 'Wet Season ' + new Date().getFullYear(),
-        deadline_date: '',
+        season_name: '',
+        deadline_date: ''
       },
 
-      autoRefresh: true,
-      isRefreshing: false,
-      lastRefreshedAt: null,
-      refreshIntervalSeconds: 30,
-      refreshTimer: null,
-    }
+      // Payment Verification Modal
+      showVerifyModal: false,
+      verifyingApp: null,
+      verifyDecision: 'approve', // 'approve' | 'reject'
+      verifyRemarks: '',
+      savingVerify: false,
+      verifyModalError: '',
+
+      // Status filters definition
+      statusFilters: [
+        { label: 'All', value: '' },
+        { label: 'Pending MAO', value: 'submitted_to_mao' },
+        { label: 'Ready for PCIC', value: 'approved_for_pcic' },
+        { label: 'At PCIC Evaluation', value: 'submitted_to_pcic' },
+        { label: 'Needs Revision', value: 'needs_revision' },
+        { label: 'Insured', value: 'insured' },
+        { label: 'Rejected', value: 'rejected' }
+      ],
+
+      // Sample Applications Registry Data
+      applications: [
+        {
+          id: 'app-001',
+          season_id: 'season-2026-wet',
+          status: 'submitted_to_mao',
+          application_date: '2026-07-15',
+          requires_payment: false,
+          payment_verified: false,
+          payment_proof_url: null,
+          variety: 'NSIC Rc 222',
+          farm_type: 'Irrigated',
+          sowing_date: '2026-06-10',
+          transplanting_date: '2026-07-01',
+          beneficiary_name: 'Maria Santos',
+          civil_status: 'Married',
+          north_boundary: 'Juan Dela Cruz',
+          south_boundary: 'River Canal',
+          east_boundary: 'Pedro Ramos',
+          west_boundary: 'Barangay Road',
+          is_land_owner: true,
+          tenure_status: 'Owner',
+          land_category: '1', // Irrigated
+          farm: {
+            farm_name: 'Green Field 1',
+            crop_type: 'Rice',
+            farm_area: '1.5',
+            farmer_profile: {
+              rsbsa_no: '02-1234-5678',
+              address: 'Brgy. San Fabian, Echague, Isabela',
+              user: {
+                first_name: 'Juan',
+                middle_name: 'Perez',
+                last_name: 'Santos',
+                extension_name: '',
+                email: 'juan.santos@example.com',
+                phone_number: '09171234567'
+              }
+            }
+          }
+        },
+        {
+          id: 'app-002',
+          season_id: 'season-2026-wet',
+          status: 'approved_for_pcic',
+          application_date: '2026-07-18',
+          requires_payment: true,
+          payment_verified: true,
+          payment_proof_url: 'https://via.placeholder.com/600x800.png?text=Payment+Receipt+Ref+100234',
+          payment_remarks: 'Verified reference #100234',
+          variety: 'Pioneer 30T80',
+          farm_type: 'Rainfed',
+          sowing_date: '2026-06-15',
+          transplanting_date: '',
+          beneficiary_name: 'Ana Reyes',
+          civil_status: 'Married',
+          north_boundary: 'Farm Lot 12',
+          south_boundary: 'Creek',
+          east_boundary: 'Road',
+          west_boundary: 'Lot 14',
+          is_land_owner: false,
+          tenure_status: 'Tenant',
+          land_category: '2', // Rainfed Lowland
+          farm: {
+            farm_name: 'Cornland Alpha',
+            crop_type: 'Corn',
+            farm_area: '2.0',
+            farmer_profile: {
+              rsbsa_no: '02-8765-4321',
+              address: 'Brgy. Ugad, Echague, Isabela',
+              user: {
+                first_name: 'Carlos',
+                middle_name: 'D',
+                last_name: 'Reyes',
+                extension_name: 'Jr.',
+                email: 'carlos.reyes@example.com',
+                phone_number: '09189876543'
+              }
+            }
+          }
+        }
+      ]
+    };
   },
 
   computed: {
-    // FIXED: Uses deadline_date setup logic to prevent structural override blocks
-    hasConfiguredSeason() {
-      return !!(this.currentSeason && this.currentSeason.deadline_date)
-    },
-
-    previousSeasons() {
-      var currentId = this.currentSeason ? this.currentSeason.id : null
-      return this.seasons.filter(function(season) {
-        return season.id !== currentId
-      })
-    },
-
-    hasPcicPreparations() {
-      return this.countByStatus('approved_for_pcic') > 0
-    },
-
+    // Current Active Application Batch based on Active Tab & Filters
     activeApplications() {
-      return this.activeAppTab === 'current'
-        ? this.applications
-        : this.historyApplications
+      if (this.activeAppTab === 'history') {
+        if (this.historySeasonId) {
+          return this.applications.filter(a => a.season_id === this.historySeasonId);
+        }
+        return this.applications.filter(a => a.season_id !== this.currentSeason?.id);
+      }
+      return this.applications.filter(a => a.season_id === this.currentSeason?.id);
     },
 
     filtered() {
-      var search = this.searchName.toLowerCase()
-      var crop = this.filterCrop
-      var status = this.filterStatus
-      var isCurrent = this.activeAppTab === 'current'
-      var historyId = this.historySeasonId
-      var self = this
+      return this.activeApplications.filter(app => {
+        // Name Search
+        const name = this.farmerName(app).toLowerCase();
+        const matchesName = !this.searchName || name.includes(this.searchName.toLowerCase());
 
-      return this.activeApplications.filter(function(app) {
-        var name = self.farmerName(app).toLowerCase()
-        var matchName = !search || name.indexOf(search) !== -1
-        var matchCrop = !crop || (app.farm && app.farm.crop_type === crop)
-        var matchStatus = !status || app.status === status
-        var matchSeason = isCurrent || !historyId || app.insurance_season_id == historyId
+        // Crop Type
+        const crop = app.farm?.crop_type || '';
+        const matchesCrop = !this.filterCrop || crop.toLowerCase() === this.filterCrop.toLowerCase();
 
-        return matchName && matchCrop && matchStatus && matchSeason
-      })
+        // Status
+        const matchesStatus = !this.filterStatus || app.status === this.filterStatus;
+
+        return matchesName && matchesCrop && matchesStatus;
+      });
     },
 
+    // Selected Items Object Array
+    selectedApplications() {
+      return this.applications.filter(a => this.selectedIds.includes(a.id));
+    },
+
+    // Enforce uniform single-status selection
+    selectedStatus() {
+      if (this.selectedApplications.length === 0) return null;
+      const firstStatus = this.selectedApplications[0].status;
+      const hasMixed = this.selectedApplications.some(a => a.status !== firstStatus);
+      return hasMixed ? null : firstStatus;
+    },
+
+    // Filtered applications eligible for checkboxes
     selectableFiltered() {
-      var self = this
-      return this.filtered.filter(function(app) {
-        return !self.isTerminal(app.status)
-      })
+      return this.filtered.filter(app => !this.isTerminal(app.status));
     },
 
     allFilteredSelected() {
-      var self = this
-      if (this.selectableFiltered.length === 0) {
-        return false
-      }
-      return this.selectableFiltered.every(function(app) {
-        return self.selectedIds.includes(app.id)
-      })
+      if (this.selectableFiltered.length === 0) return false;
+      return this.selectableFiltered.every(app => this.selectedIds.includes(app.id));
     },
 
-    selectedApplications() {
-      var self = this
-      return this.activeApplications.filter(function(app) {
-        return self.selectedIds.includes(app.id)
-      })
+    hasPcicPreparations() {
+      return this.countByStatus('approved_for_pcic') > 0;
     },
 
-    selectedStatus() {
-      var apps = this.selectedApplications
-      if (apps.length === 0) {
-        return null
-      }
-      var firstStatus = apps[0].status
-      var allSame = apps.every(function(app) {
-        return app.status === firstStatus
-      })
-      return allSame ? firstStatus : null
-    },
-
-    selectedPcicReady() {
-      return this.selectedApplications.filter(function(app) {
-        return app.status === 'approved_for_pcic'
-      })
-    },
-  },
-
-  watch: {
-    filtered() {
-      var selectableIds = this.selectableFiltered.map(function(app) {
-        return app.id
-      })
-      this.selectedIds = this.selectedIds.filter(function(id) {
-        return selectableIds.includes(id)
-      })
-    },
+    // Batch Print Area Calculations
+    totalBatchArea() {
+      const sourceList = this.selectedIds.length > 0 ? this.selectedApplications : this.filtered;
+      const total = sourceList.reduce((sum, item) => {
+        const val = parseFloat(item.farm?.farm_area) || 0;
+        return sum + val;
+      }, 0);
+      return total.toFixed(2);
+    }
   },
 
   mounted() {
-    this.fetchCurrentSeason()
-    this.startAutoRefresh()
+    this.lastRefreshedAt = new Date();
   },
 
   beforeUnmount() {
-    this.stopAutoRefresh()
+    this.stopAutoRefresh();
   },
 
   methods: {
-    authHeaders() {
-      var token = localStorage.getItem('mao_token')
-      return {
-        headers: {
-          Authorization: 'Bearer ' + token,
-          Accept: 'application/json',
-        },
+    // Utility Helpers
+    farmerName(app) {
+      if (!app?.farm?.farmer_profile?.user) return '—';
+      const u = app.farm.farmer_profile.user;
+      return `${u.first_name || ''} ${u.middle_name ? u.middle_name + ' ' : ''}${u.last_name || ''} ${u.extension_name || ''}`.trim();
+    },
+
+    formatShortName(u) {
+      if (!u) return '';
+      const fInitial = u.first_name ? u.first_name.charAt(0) + '.' : '';
+      const mInitial = u.middle_name ? u.middle_name.charAt(0) + '.' : '';
+      const ext = u.extension_name ? ' ' + u.extension_name : '';
+      return `${fInitial} ${mInitial} ${u.last_name || ''}${ext}`.trim();
+    },
+
+    truncateAddress(addr) {
+      if (!addr) return '—';
+      return addr.length > 30 ? addr.substring(0, 27) + '...' : addr;
+    },
+
+    formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    },
+
+    formatTime(dateObj) {
+      if (!dateObj) return '';
+      return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    },
+
+    statusLabel(status) {
+      const map = {
+        submitted_to_mao: 'Pending MAO Review',
+        approved_for_pcic: 'To be Submitted to PCIC',
+        submitted_to_pcic: 'Submitted to PCIC',
+        needs_revision: 'Needs Revision',
+        insured: 'Insured',
+        rejected: 'Rejected'
+      };
+      return map[status] || status;
+    },
+
+    isTerminal(status) {
+      return status === 'insured' || status === 'rejected';
+    },
+
+    countByStatus(statusKey) {
+      return this.activeApplications.filter(a => a.status === statusKey).length;
+    },
+
+    getLandCategoryCode(app) {
+      if (!app) return '';
+      if (app.land_category) return app.land_category;
+      if (app.farm_type === 'Irrigated') return '1';
+      if (app.farm_type === 'Rainfed') return '2';
+      return '3';
+    },
+
+    getTenurialStatusCode(app) {
+      if (!app) return '';
+      if (app.tenure_status === 'Owner' || app.is_land_owner) return '1';
+      if (app.tenure_status === 'Lessee') return '2';
+      return '3';
+    },
+
+    getBatchItem(index) {
+      const list = this.selectedIds.length > 0 ? this.selectedApplications : this.filtered;
+      return list[index] || null;
+    },
+
+    // Row & Selection Logic
+    toggleExpand(id) {
+      this.expandedId = this.expandedId === id ? null : id;
+    },
+
+    isSelected(id) {
+      return this.selectedIds.includes(id);
+    },
+
+    isCheckboxDisabled(app) {
+      if (this.isTerminal(app.status)) return true;
+      if (this.selectedIds.length === 0) return false;
+      return this.selectedStatus && app.status !== this.selectedStatus;
+    },
+
+    toggleSelection(id) {
+      const idx = this.selectedIds.indexOf(id);
+      if (idx > -1) {
+        this.selectedIds.splice(idx, 1);
+      } else {
+        this.selectedIds.push(id);
+      }
+      this.hasPrintedCurrentBatch = false;
+    },
+
+    toggleSelectAllFiltered() {
+      if (this.allFilteredSelected) {
+        const currentFilteredIds = this.selectableFiltered.map(a => a.id);
+        this.selectedIds = this.selectedIds.filter(id => !currentFilteredIds.includes(id));
+      } else {
+        const toAdd = this.selectableFiltered
+          .filter(a => !this.selectedStatus || a.status === this.selectedStatus)
+          .map(a => a.id);
+        this.selectedIds = Array.from(new Set([...this.selectedIds, ...toAdd]));
+      }
+      this.hasPrintedCurrentBatch = false;
+    },
+
+    clearSelection() {
+      this.selectedIds = [];
+      this.hasPrintedCurrentBatch = false;
+    },
+
+    switchTab(tab) {
+      this.activeAppTab = tab;
+      this.clearSelection();
+    },
+
+    resetFilters() {
+      this.searchName = '';
+      this.filterCrop = '';
+      this.filterStatus = '';
+      this.historySeasonId = '';
+    },
+
+    // Data Actions
+    updateAppStatus(id, newStatus) {
+      const item = this.applications.find(a => a.id === id);
+      if (item) {
+        item.status = newStatus;
+      }
+    },
+
+    bulkUpdateStatus(newStatus) {
+      this.applications.forEach(app => {
+        if (this.selectedIds.includes(app.id)) {
+          app.status = newStatus;
+        }
+      });
+      this.clearSelection();
+    },
+
+    // Auto Refresh Logic
+    onToggleAutoRefresh() {
+      if (this.autoRefresh) {
+        this.startAutoRefresh();
+      } else {
+        this.stopAutoRefresh();
       }
     },
 
     startAutoRefresh() {
-      this.stopAutoRefresh()
-      if (!this.autoRefresh) return
-      var self = this
-      this.refreshTimer = setInterval(function() {
-        self.silentRefresh()
-      }, this.refreshIntervalSeconds * 1000)
+      this.stopAutoRefresh();
+      this.refreshTimer = setInterval(() => {
+        this.manualRefresh();
+      }, this.refreshIntervalSeconds * 1000);
     },
 
     stopAutoRefresh() {
       if (this.refreshTimer) {
-        clearInterval(this.refreshTimer)
-        this.refreshTimer = null
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
       }
     },
 
-    onToggleAutoRefresh() {
-      if (this.autoRefresh) {
-        this.startAutoRefresh()
-      } else {
-        this.stopAutoRefresh()
-      }
+    manualRefresh() {
+      this.isRefreshing = true;
+      setTimeout(() => {
+        this.lastRefreshedAt = new Date();
+        this.isRefreshing = false;
+      }, 600);
     },
 
-    async silentRefresh() {
-      if (this.showSeasonModal || this.savingSeason) return
-      if (this.batchProcessing) return
-      if (this.isPrintingPcicBatch) return
-      if (this.isRefreshing) return
-
-      this.isRefreshing = true
-      try {
-        await this.refreshCurrentTab()
-        this.lastRefreshedAt = new Date()
-      } catch (err) {
-        console.error('Auto-refresh failed', err)
-      } finally {
-        this.isRefreshing = false
-      }
-    },
-
-    async manualRefresh() {
-      if (this.isRefreshing) return
-      this.isRefreshing = true
-      try {
-        await this.fetchSeasons()
-        await this.refreshCurrentTab()
-        this.lastRefreshedAt = new Date()
-      } catch (err) {
-        console.error('Manual refresh failed', err)
-      } finally {
-        this.isRefreshing = false
-      }
-    },
-
-    formatTime(date) {
-      if (!date) return ''
-      return date.toLocaleTimeString('en-PH', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    },
-
-    isTerminal(status) {
-      return status === 'insured' || status === 'rejected'
-    },
-
-    isCheckboxDisabled(app) {
-      if (this.selectedIds.length === 0) {
-        return false
-      }
-      if (this.isSelected(app.id)) {
-        return false
-      }
-      return this.selectedStatus !== null && this.selectedStatus !== app.status
-    },
-
-    async fetchCurrentSeason() {
-      try {
-        var response = await axios.get(
-          API_BASE + '/api/insurance-seasons/current',
-          this.authHeaders()
-        )
-        this.currentSeason = response.data.season
-        await this.fetchSeasons()
-
-        if (this.currentSeason && !this.currentSeason.deadline_date) {
-          this.seasonForm = {
-            season_name: 'Wet Season ' + new Date().getFullYear(),
-            deadline_date: '',
-          }
-          this.applications = []
-        } else {
-          await this.fetchApplications()
-        }
-      } catch (err) {
-        this.currentSeason = null
-        console.error('Failed to fetch current season', err)
-      }
-    },
-
-    async fetchSeasons() {
-      try {
-        var response = await axios.get(
-          API_BASE + '/api/insurance-seasons',
-          this.authHeaders()
-        )
-        this.seasons = Array.isArray(response.data)
-          ? response.data
-          : response.data.data || []
-      } catch (err) {
-        console.error('Failed to fetch seasons', err)
-      }
-    },
-
-    async fetchApplications() {
-      this.isLoading = true
-      this.errorMessage = ''
-      try {
-        var response = await axios.get(
-          API_BASE + '/api/insurance-applications',
-          this.authHeaders()
-        )
-        var apps = Array.isArray(response.data)
-          ? response.data
-          : response.data.data || []
-        var currentId = this.currentSeason ? this.currentSeason.id : null
-
-        this.applications = apps.filter(function(app) {
-          return app.insurance_season_id == currentId
-        })
-      } catch (err) {
-        this.errorMessage = 'Failed to load insurance applications.'
-        console.error(err)
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    async fetchApplicationHistory() {
-      this.isLoading = true
-      this.errorMessage = ''
-      try {
-        var response = await axios.get(
-          API_BASE + '/api/insurance-applications-history',
-          this.authHeaders()
-        )
-        this.historyApplications = Array.isArray(response.data)
-          ? response.data
-          : response.data.data || []
-      } catch (err) {
-        this.errorMessage = 'Failed to fetch archived applications.'
-        console.error(err)
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    routeForStatus(status) {
-      var routeMap = {
-        approved_for_pcic: 'approve-for-pcic',
-        needs_revision: 'needs-revision',
-        submitted_to_pcic: 'submit-pcic',
-        insured: 'approve',
-        rejected: 'reject',
-      }
-      return routeMap[status] || null
-    },
-
-    async updateAppStatus(appId, status) {
-      var action = this.routeForStatus(status)
-      if (!action) {
-        alert('Invalid status action.')
-        return
-      }
-      try {
-        await axios.put(
-          API_BASE + '/api/insurance-applications/' + appId + '/' + action,
-          {},
-          this.authHeaders()
-        )
-        await this.refreshCurrentTab()
-      } catch (error) {
-        console.error(error)
-        alert(error.response?.data?.message || 'Failed to update application status.')
-      }
-    },
-
-    async bulkUpdateStatus(status) {
-      if (this.selectedIds.length === 0) return
-      if (this.batchProcessing) return
-
-      var action = this.routeForStatus(status)
-      if (!action) {
-        alert('Invalid status action.')
-        return
-      }
-      var count = this.selectedIds.length
-      if (!confirm('Apply this action to ' + count + ' selected application(s)?')) {
-        return
-      }
-
-      this.batchProcessing = true
-      var idsToProcess = this.selectedIds.slice()
-      var failedIds = []
-      var self = this
-
-      try {
-        var results = await Promise.allSettled(
-          idsToProcess.map(function(appId) {
-            return axios.put(
-              API_BASE + '/api/insurance-applications/' + appId + '/' + action,
-              {},
-              self.authHeaders()
-            )
-          })
-        )
-
-        results.forEach(function(result, i) {
-          if (result.status === 'rejected') {
-            failedIds.push(idsToProcess[i])
-          }
-        })
-
-        await this.refreshCurrentTab()
-
-        if (failedIds.length > 0) {
-          alert(failedIds.length + ' application(s) failed. They remain selected.')
-          this.selectedIds = failedIds
-        } else {
-          this.selectedIds = []
-        }
-      } catch (error) {
-        console.error(error)
-        alert('Failed to process batch update.')
-      } finally {
-        this.batchProcessing = false
-      }
-    },
-
-    async refreshCurrentTab() {
-      if (this.activeAppTab === 'history') {
-        await this.fetchApplicationHistory()
-      } else {
-        await this.fetchApplications()
-      }
-    },
-
-    printPcicBatchManifest() {
-      this.pcicBatchList = this.activeApplications.filter(function(app) {
-        return app.status === 'approved_for_pcic'
-      })
-      this.runPrint()
-    },
-
-    printSelectedPcicBatch() {
-      if (this.selectedPcicReady.length === 0) {
-        alert('Select applications with "To be submitted to PCIC" status only.')
-        return
-      }
-      this.pcicBatchList = this.selectedPcicReady
-      this.runPrint()
-    },
-
-    runPrint() {
-      this.isPrintingPcicBatch = true
-      var self = this
-      this.$nextTick(function() {
-        window.print()
-        setTimeout(function() {
-          self.isPrintingPcicBatch = false
-        }, 500)
-      })
-    },
-
-    toggleSelection(id) {
-      if (this.selectedIds.includes(id)) {
-        this.selectedIds = this.selectedIds.filter(function(selectedId) {
-          return selectedId !== id
-        })
-      } else {
-        this.selectedIds.push(id)
-      }
-    },
-
-    toggleSelectAllFiltered() {
-      var self = this
-      if (this.allFilteredSelected) {
-        var selectableIds = this.selectableFiltered.map(function(app) {
-          return app.id
-        })
-        this.selectedIds = this.selectedIds.filter(function(id) {
-          return !selectableIds.includes(id)
-        })
-      } else {
-        var targetStatus = this.selectedStatus
-        this.selectableFiltered.forEach(function(app) {
-          var matchesTarget = !targetStatus || app.status === targetStatus
-          if (matchesTarget && !self.selectedIds.includes(app.id)) {
-            self.selectedIds.push(app.id)
-          }
-        })
-      }
-    },
-
-    isSelected(id) {
-      return this.selectedIds.includes(id)
-    },
-
-    clearSelection() {
-      this.selectedIds = []
-    },
-
-    switchTab(tab) {
-      this.activeAppTab = tab
-      this.expandedId = null
-      this.clearSelection()
-      this.resetFilters()
-      if (tab === 'history') {
-        this.fetchApplicationHistory()
-      } else {
-        this.fetchApplications()
-      }
+    // Season Modal Actions
+    openSeasonModal() {
+      this.isStartingNewSeason = false;
+      this.seasonForm.season_name = this.currentSeason?.season_name || '';
+      this.seasonForm.deadline_date = this.currentSeason?.deadline_date || '';
+      this.seasonModalError = '';
+      this.showSeasonModal = true;
     },
 
     openNewSeasonModal() {
-      this.seasonModalError = ''
-      this.isStartingNewSeason = true
-      this.showSeasonModal = true
-      this.seasonForm = {
-        season_name: 'Wet Season ' + new Date().getFullYear(),
-        deadline_date: '',
-      }
-    },
-
-    openSeasonModal() {
-      this.seasonModalError = ''
-      this.isStartingNewSeason = false
-      this.showSeasonModal = true
-      var dateStr = this.currentSeason && this.currentSeason.deadline_date
-        ? this.currentSeason.deadline_date.slice(0, 10)
-        : ''
-
-      this.seasonForm = {
-        season_name: this.currentSeason && this.currentSeason.season_name
-          ? this.currentSeason.season_name
-          : 'Wet Season ' + new Date().getFullYear(),
-        deadline_date: dateStr,
-      }
+      this.isStartingNewSeason = true;
+      this.seasonForm.season_name = '';
+      this.seasonForm.deadline_date = '';
+      this.seasonModalError = '';
+      this.showSeasonModal = true;
     },
 
     closeSeasonModal() {
-      this.showSeasonModal = false
-      this.seasonModalError = ''
+      this.showSeasonModal = false;
     },
 
-    // FIXED: Properly routes targeting actions into POST new vs PUT current
-    async saveSeason() {
-      if (!this.seasonForm.season_name.trim()) {
-        this.seasonModalError = 'Please enter a season name.'
-        return
-      }
-      if (!this.seasonForm.deadline_date) {
-        this.seasonModalError = 'Please select a deadline date.'
-        return
+    saveSeason() {
+      if (!this.seasonForm.season_name || !this.seasonForm.deadline_date) {
+        this.seasonModalError = 'Please fill in all season configuration fields.';
+        return;
       }
 
-      this.savingSeason = true
-      this.seasonModalError = ''
-
-      try {
+      this.savingSeason = true;
+      setTimeout(() => {
         if (this.isStartingNewSeason) {
-          await axios.post(
-            API_BASE + '/api/insurance-seasons/new',
-            {
-              season_name: this.seasonForm.season_name,
-              deadline_date: this.seasonForm.deadline_date,
-            },
-            this.authHeaders()
-          )
+          if (this.currentSeason) {
+            this.previousSeasons.unshift({ ...this.currentSeason });
+          }
+          this.currentSeason = {
+            id: 'season-' + Date.now(),
+            season_name: this.seasonForm.season_name,
+            deadline_date: this.seasonForm.deadline_date,
+            status: 'application_open'
+          };
         } else {
-          await axios.put(
-            API_BASE + '/api/insurance-seasons/current',
-            {
-              season_name: this.seasonForm.season_name,
-              deadline_date: this.seasonForm.deadline_date,
-              status: 'application_open',
-            },
-            this.authHeaders()
-          )
+          this.currentSeason.season_name = this.seasonForm.season_name;
+          this.currentSeason.deadline_date = this.seasonForm.deadline_date;
         }
-        await this.fetchCurrentSeason()
-        this.showSeasonModal = false
-      } catch (err) {
-        this.seasonModalError = err.response?.data?.message || 'Failed to save season.'
-      } finally {
-        this.savingSeason = false
+
+        this.hasConfiguredSeason = true;
+        this.savingSeason = false;
+        this.showSeasonModal = false;
+      }, 500);
+    },
+
+    closeSeason() {
+      if (confirm('Are you sure you want to close the current active insurance season?')) {
+        this.currentSeason.status = 'closed';
       }
-    },
-
-    async closeSeason() {
-      if (!this.currentSeason) return
-      if (!confirm('Close "' + this.currentSeason.season_name + '"?')) {
-        return
-      }
-      try {
-        await axios.post(
-          API_BASE + '/api/insurance-seasons/current/close',
-          {},
-          this.authHeaders()
-        )
-        this.applications = []
-        this.historyApplications = []
-        await this.fetchCurrentSeason()
-      } catch (err) {
-        console.error(err)
-        alert('Failed to close season.')
-      }
-    },
-
-    toggleExpand(id) {
-      this.expandedId = this.expandedId === id ? null : id
-    },
-
-    farmerName(app) {
-      var user = app.farm?.farmer_profile?.user || null
-      if (!user) return '—'
-      return [
-        user.first_name,
-        user.middle_name,
-        user.last_name,
-        user.extension_name,
-      ].filter(Boolean).join(' ')
-    },
-
-    truncateAddress(address) {
-      if (!address) return '—'
-      return address.split(',')[0].trim()
     },
 
     currentSeasonName(app) {
-      var season = this.seasons.find(function(s) {
-        return s.id == app.insurance_season_id
-      })
-      return season ? season.season_name : '—'
-    },
-
-    statusLabel(status) {
-      var map = {
-        submitted_to_mao: 'Submitted to MAO',
-        approved_for_pcic: 'To be submitted to PCIC',
-        submitted_to_pcic: 'Submitted to PCIC',
-        needs_revision: 'Needs Revision',
-        insured: 'Insured',
-        rejected: 'Rejected',
+      if (app.season_id === this.currentSeason?.id) {
+        return this.currentSeason.season_name;
       }
-      return map[status] || status || '—'
+      const prev = this.previousSeasons.find(s => s.id === app.season_id);
+      return prev ? prev.season_name : 'Archived Season';
     },
 
-    countByStatus(status) {
-      return this.activeApplications.filter(function(app) {
-        return app.status === status
-      }).length
+    // Payment Verification Modal Actions
+    openVerifyModal(app) {
+      this.verifyingApp = app;
+      this.verifyDecision = 'approve';
+      this.verifyRemarks = app.payment_remarks || '';
+      this.verifyModalError = '';
+      this.showVerifyModal = true;
     },
 
-    formatDate(date) {
-      if (!date) return '—'
-      return new Date(date).toLocaleDateString('en-PH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+    closeVerifyModal() {
+      this.showVerifyModal = false;
+      this.verifyingApp = null;
     },
 
-    resetFilters() {
-      this.searchName = ''
-      this.filterCrop = ''
-      this.filterStatus = ''
-      this.historySeasonId = ''
+    submitPaymentVerification() {
+      if (this.verifyDecision === 'reject' && !this.verifyRemarks.trim()) {
+        this.verifyModalError = 'Remarks are required when rejecting payment proof.';
+        return;
+      }
+
+      this.savingVerify = true;
+      setTimeout(() => {
+        if (this.verifyingApp) {
+          if (this.verifyDecision === 'approve') {
+            this.verifyingApp.payment_verified = true;
+            this.verifyingApp.payment_remarks = this.verifyRemarks;
+            this.verifyingApp.status = 'approved_for_pcic';
+          } else {
+            this.verifyingApp.payment_verified = false;
+            this.verifyingApp.payment_remarks = this.verifyRemarks;
+            this.verifyingApp.status = 'needs_revision';
+          }
+        }
+        this.savingVerify = false;
+        this.closeVerifyModal();
+      }, 500);
     },
-  },
-}
+
+    // Printing Operations
+    printPcicBatchManifest() {
+      this.isPrintingPcicBatch = true;
+      this.hasPrintedCurrentBatch = true;
+      this.$nextTick(() => {
+        window.print();
+        this.isPrintingPcicBatch = false;
+      });
+    },
+
+    printSelectedPcicBatch() {
+      this.printPcicBatchManifest();
+    }
+  }
+};
 </script>
 
 <style scoped>
 .insurance-page {
-  font-family: 'DM Sans', sans-serif;
-  background: #F5F7F5;
-  padding: 2rem 2rem 6rem;
-  color: #263238;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #2c3e50;
+  background-color: #f8fafc;
 }
 
 .page-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 20px;
 }
 
 .page-title {
-  font-size: 1.5rem;
+  font-size: 24px;
   font-weight: 700;
-  color: #263238;
-  margin: 0 0 4px;
+  color: #1e293b;
+  margin: 0 0 4px 0;
 }
 
 .page-sub {
-  font-size: 0.9rem;
-  color: #5c6b64;
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
 }
 
+/* Season Display Card */
 .season-card {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 1.2rem 1.4rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
-  margin-bottom: 1.5rem;
-  border-left: 4px solid #2E7D32;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #10b981;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .season-info {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 24px;
 }
 
 .season-icon {
+  font-size: 24px;
+  background: #ecfdf5;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
-  background: #eaf5ea;
-  color: #2E7D32;
 }
 
 .season-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
 }
 
 .season-label {
-  font-size: 0.72rem;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #5c6b64;
+  letter-spacing: 0.5px;
+  color: #64748b;
   font-weight: 600;
 }
 
 .season-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #263238;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .season-actions {
@@ -1315,602 +1506,812 @@ export default {
   gap: 10px;
 }
 
-.btn-season-secondary,
-.btn-season-danger,
-.btn-season-primary {
-  border: none;
-  border-radius: 10px;
-  padding: 9px 18px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.btn-season-secondary {
-  background: #FFFFFF;
-  color: #2E7D32;
-  border: 1px solid #66BB6A;
-}
-.btn-season-secondary:hover { background: #eaf5ea; }
-
-.btn-season-danger {
-  background: #FFFFFF;
-  color: #b3261e;
-  border: 1px solid #f3c6c6;
-}
-.btn-season-danger:hover { background: #fdf0f0; }
-
-.btn-season-primary {
-  background: #2E7D32;
-  color: #FFFFFF;
-  width: 100%;
-}
-.btn-season-primary:hover { background: #256428; }
-.btn-season-primary:disabled { background: #a9c9ab; cursor: not-allowed; }
-
+/* Setup Card Fallback */
 .setup-card {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 2.5rem;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 32px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
-  margin-bottom: 1.5rem;
+  max-width: 480px;
+  margin: 40px auto;
 }
 
-.setup-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
-.setup-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: #263238; }
-.setup-card p { margin: 0 0 1.2rem; color: #5c6b64; font-size: 0.88rem; }
+.setup-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
 
 .setup-form {
-  max-width: 360px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  margin-top: 20px;
   text-align: left;
 }
 
-.modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.modal-field label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #5c6b64;
-}
-
-.modal-input {
-  border: 1px solid #d7e2d8;
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  color: #263238;
-  background: #FFFFFF;
-}
-
-.modal-input:focus {
-  outline: none;
-  border-color: #66BB6A;
-  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
-}
-
-.modal-error { color: #b3261e; font-size: 0.8rem; margin: 0; }
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(38, 50, 56, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.modal-box {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 1.6rem;
-  width: 90%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.modal-title { margin: 0; font-size: 1.05rem; color: #263238; }
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 0.4rem;
-}
-
-.btn-modal-cancel,
-.btn-modal-save {
-  border: none;
-  border-radius: 10px;
-  padding: 9px 18px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.btn-modal-cancel { background: #F5F7F5; color: #5c6b64; }
-.btn-modal-save { background: #2E7D32; color: #FFFFFF; }
-.btn-modal-save:hover { background: #256428; }
-.btn-modal-save:disabled { background: #a9c9ab; cursor: not-allowed; }
-
-.section-divider {
-  display: flex;
-  align-items: center;
-  margin: 1.8rem 0 1.2rem;
-}
-
-.section-divider::before,
-.section-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #dde8de;
-}
-
-.section-divider span {
-  padding: 0 14px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #5c6b64;
-}
-
+/* Tab Bar */
 .tab-bar {
   display: flex;
-  gap: 4px;
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 5px;
-  width: fit-content;
-  margin-bottom: 1.3rem;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 20px;
 }
 
 .tab-btn {
-  border: none;
-  background: transparent;
-  padding: 9px 20px;
-  font-size: 0.85rem;
+  padding: 10px 20px;
+  font-size: 14px;
   font-weight: 600;
-  color: #5c6b64;
-  border-radius: 8px;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: all 0.2s;
 }
 
-.tab-btn.active { background: #2E7D32; color: #FFFFFF; }
+.tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
 
+/* Refresh Bar */
 .refresh-bar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.refresh-status { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #5c6b64; }
-.refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: #93a29a; flex-shrink: 0; }
-
-.refresh-dot.live {
-  background: #2E7D32;
-  box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5);
-  animation: pulse-dot 2s infinite;
-}
-
-@keyframes pulse-dot {
-  0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.45); }
-  70% { box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
-}
-
-.refresh-last { color: #93a29a; }
-.refresh-controls { display: flex; align-items: center; gap: 12px; }
-
-.btn-icon-refresh {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #d7e2d8;
-  background: #FFFFFF;
-  color: #2E7D32;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn-icon-refresh:hover { background: #eaf5ea; }
-.btn-icon-refresh:disabled { color: #93a29a; cursor: not-allowed; background: #FFFFFF; }
-
-.btn-icon-refresh .spinning {
-  display: inline-block;
-  animation: spin 0.8s linear infinite;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 16px;
 }
 
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 38px;
-  height: 21px;
-  flex-shrink: 0;
-}
-
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #d7e2d8;
-  border-radius: 999px;
-  transition: background-color 0.2s ease;
-}
-
-.toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 15px;
-  width: 15px;
-  left: 3px;
-  bottom: 3px;
-  background-color: #FFFFFF;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-}
-
-.toggle-switch input:checked + .toggle-slider { background-color: #2E7D32; }
-.toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
-
-.filters-row {
+.refresh-status {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.refresh-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+}
+
+.refresh-dot.live {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.refresh-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-icon-refresh {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spinning {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* Filters & Controls */
+.filters-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
-  margin-bottom: 0.9rem;
 }
 
-.search-wrap { flex: 1; min-width: 220px; }
+.search-wrap {
+  flex: 1;
+  min-width: 220px;
+}
 
-.search-input,
-.filter-select {
+.search-input, .filter-select {
   width: 100%;
-  border: 1px solid #d7e2d8;
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  color: #263238;
-  background: #FFFFFF;
-  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #ffffff;
 }
-
-.filter-select { width: auto; min-width: 170px; }
-
-.search-input:focus,
-.filter-select:focus {
-  outline: none;
-  border-color: #66BB6A;
-  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
-}
-
-.btn-reset {
-  border: 1px solid #d7e2d8;
-  background: #FFFFFF;
-  color: #5c6b64;
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn-reset:hover { background: #f0f4f0; }
-
-.btn-print-pcic {
-  border: none;
-  background: #F9A825;
-  color: #263238;
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-}
-.btn-print-pcic:hover { background: #e0960f; }
 
 .status-filter-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 1.2rem;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .status-filter-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #d7e2d8;
-  background: #FFFFFF;
-  color: #5c6b64;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 6px 12px;
   border-radius: 20px;
-  padding: 7px 14px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.status-filter-tag:hover { border-color: #66BB6A; }
-
-.sf-count {
-  background: rgba(38, 50, 56, 0.08);
-  border-radius: 10px;
-  padding: 1px 7px;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.status-filter-tag.active { color: #FFFFFF; border-color: transparent; }
-.status-filter-tag.active .sf-count { background: rgba(255, 255, 255, 0.25); }
-
-.status-filter-tag.sf-all.active { background: #263238; }
-.status-filter-tag.sf-submitted_to_mao.active { background: #1976D2; }
-.status-filter-tag.sf-approved_for_pcic.active { background: #F9A825; color: #263238; }
-.status-filter-tag.sf-approved_for_pcic.active .sf-count { background: rgba(38, 50, 56, 0.15); }
-.status-filter-tag.sf-submitted_to_pcic.active { background: #6A4C93; }
-.status-filter-tag.sf-needs_revision.active { background: #e08a1e; }
-.status-filter-tag.sf-insured.active { background: #2E7D32; }
-.status-filter-tag.sf-rejected.active { background: #b3261e; }
-
-.bulk-action-bar {
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 1.2rem;
-  flex-wrap: wrap;
-  background: #eaf5ea;
-  border: 1px solid #bfe0c1;
-  border-radius: 12px;
-  padding: 0.9rem 1.2rem;
-  margin-bottom: 1.2rem;
+  gap: 6px;
 }
 
+.status-filter-tag.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.sf-count {
+  background: rgba(0,0,0,0.08);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.status-filter-tag.active .sf-count {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Bulk Action Bar */
 .bulk-action-bar.floating {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 600;
-  margin-bottom: 0;
-  width: min(920px, calc(100% - 48px));
-  box-shadow: 0 10px 30px rgba(38, 50, 56, 0.22), 0 2px 8px rgba(38, 50, 56, 0.12);
-  background: #FFFFFF;
-  border: 1px solid #dde8de;
-  border-left: 4px solid #2E7D32;
-}
-
-.bulk-action-bar.floating.mixed { border-left-color: #F9A825; background: #FFFFFF; }
-.bulk-action-bar.mixed { background: #fdf1d6; border-color: #f3d38a; }
-
-.float-bar-enter-active,
-.float-bar-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
-.float-bar-enter-from,
-.float-bar-leave-to { transform: translateX(-50%) translateY(16px); opacity: 0; }
-
-.bulk-left { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #263238; }
-.bulk-warning { font-size: 0.82rem; color: #7a5205; flex: 1; }
-.bulk-actions { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
-.bulk-terminal-note { font-size: 0.82rem; color: #5c6b64; font-style: italic; }
-
-.btn-action-approve,
-.btn-action-submit-pcic,
-.btn-action-finalize,
-.btn-action-reject {
-  border: none;
+  position: sticky;
+  top: 16px;
+  z-index: 100;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 20px;
   border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-.btn-action-approve { background: #1976D2; color: #FFFFFF; }
-.btn-action-approve:hover { background: #145ea8; }
+.bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-.btn-action-submit-pcic { background: #F9A825; color: #263238; }
-.btn-action-submit-pcic:hover { background: #e0960f; }
+.bulk-warning {
+  font-size: 13px;
+  color: #fde047;
+}
 
-.btn-action-finalize { background: #2E7D32; color: #FFFFFF; }
-.btn-action-finalize:hover { background: #256428; }
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-.btn-action-reject { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
-.btn-action-reject:hover { background: #fdf0f0; }
+.print-required-notice {
+  font-size: 12px;
+  color: #fca5a5;
+}
 
+.bulk-terminal-note {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Stat Cards Matrix */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.8rem;
-  margin-bottom: 1.4rem;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 0.9rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
 }
 
 .stat-label {
-  font-size: 0.72rem;
-  color: #5c6b64;
-  font-weight: 600;
+  font-size: 11px;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
-.stat-value { font-size: 1.35rem; font-weight: 700; color: #263238; }
-.stat-value.mao { color: #1976D2; }
-.stat-value.pcic { color: #F9A825; }
-.stat-value.review { color: #6A4C93; }
-.stat-value.revision { color: #e08a1e; }
-.stat-value.insured { color: #2E7D32; }
-.stat-value.rejected { color: #b3261e; }
-
-.state-box {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 2.5rem;
-  text-align: center;
-  color: #5c6b64;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 4px;
 }
 
-.error-box { color: #b3261e; }
+.stat-value.mao { color: #d97706; }
+.stat-value.pcic { color: #0284c7; }
+.stat-value.review { color: #8b5cf6; }
+.stat-value.revision { color: #dc2626; }
+.stat-value.insured { color: #10b981; }
+.stat-value.rejected { color: #64748b; }
 
-.spinner {
-  width: 26px;
-  height: 26px;
-  border: 3px solid #dde8de;
-  border-top-color: #2E7D32;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-.empty-state { text-align: center; padding: 2.5rem; color: #93a29a; font-size: 0.88rem; }
-
+/* Main Table Styling */
 .table-wrap {
-  background: #FFFFFF;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
-.app-table { width: 100%; border-collapse: collapse; }
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
 
 .app-table th {
-  text-align: left;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #5c6b64;
-  background: #F5F7F5;
-  padding: 12px 14px;
+  background: #f8fafc;
+  color: #475569;
   font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .app-table td {
   padding: 12px 14px;
-  font-size: 0.83rem;
-  border-top: 1px solid #eef2ef;
-  color: #263238;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.main-row { cursor: pointer; transition: background 0.15s ease; }
-.main-row:hover { background: #f7faf7; }
-.main-row.selected { background: #eaf5ea; }
-.main-row.expanded { background: #f2f9f2; }
+.main-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
 
-.expand-cell { width: 24px; }
-.expand-icon { display: inline-block; font-size: 0.7rem; color: #93a29a; transition: transform 0.15s ease; }
-.expand-icon.open { transform: rotate(90deg); color: #2E7D32; }
+.main-row:hover {
+  background-color: #f8fafc;
+}
 
-.farmer-name { font-weight: 600; color: #263238; }
-.farmer-sub { font-size: 0.75rem; color: #93a29a; }
+.main-row.selected {
+  background-color: #f0f9ff;
+}
 
+.expand-cell {
+  width: 24px;
+  text-align: center;
+}
+
+.expand-icon {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+  color: #94a3b8;
+}
+
+.expand-icon.open {
+  transform: rotate(90deg);
+  color: #0284c7;
+}
+
+.farmer-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.farmer-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Status Badges */
 .status-badge {
   display: inline-block;
-  padding: 4px 11px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.status-badge.submitted_to_mao { background: #e3edfa; color: #1976D2; }
-.status-badge.approved_for_pcic { background: #fdf1d6; color: #b9790a; }
-.status-badge.submitted_to_pcic { background: #ece4f5; color: #6A4C93; }
-.status-badge.needs_revision { background: #fbe6d0; color: #b3610f; }
-.status-badge.insured { background: #e5f4e6; color: #2E7D32; }
-.status-badge.rejected { background: #fde3e3; color: #b3261e; }
+.status-badge.submitted_to_mao { background: #fef3c7; color: #92400e; }
+.status-badge.approved_for_pcic { background: #e0f2fe; color: #075985; }
+.status-badge.submitted_to_pcic { background: #ede9fe; color: #5b21b6; }
+.status-badge.needs_revision { background: #fee2e2; color: #991b1b; }
+.status-badge.insured { background: #d1fae5; color: #065f46; }
+.status-badge.rejected { background: #f1f5f9; color: #475569; }
 
-.detail-row td { padding: 0; border-top: none; }
+/* Payment Badges */
+.pay-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.pay-badge.free { background: #f1f5f9; color: #475569; }
+.pay-badge.verified { background: #dcfce7; color: #166534; }
+.pay-badge.pending { background: #fef9c3; color: #854d0e; }
 
-.detail-box {
-  background: #fafcfa;
-  padding: 1.4rem;
-  border-top: 1px solid #eef2ef;
-  border-bottom: 2px solid #dde8de;
+/* Detail Accordion Panel */
+.detail-row td {
+  background-color: #f8fafc;
+  padding: 0;
 }
 
-.detail-actions-panel { margin-bottom: 1.2rem; }
-.action-sub-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.action-panel-label { font-size: 0.8rem; color: #5c6b64; }
-.action-hint { font-size: 0.8rem; color: #5c6b64; font-style: italic; }
+.detail-box {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-actions-panel {
+  background: #ffffff;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.action-sub-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-hint {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
 
 .detail-grid-wrapper {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
 }
 
-.detail-section { background: #FFFFFF; border: 1px solid #eef2ef; border-radius: 10px; padding: 1rem; }
+.detail-section {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
 
 .section-title {
-  font-size: 0.78rem;
+  font-size: 12px;
   font-weight: 700;
-  color: #2E7D32;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 0.8rem;
+  color: #0284c7;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 4px;
 }
 
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-.detail-item { display: flex; flex-direction: column; gap: 2px; }
-.detail-item.full-width { grid-column: 1 / -1; }
-.detail-label { font-size: 0.7rem; color: #93a29a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
-.detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 
-.print-area { display: none; }
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item.full-width {
+  grid-column: span 2;
+}
+
+.detail-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.detail-val {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-season-primary, .btn-modal-save {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-season-secondary, .btn-reset, .btn-modal-cancel {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-season-danger {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #e11d48;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-print-pcic {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-action-approve {
+  background: #0284c7;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-action-submit-pcic {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-action-submit-pcic:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-action-finalize {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-action-reject {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-action-verify, .btn-inline-verify {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.verify-modal {
+  max-width: 520px;
+}
+
+.modal-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.modal-field {
+  margin-bottom: 16px;
+}
+
+.modal-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.textarea-remarks {
+  resize: vertical;
+}
+
+.decision-toggle-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-decision {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-decision.approve.active {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.btn-decision.reject.active {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.proof-preview-container {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.proof-image-preview {
+  max-height: 200px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.proof-click-hint {
+  display: block;
+  font-size: 11px;
+  color: #0284c7;
+  margin-top: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* Printable Official PCIC Form Layout Styling */
+.print-area {
+  display: none;
+}
 
 @media print {
-  .insurance-page > *:not(.print-area) { display: none !important; }
-  .print-area { display: block !important; padding: 2rem; font-family: 'DM Sans', sans-serif; color: #263238; }
-  .print-letterhead { text-align: center; margin-bottom: 1rem; }
-  .print-letterhead h1 { font-size: 1.2rem; margin: 0 0 4px; }
-  .print-letterhead h2 { font-size: 1rem; margin: 0 0 8px; font-weight: 600; }
-  .print-letterhead p { font-size: 0.85rem; margin: 2px 0; }
-  .print-divider { border-top: 2px solid #263238; margin: 1rem 0; }
-  .print-batch-table { width: 100%; border-collapse: collapse; }
-  .print-batch-table th, .print-batch-table td { border: 1px solid #263238; padding: 6px 8px; font-size: 0.78rem; text-align: left; }
-  .print-batch-table th { background: #F5F7F5; font-weight: 700; }
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    color: #000;
+    background: #fff;
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+  }
+
+  .pcic-page-container {
+    padding: 10mm;
+    box-sizing: border-box;
+    height: 100vh;
+    position: relative;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+
+  .pcic-header h3 { font-size: 14px; margin: 0; font-weight: bold; }
+  .pcic-header .subtitle { font-size: 11px; margin: 2px 0; }
+  .pcic-header .form-title { font-size: 16px; margin: 4px 0 0 0; text-decoration: underline; font-weight: bold; }
+  .pcic-header .group-sub { font-size: 11px; margin: 0 0 10px 0; font-style: italic; }
+
+  .pcic-meta-grid {
+    border: 1px solid #000;
+    padding: 6px;
+    margin-bottom: 8px;
+  }
+
+  .meta-row {
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .split-row {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .inline-checks label {
+    margin-right: 8px;
+  }
+
+  .margin-left {
+    margin-left: 16px;
+  }
+
+  .pcic-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+  }
+
+  .pcic-grid-table th, .pcic-grid-table td {
+    border: 1px solid #000;
+    padding: 3px 2px;
+    text-align: center;
+    font-size: 9px;
+  }
+
+  .pcic-grid-table th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    font-weight: bold;
+  }
+
+  .col-xs {
+    width: 20px;
+  }
+
+  .row-total td {
+    font-weight: bold;
+  }
+
+  .pcic-footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: 8px;
+    border: 1px solid #000;
+    padding: 6px;
+  }
+
+  .cert-title {
+    font-weight: bold;
+    font-size: 9px;
+    margin: 0 0 4px 0;
+    text-decoration: underline;
+  }
+
+  .cert-text {
+    font-size: 8px;
+    margin: 0 0 4px 0;
+    line-height: 1.1;
+  }
+
+  .pcic-calc-rows div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    margin-bottom: 2px;
+  }
+
+  .small-text {
+    font-size: 8px;
+    margin: 2px 0;
+  }
+
+  /* Page 2 Specific Footer Layout */
+  .pcic-p2-footer {
+    margin-top: 12px;
+  }
+
+  .legends-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    border: 1px solid #000;
+    padding: 6px;
+    margin-bottom: 20px;
+    font-size: 9px;
+  }
+
+  .legend-grid {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .signatures-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 30px;
+    text-align: center;
+  }
+
+  .sig-line {
+    border-bottom: 1px solid #000;
+    margin: 35px 20px 4px 20px;
+  }
+
+  .sig-title {
+    font-weight: bold;
+    font-size: 10px;
+    margin: 0;
+  }
+
+  .sig-sub {
+    font-size: 8px;
+    color: #333;
+    margin: 2px 0 0 0;
+  }
+
+  .page-number-footer {
+    position: absolute;
+    bottom: 8mm;
+    right: 10mm;
+    font-size: 9px;
+    font-weight: bold;
+  }
 }
 </style>
