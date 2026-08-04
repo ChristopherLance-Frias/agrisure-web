@@ -353,113 +353,175 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import ApexChart from 'vue3-apexcharts';
+import { ref, reactive, onMounted } from 'vue'
+import axios from 'axios'
+import ApexChart from 'vue3-apexcharts'
 
-// Current Logged-in User
-const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' });
-const selectedSeason = ref('wet');
+const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' })
+const selectedSeason = ref('wet')
 
-
-
-// Top Stats
 const stats = ref({
-  farmers: { count: '2,845', change: '+24 this month' },
-  applications: { count: '1,245', pending: '86 Pending Today' },
-  claims: { count: '42', inspecting: '7 Waiting Inspection' },
-  damage: { count: '19', critical: '3 Critical Level' },
-  inventory: { items: '126', lowStock: '7 Low Stock Items' },
-});
+    farmers:{count:0,change:''},
+    applications:{count:0,pending:''},
+    claims:{count:0,inspecting:''},
+    damage:{count:0,critical:''},
+    inventory:{items:0,lowStock:''}
+})
 
-// Urgent Tasks
-const pendingTasks = ref([
-  { id: 1, title: 'Verify Farmer Applications', badgeText: '12 Left', dotColor: 'dot-amber', badgeColor: 'badge-amber' },
-  { id: 2, title: 'Field Claims Inspection', badgeText: '5 Today', dotColor: 'dot-amber', badgeColor: 'badge-amber' },
-  { id: 3, title: 'Fertilizer Stock Low', badgeText: 'Action Req.', dotColor: 'dot-red', badgeColor: 'badge-red' },
-  { id: 4, title: 'Rice Seed Distribution', badgeText: 'Tomorrow', dotColor: 'dot-green', badgeColor: 'badge-green' },
-]);
+const pendingTasks = ref([])
+const barangayData = ref([])
+const weather = ref({temp:'29°C',condition:'Partly Cloudy',humidity:'81%',rainChance:'70%',icon:'fa-solid fa-cloud-sun'})
+const distributionSummary = ref([])
+const recentActivities = ref([])
 
-// Barangay Performance Table Data
-const barangayData = ref([
-  { name: 'Centro', farmers: 245, claims: 120, damage: 4, statusBg: 'dot-green' },
-  { name: 'Rizal', farmers: 193, claims: 98, damage: 8, statusBg: 'dot-amber' },
-  { name: 'Mabini', farmers: 175, claims: 82, damage: 2, statusBg: 'dot-red' },
-  { name: 'San Roque', farmers: 140, claims: 65, damage: 1, statusBg: 'dot-green' },
-]);
-
-// Weather Overview
-const weather = ref({ temp: '29°C', condition: 'Partly Cloudy', humidity: '81%', rainChance: '70%', icon: 'fa-solid fa-cloud-sun' });
-
-// Distribution KPIs
-const distributionSummary = ref([
-  { label: 'Distributions Completed', value: '14', colorClass: 'text-green' },
-  { label: 'Upcoming Scheduled', value: '3', colorClass: 'text-amber' },
-  { label: 'Total Beneficiaries', value: '540', colorClass: 'text-dark' },
-  { label: 'Supplies Distributed', value: '1,320', unit: 'units', colorClass: 'text-dark' },
-]);
-
-// Activity Log
-const recentActivities = ref([
-  { id: 1, colorClass: 'dot-green', text: '<strong style="color: #0f172a;">Juan Dela Cruz</strong> submitted a new insurance application.', time: '10m ago' },
-  { id: 2, colorClass: 'dot-red', text: '<strong style="color: #0f172a;">Maria Santos</strong> filed flood crop damage report for Barangay Rizal.', time: '1h ago' },
-  { id: 3, colorClass: 'dot-amber', text: 'Stock update: <strong style="color: #0f172a;">Urea Fertilizer</strong> reserve reduced below threshold.', time: '3h ago' },
-  { id: 4, colorClass: 'dot-blue', text: 'Insurance Claim <strong style="color: #0f172a;">#CLM-2026-089</strong> approved by Regional Office.', time: '5h ago' },
-]);
-
-// ApexCharts Reactive Configurations
 const chartConfigs = reactive({
-  applicationTrend: {
-    series: [{ name: 'Applications', data: [45, 52, 38, 65, 89, 120, 95, 110] }],
-    options: {
-      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
-      colors: ['#047857'],
-      plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
-      xaxis: { 
-        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-        labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
-      },
-      yaxis: { labels: { style: { colors: '#94a3b8', fontSize: '11px' } } },
-      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+    applicationTrend:{
+        series:[{name:'Applications',data:[]}],
+        options:{
+            chart:{toolbar:{show:false},fontFamily:'inherit'},
+            colors:['#047857'],
+            plotOptions:{bar:{borderRadius:6,columnWidth:'40%'}},
+            xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']},
+            grid:{borderColor:'#f1f5f9'}
+        }
+    },
+    damageAnalytics:{
+        series:[{name:'Incidents',data:[]}],
+        options:{
+            chart:{toolbar:{show:false}},
+            colors:['#e11d48'],
+            plotOptions:{bar:{horizontal:true,borderRadius:6}},
+            xaxis:{categories:[]}
+        }
+    },
+    insuranceStatus:{
+        series:[],
+        options:{
+            labels:[],
+            colors:['#059669','#d97706','#2563eb','#7c3aed','#dc2626'],
+            legend:{position:'bottom'}
+        }
+    },
+    inventoryStatus:{
+        series:[{name:'Stock',data:[]}],
+        options:{
+            chart:{toolbar:{show:false}},
+            colors:['#059669'],
+            plotOptions:{bar:{horizontal:true,borderRadius:6}},
+            xaxis:{categories:[],max:100}
+        }
     }
-  },
-  damageAnalytics: {
-    series: [{ name: 'Incidents', data: [45, 28, 15, 8] }],
-    options: {
-      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
-      plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '45%' } },
-      colors: ['#e11d48'],
-      xaxis: { 
-        categories: ['Flood', 'Typhoon', 'Drought', 'Pest'],
-        labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
-      },
-      yaxis: { labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } } },
-      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+})
+
+const loadDashboard = async()=>{
+    try{
+
+        const [
+            overview,
+            insurance,
+            damage,
+            distribution,
+            inventory,
+            executive
+        ] = await Promise.all([
+            axios.get('/api/reports/overview'),
+            axios.get('/api/reports/insurance'),
+            axios.get('/api/reports/damage-reports'),
+            axios.get('/api/reports/distribution'),
+            axios.get('/api/reports/inventory'),
+            axios.get('/api/reports/executive')
+        ])
+
+        const ov=overview.data.summary
+        const ins=insurance.data
+        const dmg=damage.data
+        const dist=distribution.data
+        const inv=inventory.data
+        const exe=executive.data
+
+        stats.value={
+            farmers:{
+                count:ov.total_farmers,
+                change:`${ov.total_farms} Farms`
+            },
+            applications:{
+                count:ov.insurance_applications,
+                pending:`${ins.summary.submitted_to_mao} Pending`
+            },
+            claims:{
+                count:ov.claims,
+                inspecting:`₱${Number(exe.kpis.claims_released_amount).toLocaleString()}`
+            },
+            damage:{
+                count:ov.damage_reports,
+                critical:`${dmg.summary.validated_by_mao} Validated`
+            },
+            inventory:{
+                items:ov.inventory_supplies,
+                lowStock:`${inv.summary.low_stock_items} Low Stock`
+            }
+        }
+
+        chartConfigs.applicationTrend.series=[{
+            name:'Applications',
+            data:ins.monthly_applications.map(i=>i.total)
+        }]
+
+        chartConfigs.applicationTrend.options.xaxis.categories=ins.monthly_applications.map(i=>`Month ${i.month}`)
+
+        chartConfigs.damageAnalytics.series=[{
+            name:'Incidents',
+            data:dmg.damage_causes.map(i=>i.total)
+        }]
+
+        chartConfigs.damageAnalytics.options.xaxis.categories=dmg.damage_causes.map(i=>i.damage_cause)
+
+        chartConfigs.insuranceStatus.series=ins.status_distribution.map(i=>i.total)
+
+        chartConfigs.insuranceStatus.options.labels=ins.status_distribution.map(i=>i.status)
+
+        chartConfigs.inventoryStatus.series=[{
+            name:'Quantity',
+            data:inv.current_inventory.map(i=>i.quantity)
+        }]
+
+        chartConfigs.inventoryStatus.options.xaxis.categories=inv.current_inventory.map(i=>i.supply_name)
+
+        barangayData.value=exe.top_barangays_by_farmers.map(i=>({
+            name:i.name,
+            farmers:i.total,
+            claims:0,
+            damage:0,
+            statusBg:'dot-green'
+        }))
+
+        distributionSummary.value=[
+            {label:'Distribution Events',value:dist.summary.distribution_events,colorClass:'text-green'},
+            {label:'Beneficiaries',value:dist.summary.beneficiary_farmers,colorClass:'text-dark'},
+            {label:'Barangays Served',value:dist.summary.barangays_served,colorClass:'text-amber'},
+            {label:'Items Distributed',value:dist.summary.distributed_items,unit:'units',colorClass:'text-dark'}
+        ]
+
+        pendingTasks.value=[
+            {id:1,title:'Applications Pending',badgeText:ins.summary.submitted_to_mao,dotColor:'dot-amber',badgeColor:'badge-amber'},
+            {id:2,title:'Validated Damage Reports',badgeText:dmg.summary.validated_by_mao,dotColor:'dot-red',badgeColor:'badge-red'},
+            {id:3,title:'Low Stock Supplies',badgeText:inv.summary.low_stock_items,dotColor:'dot-red',badgeColor:'badge-red'},
+            {id:4,title:'Claims Ready',badgeText:exe.kpis.claims_processed,dotColor:'dot-green',badgeColor:'badge-green'}
+        ]
+
+        recentActivities.value=[
+            {id:1,colorClass:'dot-green',text:`${ov.insurance_applications} insurance applications recorded.`,time:'Today'},
+            {id:2,colorClass:'dot-red',text:`${ov.damage_reports} damage reports submitted.`,time:'Today'},
+            {id:3,colorClass:'dot-amber',text:`${inv.summary.low_stock_items} supplies are low on stock.`,time:'Today'},
+            {id:4,colorClass:'dot-blue',text:`₱${Number(exe.kpis.claims_released_amount).toLocaleString()} claims released.`,time:'Today'}
+        ]
+
+    }catch(e){
+        console.error(e)
     }
-  },
-  insuranceStatus: {
-    series: [68, 20, 12],
-    options: {
-      chart: { fontFamily: 'inherit' },
-      labels: ['Approved', 'Pending', 'Rejected'],
-      colors: ['#059669', '#d97706', '#e11d48'],
-      legend: { position: 'bottom', fontSize: '12px', labels: { colors: '#64748b' } },
-      stroke: { width: 0 }
-    }
-  },
-  inventoryStatus: {
-    series: [{ name: 'Stock Level (%)', data: [85, 60, 18, 75] }],
-    options: {
-      chart: { toolbar: { show: false }, fontFamily: 'inherit' },
-      plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '45%' } },
-      colors: ['#059669'],
-      xaxis: { categories: ['Rice Seeds', 'Corn Seeds', 'Fertilizer', 'Pesticides'], max: 100, labels: { style: { colors: '#94a3b8', fontSize: '11px' } } },
-      yaxis: { labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } } },
-      grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-    }
-  }
-});
+}
+
+onMounted(loadDashboard)
 </script>
 
 <style scoped>
