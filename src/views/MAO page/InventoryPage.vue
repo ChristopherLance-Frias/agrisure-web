@@ -1,83 +1,74 @@
 <template>
   <div class="inv-page">
+    <!-- ===== Header ===== -->
     <div class="page-header">
-      <div>
-        <h2 class="page-title">Farming Supply Inventory</h2>
-        <p class="page-subtitle">Manage stocks and create distribution events for barangay officials.</p>
+      <div class="header-copy">
+        <p class="eyebrow">Municipal Agriculture Office</p>
+        <h1 class="page-title">Farming Supply Inventory</h1>
+        <p class="page-subtitle">Track stock levels and dispatch supplies to barangay officials.</p>
       </div>
 
       <div class="header-actions">
-        <button class="btn-secondary" @click="activeTab = 'inventory'; showAddSupply = true">
+        <button class="btn btn-ghost" @click="activeTab = 'inventory'; showAddSupply = true">
+          <svg viewBox="0 0 20 20" class="icon"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           Add supply
         </button>
 
-        <button class="btn-primary" @click="openCreateEvent">
+        <button class="btn btn-primary" @click="openCreateEvent">
+          <svg viewBox="0 0 20 20" class="icon"><path d="M4 6h9M4 10h12M4 14h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           Create distribution event
         </button>
       </div>
     </div>
 
-    <div class="metrics-row">
-      <div class="metric-card">
-        <div>
-          <p class="metric-label">Total supply types</p>
-          <p class="metric-value">{{ supplies.length }}</p>
-        </div>
+    <!-- ===== Ledger strip ===== -->
+    <div class="ledger-strip">
+      <div class="ledger-item">
+        <span class="ledger-value">{{ supplies.length }}</span>
+        <span class="ledger-label">Supply types</span>
       </div>
-
-      <div class="metric-card">
-        <div>
-          <p class="metric-label">In stock</p>
-          <p class="metric-value val-green">{{ supplies.filter(s => s.status === 'in-stock').length }}</p>
-        </div>
+      <div class="ledger-divider" />
+      <div class="ledger-item">
+        <span class="ledger-value tone-green">{{ supplies.filter(s => s.status === 'in-stock').length }}</span>
+        <span class="ledger-label">In stock</span>
       </div>
-
-      <div class="metric-card">
-        <div>
-          <p class="metric-label">Low stock</p>
-          <p class="metric-value val-amber">{{ supplies.filter(s => s.status === 'low').length }}</p>
-        </div>
+      <div class="ledger-divider" />
+      <div class="ledger-item">
+        <span class="ledger-value tone-gold">{{ supplies.filter(s => s.status === 'low').length }}</span>
+        <span class="ledger-label">Low stock</span>
       </div>
-
-      <div class="metric-card">
-        <div>
-          <p class="metric-label">Distribution events</p>
-          <p class="metric-value val-blue">{{ distributionEvents.length }}</p>
-        </div>
+      <div class="ledger-divider" />
+      <div class="ledger-item">
+        <span class="ledger-value tone-blue">{{ distributionEvents.length }}</span>
+        <span class="ledger-label">Distribution events</span>
       </div>
-
-      <div class="metric-card">
-        <div>
-          <p class="metric-label">Completed events</p>
-          <p class="metric-value val-purple">{{ distributionEvents.filter(e => e.status === 'completed').length }}</p>
-        </div>
+      <div class="ledger-divider" />
+      <div class="ledger-item">
+        <span class="ledger-value tone-plum">{{ distributionEvents.filter(e => e.status === 'completed').length }}</span>
+        <span class="ledger-label">Completed</span>
       </div>
     </div>
 
-    <div class="tab-bar">
+    <!-- ===== Section switch ===== -->
+    <div class="tab-bar" role="tablist">
       <button class="tab-btn" :class="{ active: activeTab === 'inventory' }" @click="activeTab = 'inventory'">
         Supply stocks
       </button>
-
       <button class="tab-btn" :class="{ active: activeTab === 'lists' }" @click="activeTab = 'lists'">
         Distribution events
       </button>
     </div>
 
+    <!-- ===================== INVENTORY ===================== -->
     <div v-if="activeTab === 'inventory'">
       <div class="toolbar">
         <div class="search-wrap">
+          <svg viewBox="0 0 20 20" class="icon search-icon"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M14 14l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           <input v-model="supplySearch" type="text" placeholder="Search supply name or category…" class="search-input" />
         </div>
 
         <div class="filter-group">
-          <button
-            v-for="f in stockFilters"
-            :key="f.value"
-            class="filter-tag"
-            :class="{ active: supplyFilter === f.value }"
-            @click="supplyFilter = f.value"
-          >
+          <button v-for="f in stockFilters" :key="f.value" class="filter-tag" :class="{ active: supplyFilter === f.value }" @click="supplyFilter = f.value">
             {{ f.label }}
           </button>
         </div>
@@ -90,90 +81,94 @@
               <th>Supply name</th>
               <th>Category</th>
               <th>Unit</th>
-              <th>Qty available</th>
-              <th>Qty distributed</th>
+              <th class="num">Available</th>
+              <th class="num">Distributed</th>
               <th>Status</th>
-              <th></th>
+              <th class="col-actions"></th>
             </tr>
           </thead>
 
           <tbody v-if="!loadingSupplies">
-            <tr v-for="s in filteredSupplies" :key="s.id">
+            <tr v-for="s in filteredSupplies" :key="s.id" :class="{ 'row-low': s.status === 'low', 'row-out': s.status === 'out' }">
               <td class="td-name">{{ s.name }}</td>
               <td><span class="cat-tag">{{ s.category }}</span></td>
               <td class="td-muted">{{ s.unit }}</td>
-              <td class="td-qty">{{ Number(s.qty_available || 0).toLocaleString() }}</td>
-              <td class="td-muted">{{ Number(s.qty_distributed || 0).toLocaleString() }}</td>
-              <td><span class="status-pill" :class="'sp-' + s.status">{{ stockLabel(s.status) }}</span></td>
+              <td class="td-qty num">{{ Number(s.qty_available || 0).toLocaleString() }}</td>
+              <td class="td-muted num">{{ Number(s.qty_distributed || 0).toLocaleString() }}</td>
+              <td><span class="status-pill" :class="'sp-' + s.status"><i class="dot" />{{ stockLabel(s.status) }}</span></td>
               <td>
                 <div class="row-actions">
-                  <button class="icon-btn" @click="editSupply(s)">Edit</button>
-                  <button class="icon-btn" @click="deleteSupply(s.id)">Delete</button>
+                  <button class="icon-btn" title="Edit" @click="editSupply(s)">
+                    <svg viewBox="0 0 20 20" class="icon"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button class="icon-btn icon-btn-danger" title="Delete" @click="deleteSupply(s.id)">
+                    <svg viewBox="0 0 20 20" class="icon"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
                 </div>
               </td>
             </tr>
 
             <tr v-if="!filteredSupplies.length">
-              <td colspan="7" class="td-empty">No supplies found</td>
+              <td colspan="7">
+                <div class="empty-block">
+                  <p class="empty-title">No supplies found</p>
+                  <p class="empty-copy">Try a different search term or filter, or add a new supply to get started.</p>
+                </div>
+              </td>
             </tr>
           </tbody>
 
           <tbody v-else>
-            <tr>
-              <td colspan="7" class="td-empty">Loading inventory…</td>
-            </tr>
+            <tr><td colspan="7" class="td-loading">Loading inventory…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
+    <!-- ===================== DISTRIBUTION EVENTS ===================== -->
     <div v-if="activeTab === 'lists'" class="lists-area">
       <div class="list-col">
-        <div class="toolbar">
+        <div class="toolbar toolbar-stack">
           <div class="search-wrap">
-            <input v-model="listSearch" type="text" placeholder="Search event title…" class="search-input" />
+            <svg viewBox="0 0 20 20" class="icon search-icon"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M14 14l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input v-model="listSearch" type="text" placeholder="Search event title or reference…" class="search-input" />
           </div>
 
           <div class="filter-group">
-            <button
-              v-for="f in listFilters"
-              :key="f.value"
-              class="filter-tag"
-              :class="{ active: listFilter === f.value }"
-              @click="listFilter = f.value"
-            >
+            <button v-for="f in listFilters" :key="f.value" class="filter-tag" :class="{ active: listFilter === f.value }" @click="listFilter = f.value">
               {{ f.label }}
             </button>
           </div>
         </div>
 
         <div class="dist-cards" v-if="!loadingLists">
-          <div
+          <button
             v-for="event in filteredLists"
             :key="event.id"
             class="dist-card"
             :class="{ selected: selectedEvent && selectedEvent.id === event.id }"
-            @click="selectedEvent = event"
+            @click="selectEvent(event)"
           >
             <div class="dc-top">
-              <div>
-                <p class="dc-id">{{ event.reference_no || ('EVENT-' + event.id) }}</p>
-                <p class="dc-barangay">{{ event.title }}</p>
-              </div>
-
-              <span class="status-pill" :class="'sp-' + event.status">
-                {{ listLabel(event.status) }}
+              <p class="dc-id">{{ event.reference_no || ('EVENT-' + event.id) }}</p>
+              <span class="status-pill" :class="'sp-' + event.status"><i class="dot" />{{ listLabel(event.status) }}</span>
+            </div>
+            <p class="dc-title">{{ event.title }}</p>
+            <div class="dc-meta">
+              <span class="dc-meta-item">
+                <svg viewBox="0 0 20 20" class="icon-sm"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                {{ event.distribution_date }}
+              </span>
+              <span class="dc-meta-item">
+                <svg viewBox="0 0 20 20" class="icon-sm"><path d="M10 2a5 5 0 100 10 5 5 0 000-10zM3 18c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+                {{ event.lists?.length || 0 }} barangay list/s
               </span>
             </div>
-
-            <div class="dc-meta">
-              <span>{{ event.distribution_date }}</span>
-              <span>{{ event.lists?.length || 0 }} barangay list/s</span>
-            </div>
-          </div>
+          </button>
 
           <div v-if="!filteredLists.length" class="empty-state">
-            <p>No distribution events found</p>
+            <p class="empty-title">No distribution events found</p>
+            <p class="empty-copy">Create one to start dispatching supplies to barangays.</p>
           </div>
         </div>
 
@@ -182,17 +177,15 @@
         </div>
       </div>
 
+      <!-- ===== Manifest detail panel ===== -->
       <div class="detail-col" v-if="selectedEvent">
-        <div class="detail-card">
-          <div class="detail-header">
+        <div class="manifest-card">
+          <div class="manifest-header">
             <div>
-              <p class="detail-id">{{ selectedEvent.reference_no || selectedEvent.id }}</p>
-              <p class="detail-barangay">{{ selectedEvent.title }}</p>
+              <p class="detail-id">{{ selectedEvent.reference_no || ('EVENT-' + selectedEvent.id) }}</p>
+              <h3 class="detail-title">{{ selectedEvent.title }}</h3>
             </div>
-
-            <span class="status-pill" :class="'sp-' + selectedEvent.status">
-              {{ listLabel(selectedEvent.status) }}
-            </span>
+            <span class="status-pill status-pill-lg" :class="'sp-' + selectedEvent.status"><i class="dot" />{{ listLabel(selectedEvent.status) }}</span>
           </div>
 
           <div class="detail-meta-row">
@@ -200,79 +193,61 @@
               <span class="dm-label">Date</span>
               <span class="dm-val">{{ selectedEvent.distribution_date }}</span>
             </div>
-
             <div class="dm-item">
               <span class="dm-label">Time</span>
               <span class="dm-val">{{ selectedEvent.distribution_time || '—' }}</span>
             </div>
-
             <div class="dm-item">
               <span class="dm-label">Venue</span>
               <span class="dm-val">{{ selectedEvent.venue }}</span>
             </div>
-
             <div class="dm-item">
-              <span class="dm-label">Barangay Lists</span>
+              <span class="dm-label">Barangay lists</span>
               <span class="dm-val">{{ selectedEvent.lists?.length || 0 }}</span>
             </div>
           </div>
 
-          <p class="section-label">Barangay Lists</p>
+          <div class="perforation"><span v-for="n in 40" :key="n" /></div>
 
-          <div
-            v-for="list in selectedEvent.lists || []"
-            :key="list.id"
-            style="margin-bottom: 1rem; border: 1px solid #eef2ef; padding: .8rem; border-radius: 10px;"
-          >
-            <p class="td-name">
-              Brgy. {{ list.barangay?.name || 'Unknown Barangay' }}
-            </p>
+          <p class="section-label">Barangay lists</p>
 
-            <p class="td-muted">
-              Farmers: {{ list.farmers?.length || 0 }}
-            </p>
+          <div v-for="list in selectedEvent.lists || []" :key="list.id" class="barangay-block">
+            <button class="barangay-block-head" @click="toggleListOpen(list.id)">
+              <div class="bb-left">
+                <svg class="chevron icon-sm" :class="{ open: isListOpen(list.id) }" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="bb-name">Brgy. {{ list.barangay?.name || 'Unknown Barangay' }}</span>
+              </div>
+              <div class="bb-right">
+                <span class="bb-stat">{{ list.farmers?.length || 0 }} farmers</span>
+                <span class="status-pill" :class="'sp-' + (list.status || 'draft')"><i class="dot" />{{ listLabel(list.status || 'draft') }}</span>
+              </div>
+            </button>
 
-            <table class="inner-table" style="margin-top:.5rem">
-              <thead>
-                <tr>
-                  <th>Supply</th>
-                  <th>Total Qty</th>
-                </tr>
-              </thead>
+            <div class="barangay-block-body" v-show="isListOpen(list.id)">
+              <table class="inner-table">
+                <thead><tr><th>Supply</th><th class="num">Total qty</th></tr></thead>
+                <tbody>
+                  <tr v-for="item in list.items || []" :key="item.id">
+                    <td>{{ item.supply?.name }}</td>
+                    <td class="num">{{ item.quantity }} {{ item.supply?.unit }}</td>
+                  </tr>
+                </tbody>
+              </table>
 
-              <tbody>
-                <tr v-for="item in list.items || []" :key="item.id">
-                  <td>{{ item.supply?.name }}</td>
-                  <td>{{ item.quantity }} {{ item.supply?.unit }}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="farmer-chips">
-              <span
-                class="farmer-chip"
-                v-for="f in list.farmers || []"
-                :key="f.id"
-              >
-                {{ f.farmer?.last_name }}, {{ f.farmer?.first_name }},{{ f.farmer?.middle_name }}
-              </span>
+              <p class="mini-label">Recipients</p>
+              <div class="farmer-chips">
+                <span class="farmer-chip" v-for="f in list.farmers || []" :key="f.id">
+                  {{ f.farmer?.last_name }}, {{ f.farmer?.first_name }} {{ f.farmer?.middle_name || '' }}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div class="detail-actions">
-            <button
-              v-if="selectedEvent.status === 'draft'"
-              class="action-btn btn-send"
-              @click="publishDistributionEvent(selectedEvent)"
-            >
+          <div class="detail-actions" v-if="selectedEvent.status === 'draft' || selectedEvent.status === 'published'">
+            <button v-if="selectedEvent.status === 'draft'" class="btn btn-primary btn-block" @click="publishDistributionEvent(selectedEvent)">
               Publish to barangays
             </button>
-
-            <button
-              v-if="selectedEvent.status === 'published'"
-              class="action-btn btn-send"
-              @click="completeDistributionEvent(selectedEvent)"
-            >
+            <button v-if="selectedEvent.status === 'published'" class="btn btn-primary btn-block" @click="completeDistributionEvent(selectedEvent)">
               Mark as completed
             </button>
           </div>
@@ -280,10 +255,13 @@
       </div>
 
       <div class="detail-empty" v-else>
-        <p>Select an event to view details</p>
+        <svg viewBox="0 0 48 48" class="empty-icon"><rect x="8" y="10" width="32" height="30" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 18h32M16 6v8M32 6v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <p class="empty-title">Select an event to view its manifest</p>
+        <p class="empty-copy">Details, barangay lists, and status actions will appear here.</p>
       </div>
     </div>
 
+    <!-- ===================== ADD / EDIT SUPPLY MODAL ===================== -->
     <transition name="fade">
       <div class="modal-backdrop" v-if="showAddSupply" @click.self="closeAddSupply">
         <div class="modal">
@@ -293,9 +271,9 @@
           </div>
 
           <div class="form-grid">
-            <div class="form-field">
+            <div class="form-field span-2">
               <label>Supply name</label>
-              <input v-model="supplyForm.name" type="text" />
+              <input v-model="supplyForm.name" type="text" placeholder="e.g. Urea Fertilizer 50kg" />
             </div>
 
             <div class="form-field">
@@ -313,7 +291,7 @@
 
             <div class="form-field">
               <label>Unit</label>
-              <input v-model="supplyForm.unit" type="text" />
+              <input v-model="supplyForm.unit" type="text" placeholder="e.g. sack, liter, piece" />
             </div>
 
             <div class="form-field">
@@ -321,15 +299,15 @@
               <input v-model.number="supplyForm.qty_available" type="number" min="0" />
             </div>
 
-            <div class="form-field" style="grid-column:1/-1">
+            <div class="form-field">
               <label>Low stock threshold</label>
               <input v-model.number="supplyForm.low_threshold" type="number" min="0" />
             </div>
           </div>
 
           <div class="modal-actions">
-            <button class="modal-btn modal-cancel" @click="closeAddSupply">Cancel</button>
-            <button class="modal-btn modal-confirm" @click="saveSupply">
+            <button class="btn btn-ghost" @click="closeAddSupply">Cancel</button>
+            <button class="btn btn-primary" @click="saveSupply">
               {{ editingSupply ? 'Save changes' : 'Add supply' }}
             </button>
           </div>
@@ -337,182 +315,186 @@
       </div>
     </transition>
 
+    <!-- ===================== CREATE DISTRIBUTION EVENT — WIZARD ===================== -->
     <transition name="fade">
-      <div class="modal-backdrop" v-if="showCreateEvent" @click.self="showCreateEvent = false">
-        <div class="modal modal-wide" style="max-width: 800px;">
+      <div class="modal-backdrop" v-if="showCreateEvent" @click.self="closeCreateEvent">
+        <div class="modal modal-wide">
           <div class="modal-head">
             <h4>Create distribution event</h4>
-            <button class="modal-close" @click="showCreateEvent = false">×</button>
+            <button class="modal-close" @click="closeCreateEvent">×</button>
           </div>
 
-          <div class="form-grid">
-            <div class="form-field">
-              <label>Title</label>
-              <input v-model="eventForm.title" placeholder="e.g. Fertilizer Distribution" />
-            </div>
-
-            <div class="form-field">
-              <label>Date</label>
-              <input v-model="eventForm.distribution_date" type="date" />
-            </div>
-
-            <div class="form-field">
-              <label>Time</label>
-              <input v-model="eventForm.distribution_time" type="time" />
-            </div>
-
-            <div class="form-field">
-              <label>Venue</label>
-              <input v-model="eventForm.venue" placeholder="e.g. MAO Office" />
-            </div>
-
-            <div class="form-field" style="grid-column:1/-1">
-              <label>Description</label>
-              <textarea v-model="eventForm.description" placeholder="Optional"></textarea>
-            </div>
+          <!-- Step indicator -->
+          <div class="wizard-steps">
+            <button class="wizard-step" :class="{ active: wizardStep === 1, done: wizardStep > 1 }" @click="wizardStep = 1">
+              <span class="wizard-step-num"><svg v-if="wizardStep > 1" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><template v-else>1</template></span>
+              Event details
+            </button>
+            <span class="wizard-line" />
+            <button class="wizard-step" :class="{ active: wizardStep === 2 }" @click="canGoToStep2 && (wizardStep = 2)">
+              <span class="wizard-step-num">2</span>
+              Barangay lists & allocation
+            </button>
           </div>
 
-          <p class="section-label" style="margin:1rem 0 8px">Barangay Lists</p>
-
-          <div
-            v-for="(brgyList, index) in eventForm.barangay_lists"
-            :key="index"
-            class="barangay-list-box"
-            style="border:1px solid #dde8de; padding:1rem; border-radius:12px; margin-bottom:1rem;"
-          >
+          <!-- Step 1 -->
+          <div v-if="wizardStep === 1" class="wizard-panel">
             <div class="form-grid">
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="eventForm.title" placeholder="e.g. Fertilizer Distribution — 3rd Quarter" />
+              </div>
               <div class="form-field">
-                <label>Barangay</label>
-                <select v-model="brgyList.user_id" @change="selectBarangayForList(index)">
-                  <option value="">Select Barangay</option>
-                  <option
-                    v-for="user in barangayAccounts"
-                    :key="user.id"
-                    :value="user.id"
-                  >
-                    {{ user.barangay?.name }}
-                  </option>
-                </select>
+                <label>Date</label>
+                <input v-model="eventForm.distribution_date" type="date" />
               </div>
-
               <div class="form-field">
-                <label>Barangay Official</label>
-                <input :value="brgyList.official" readonly />
+                <label>Time</label>
+                <input v-model="eventForm.distribution_time" type="time" />
+              </div>
+              <div class="form-field span-2">
+                <label>Venue</label>
+                <input v-model="eventForm.venue" placeholder="e.g. MAO Office" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description <span class="optional">(optional)</span></label>
+                <textarea v-model="eventForm.description" placeholder="Notes for barangay officials"></textarea>
               </div>
             </div>
 
-            <p class="section-label" style="margin:1rem 0 8px">Supply Items</p>
-
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.5rem;">
-              <div v-for="(item, idx) in brgyList.items" :key="idx" style="display: flex; align-items: center; gap: 4px; background: #f0f4f0; padding: 4px 8px; border-radius: 6px;">
-                <select v-model="item.supply_id" style="padding: 4px; font-size: 12px; width: auto; border: 1px solid #d0ddd1; border-radius: 4px;">
-                  <option value="">Select supply</option>
-                  <option v-for="s in supplies" :key="s.id" :value="s.id">
-                    {{ s.name }}
-                  </option>
-                </select>
-                <button class="icon-btn" style="padding: 2px;" @click="brgyList.items.splice(idx, 1)">×</button>
-              </div>
-              <button class="btn-ghost" @click="brgyList.items.push({ supply_id: '' })">
-                + Add item
+            <div class="modal-actions">
+              <button class="btn btn-ghost" @click="closeCreateEvent">Cancel</button>
+              <button class="btn btn-primary" :disabled="!step1Valid" @click="wizardStep = 2">
+                Continue to barangay lists
               </button>
             </div>
-
-            <p class="section-label" style="margin:1rem 0 8px">
-              Farmer Recipients ({{ brgyList.farmer_ids.length }} selected)
-            </p>
-
-            <div class="recipient-actions" style="margin-bottom: 0.5rem;">
-              <button type="button" class="filter-tag" style="padding: 2px 8px;" @click="brgyList.farmer_ids = brgyList.farmers.map(f => f.id)">
-                Select All
-              </button>
-              <button type="button" class="filter-tag" style="padding: 2px 8px;" @click="brgyList.farmer_ids = []">
-                Clear
-              </button>
-            </div>
-
-            <div class="farmers-list" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 120px; overflow-y: auto; border: 1px solid #eef2ef; padding: 8px; border-radius: 8px; background: #fafcfa; margin-bottom: 1rem;">
-              <label
-                v-for="farmer in brgyList.farmers"
-                :key="farmer.id"
-                class="farmer-option"
-                style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;"
-              >
-                <input
-                  type="checkbox"
-                  :value="farmer.id"
-                  v-model="brgyList.farmer_ids"
-                />
-                {{ farmer.last_name }}, {{ farmer.first_name }}, {{ farmer.middle_name }}
-              </label>
-            </div>
-
-            <div v-if="brgyList.farmer_ids.length && brgyList.items.some(i => i.supply_id)" class="allocation-matrix-section" style="margin-top: 1rem;">
-              <p class="section-label" style="color: #145c2e;">Allocation Matrix</p>
-              <div style="overflow-x: auto; border: 1px solid #dde8de; border-radius: 8px; background: #fff;">
-                <table class="inner-table" style="margin-bottom: 0;">
-                  <thead>
-                    <tr>
-                      <th>Farmer</th>
-                      <th v-for="item in brgyList.items.filter(i => i.supply_id)" :key="item.supply_id">
-                        {{ supplyName(item.supply_id) }}
-                        <span style="display:block; font-size: 10px; color: #718a77; font-weight: normal;">
-                          Total: {{ totalAllocatedForSupply(brgyList, item.supply_id) }}
-                        </span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="farmerId in brgyList.farmer_ids" :key="farmerId">
-                      <td class="td-name" style="font-size: 12px;">
-                        {{ brgyList.farmers.find(f => f.id === farmerId)?.last_name }}, 
-                        {{ brgyList.farmers.find(f => f.id === farmerId)?.first_name }}
-                      </td>
-                      <td v-for="item in brgyList.items.filter(i => i.supply_id)" :key="item.supply_id">
-                        <input 
-                          type="number" 
-                          min="0" 
-                          style="width: 70px; padding: 4px 6px; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;"
-                          :value="getAllocation(brgyList, farmerId, item.supply_id)"
-                          @input="setAllocation(brgyList, farmerId, item.supply_id, $event.target.value)"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <button class="btn-ghost" style="margin-top:1rem; border-color: #fee2e2; color: #7f1d1d;" @click="eventForm.barangay_lists.splice(index, 1)">
-              Remove Barangay List
-            </button>
           </div>
 
-          <button class="btn-ghost" @click="addBarangayList">
-            + Add Barangay List
-          </button>
+          <!-- Step 2 -->
+          <div v-else class="wizard-panel">
+            <div class="barangay-tabs">
+              <button
+                v-for="(brgyList, index) in eventForm.barangay_lists"
+                :key="index"
+                class="barangay-tab"
+                :class="{ active: activeListIndex === index, incomplete: !isListComplete(brgyList) }"
+                @click="activeListIndex = index"
+              >
+                <svg v-if="isListComplete(brgyList)" viewBox="0 0 16 16" class="icon-sm tab-check"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {{ brgyList.barangay_name || 'New barangay list ' + (index + 1) }}
+                <span class="tab-remove" @click.stop="removeBarangayList(index)">×</span>
+              </button>
+              <button class="btn-ghost btn-add-tab" @click="addBarangayList">
+                <svg viewBox="0 0 20 20" class="icon"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                Add barangay
+              </button>
+            </div>
 
-          <div class="modal-actions">
-            <button class="modal-btn modal-cancel" @click="showCreateEvent = false">
-              Cancel
-            </button>
+            <div v-if="currentList" class="barangay-config">
+              <!-- 1. barangay + official -->
+              <div class="config-step">
+                <p class="config-step-title"><span class="step-badge">1</span>Barangay & official</p>
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label>Barangay</label>
+                    <select v-model="currentList.user_id" @change="selectBarangayForList(activeListIndex)">
+                      <option value="">Select barangay</option>
+                      <option v-for="user in barangayAccounts" :key="user.id" :value="user.id">{{ user.barangay?.name }}</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label>Barangay official</label>
+                    <input :value="currentList.official" readonly placeholder="Auto-filled after selection" />
+                  </div>
+                </div>
+              </div>
 
-            <button
-              class="modal-btn modal-confirm"
-              @click="saveDistributionEvent"
-              :disabled="!canSaveEvent"
-            >
-              Save as draft
-            </button>
+              <!-- 2. supply items -->
+              <div class="config-step">
+                <p class="config-step-title"><span class="step-badge">2</span>Supply items</p>
+                <div class="item-chip-row">
+                  <div v-for="(item, idx) in currentList.items" :key="idx" class="item-chip">
+                    <select v-model="item.supply_id">
+                      <option value="">Select supply</option>
+                      <option v-for="s in supplies" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                    <button class="chip-remove" @click="currentList.items.splice(idx, 1)">×</button>
+                  </div>
+                  <button class="btn-ghost btn-sm" @click="currentList.items.push({ supply_id: '' })">+ Add item</button>
+                </div>
+              </div>
+
+              <!-- 3. farmers -->
+              <div class="config-step">
+                <p class="config-step-title">
+                  <span class="step-badge">3</span>Farmer recipients
+                  <span class="count-badge">{{ currentList.farmer_ids.length }} / {{ currentList.farmers.length }} selected</span>
+                </p>
+                <div class="recipient-actions">
+                  <button type="button" class="filter-tag" @click="currentList.farmer_ids = currentList.farmers.map(f => f.id)">Select all</button>
+                  <button type="button" class="filter-tag" @click="currentList.farmer_ids = []">Clear</button>
+                </div>
+                <div class="farmers-list">
+                  <label v-for="farmer in currentList.farmers" :key="farmer.id" class="farmer-option">
+                    <input type="checkbox" :value="farmer.id" v-model="currentList.farmer_ids" />
+                    {{ farmer.last_name }}, {{ farmer.first_name }} {{ farmer.middle_name || '' }}
+                  </label>
+                  <p v-if="!currentList.farmers.length" class="empty-copy small">Select a barangay to load its registered farmers.</p>
+                </div>
+              </div>
+
+              <!-- 4. allocation -->
+              <div class="config-step" v-if="currentList.farmer_ids.length && currentList.items.some(i => i.supply_id)">
+                <p class="config-step-title"><span class="step-badge">4</span>Allocation per farmer</p>
+                <div class="allocation-wrap">
+                  <table class="inner-table allocation-table">
+                    <thead>
+                      <tr>
+                        <th class="sticky-col">Farmer</th>
+                        <th v-for="item in currentList.items.filter(i => i.supply_id)" :key="item.supply_id">
+                          {{ supplyName(item.supply_id) }}
+                          <span class="alloc-total">Total: {{ totalAllocatedForSupply(currentList, item.supply_id) }}</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="farmerId in currentList.farmer_ids" :key="farmerId">
+                        <td class="td-name sticky-col">
+                          {{ currentList.farmers.find(f => f.id === farmerId)?.last_name }},
+                          {{ currentList.farmers.find(f => f.id === farmerId)?.first_name }}
+                        </td>
+                        <td v-for="item in currentList.items.filter(i => i.supply_id)" :key="item.supply_id">
+                          <input
+                            type="number" min="0" class="alloc-input"
+                            :value="getAllAllocation(currentList, farmerId, item.supply_id)"
+                            @input="setAllocation(currentList, farmerId, item.supply_id, $event.target.value)"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="empty-state">
+              <p class="empty-title">No barangay list yet</p>
+              <p class="empty-copy">Add a barangay to start configuring supply items and recipients.</p>
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn btn-ghost" @click="wizardStep = 1">Back</button>
+              <button class="btn btn-primary" :disabled="!canSaveEvent" @click="saveDistributionEvent">
+                Save as draft
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </transition>
 
     <transition name="slide-toast">
-      <div class="toast" :class="'toast-' + toast.type" v-if="toast.visible">
-        {{ toast.message }}
-      </div>
+      <div class="toast" :class="'toast-' + toast.type" v-if="toast.visible">{{ toast.message }}</div>
     </transition>
   </div>
 </template>
@@ -542,17 +524,16 @@ export default {
       listFilter: 'all',
 
       selectedEvent: null,
+      openListIds: [],
 
       showAddSupply: false,
       showCreateEvent: false,
-
       editingSupply: null,
 
-      toast: {
-        visible: false,
-        message: '',
-        type: 'success'
-      },
+      wizardStep: 1,
+      activeListIndex: 0,
+
+      toast: { visible: false, message: '', type: 'success' },
 
       stockFilters: [
         { label: 'All', value: 'all' },
@@ -569,13 +550,7 @@ export default {
         { label: 'Cancelled', value: 'cancelled' }
       ],
 
-      supplyForm: {
-        name: '',
-        category: '',
-        unit: '',
-        qty_available: 0,
-        low_threshold: 50
-      },
+      supplyForm: { name: '', category: '', unit: '', qty_available: 0, low_threshold: 50 },
 
       barangayAccounts: [],
 
@@ -593,11 +568,7 @@ export default {
   computed: {
     filteredSupplies() {
       let list = this.supplies || []
-
-      if (this.supplyFilter !== 'all') {
-        list = list.filter(s => s.status === this.supplyFilter)
-      }
-
+      if (this.supplyFilter !== 'all') list = list.filter(s => s.status === this.supplyFilter)
       if (this.supplySearch.trim()) {
         const q = this.supplySearch.trim().toLowerCase()
         list = list.filter(s =>
@@ -605,17 +576,12 @@ export default {
           String(s.category || '').toLowerCase().includes(q)
         )
       }
-
       return list
     },
 
     filteredLists() {
       let list = this.distributionEvents || []
-
-      if (this.listFilter !== 'all') {
-        list = list.filter(e => e.status === this.listFilter)
-      }
-
+      if (this.listFilter !== 'all') list = list.filter(e => e.status === this.listFilter)
       if (this.listSearch.trim()) {
         const q = this.listSearch.trim().toLowerCase()
         list = list.filter(e =>
@@ -624,8 +590,19 @@ export default {
           String(e.reference_no || '').toLowerCase().includes(q)
         )
       }
-
       return list
+    },
+
+    step1Valid() {
+      return !!(this.eventForm.title && this.eventForm.distribution_date && this.eventForm.venue)
+    },
+
+    canGoToStep2() {
+      return this.step1Valid
+    },
+
+    currentList() {
+      return this.eventForm.barangay_lists[this.activeListIndex] || null
     },
 
     canSaveEvent() {
@@ -654,43 +631,43 @@ export default {
 
   methods: {
     stockLabel(status) {
-      const map = {
-        'in-stock': 'In stock',
-        low: 'Low stock',
-        out: 'Out of stock'
-      }
-
-      return map[status] || status
+      return { 'in-stock': 'In stock', low: 'Low stock', out: 'Out of stock' }[status] || status
     },
 
     listLabel(status) {
-      const map = {
-        draft: 'Draft',
-        published: 'Published',
-        completed: 'Completed',
-        cancelled: 'Cancelled'
-      }
+      return { draft: 'Draft', published: 'Published', completed: 'Completed', cancelled: 'Cancelled' }[status] || status
+    },
 
-      return map[status] || status
+    isListComplete(list) {
+      return !!(list.barangay_id && list.farmer_ids.length > 0 && list.items.some(i => i.supply_id) && list.allocations.some(a => a.quantity > 0))
+    },
+
+    toggleListOpen(id) {
+      const i = this.openListIds.indexOf(id)
+      if (i === -1) this.openListIds.push(id)
+      else this.openListIds.splice(i, 1)
+    },
+
+    isListOpen(id) {
+      return this.openListIds.includes(id)
     },
 
     showToast(message, type = 'success') {
       this.toast = { visible: true, message, type }
-
       clearTimeout(this._toastTimer)
-
-      this._toastTimer = setTimeout(() => {
-        this.toast.visible = false
-      }, 3000)
+      this._toastTimer = setTimeout(() => { this.toast.visible = false }, 3000)
     },
 
     openCreateEvent() {
       this.activeTab = 'lists'
       this.showCreateEvent = true
+      this.wizardStep = 1
+      this.activeListIndex = 0
+      if (!this.eventForm.barangay_lists.length) this.addBarangayList()
+    },
 
-      if (!this.eventForm.barangay_lists.length) {
-        this.addBarangayList()
-      }
+    closeCreateEvent() {
+      this.showCreateEvent = false
     },
 
     addBarangayList() {
@@ -701,22 +678,22 @@ export default {
         official: '',
         farmers: [],
         farmer_ids: [],
-        items: [
-          {
-            supply_id: ''
-          }
-        ],
+        items: [{ supply_id: '' }],
         allocations: []
       })
+      this.activeListIndex = this.eventForm.barangay_lists.length - 1
+    },
+
+    removeBarangayList(index) {
+      this.eventForm.barangay_lists.splice(index, 1)
+      if (this.activeListIndex >= this.eventForm.barangay_lists.length) {
+        this.activeListIndex = Math.max(0, this.eventForm.barangay_lists.length - 1)
+      }
     },
 
     async selectBarangayForList(index) {
       const list = this.eventForm.barangay_lists[index]
-
-      const selected = this.barangayAccounts.find(
-        user => user.id == list.user_id
-      )
-
+      const selected = this.barangayAccounts.find(user => user.id == list.user_id)
       if (!selected) return
 
       list.barangay_id = selected.barangay_id
@@ -726,10 +703,7 @@ export default {
       list.allocations = []
 
       try {
-        const response = await axios.get(
-          `${API_BASE}/api/barangays/${selected.barangay_id}/farmers`
-        )
-
+        const response = await axios.get(`${API_BASE}/api/barangays/${selected.barangay_id}/farmers`)
         list.farmers = response.data
       } catch (error) {
         console.error(error.response?.data || error)
@@ -737,32 +711,20 @@ export default {
       }
     },
 
-    /* --- Helper Allocation Matrix Methods --- */
-    getAllocation(brgyList, farmerId, supplyId) {
-      const alloc = brgyList.allocations.find(
-        a => a.farmer_id === farmerId && a.supply_id === supplyId
-      )
+    getAllAllocation(brgyList, farmerId, supplyId) {
+      const alloc = brgyList.allocations.find(a => a.farmer_id === farmerId && a.supply_id === supplyId)
       return alloc ? alloc.quantity : 0
     },
 
     setAllocation(brgyList, farmerId, supplyId, value) {
       const quantity = parseInt(value, 10) || 0
-      const index = brgyList.allocations.findIndex(
-        a => a.farmer_id === farmerId && a.supply_id === supplyId
-      )
+      const index = brgyList.allocations.findIndex(a => a.farmer_id === farmerId && a.supply_id === supplyId)
 
       if (index !== -1) {
-        if (quantity > 0) {
-          brgyList.allocations[index].quantity = quantity
-        } else {
-          brgyList.allocations.splice(index, 1)
-        }
+        if (quantity > 0) brgyList.allocations[index].quantity = quantity
+        else brgyList.allocations.splice(index, 1)
       } else if (quantity > 0) {
-        brgyList.allocations.push({
-          farmer_id: farmerId,
-          supply_id: supplyId,
-          quantity: quantity
-        })
+        brgyList.allocations.push({ farmer_id: farmerId, supply_id: supplyId, quantity })
       }
     },
 
@@ -774,7 +736,12 @@ export default {
 
     supplyName(supplyId) {
       const supply = this.supplies.find(s => s.id === supplyId)
-      return supply ? supply.name : 'Unknown Supply'
+      return supply ? supply.name : 'Unknown supply'
+    },
+
+    selectEvent(event) {
+      this.selectedEvent = event
+      this.openListIds = (event.lists || []).slice(0, 1).map(l => l.id)
     },
 
     async fetchSupplies() {
@@ -795,13 +762,18 @@ export default {
         this.loadingLists = true
         const response = await axios.get(`${API_BASE}/api/distribution-events`)
         this.distributionEvents = response.data
+
+        if (this.selectedEvent) {
+          const updated = this.distributionEvents.find(e => e.id === this.selectedEvent.id)
+          if (updated) this.selectedEvent = updated
+        }
       } catch (error) {
         console.error(error.response?.data || error)
         this.showToast('Failed to load distribution events', 'error')
       } finally {
         this.loadingLists = false
       }
-    },      
+    },
 
     async fetchBarangayAccounts() {
       try {
@@ -814,7 +786,6 @@ export default {
 
     editSupply(supply) {
       this.editingSupply = supply
-
       this.supplyForm = {
         name: supply.name,
         category: supply.category,
@@ -822,37 +793,24 @@ export default {
         qty_available: supply.qty_available,
         low_threshold: supply.low_threshold ?? 50
       }
-
       this.showAddSupply = true
     },
 
     closeAddSupply() {
       this.showAddSupply = false
       this.editingSupply = null
-
-      this.supplyForm = {
-        name: '',
-        category: '',
-        unit: '',
-        qty_available: 0,
-        low_threshold: 50
-      }
+      this.supplyForm = { name: '', category: '', unit: '', qty_available: 0, low_threshold: 50 }
     },
 
     async saveSupply() {
       try {
         if (this.editingSupply) {
-          await axios.put(
-            `${API_BASE}/api/inventory/${this.editingSupply.id}`,
-            this.supplyForm
-          )
-
+          await axios.put(`${API_BASE}/api/inventory/${this.editingSupply.id}`, this.supplyForm)
           this.showToast('Supply updated successfully', 'success')
         } else {
           await axios.post(`${API_BASE}/api/inventory`, this.supplyForm)
           this.showToast('Supply added successfully', 'success')
         }
-
         await this.fetchSupplies()
         this.closeAddSupply()
       } catch (error) {
@@ -863,7 +821,6 @@ export default {
 
     async deleteSupply(id) {
       if (!confirm('Delete this supply?')) return
-
       try {
         await axios.delete(`${API_BASE}/api/inventory/${id}`)
         await this.fetchSupplies()
@@ -882,7 +839,6 @@ export default {
           distribution_time: this.eventForm.distribution_time || null,
           venue: this.eventForm.venue,
           description: this.eventForm.description || null,
-
           barangay_lists: this.eventForm.barangay_lists.map(list => ({
             barangay_id: list.barangay_id,
             farmer_ids: list.farmer_ids,
@@ -896,7 +852,6 @@ export default {
         }
 
         await axios.post(`${API_BASE}/api/distribution-events`, payload)
-
         await this.fetchDistributionEvents()
 
         this.showToast('Distribution event created', 'success')
@@ -904,28 +859,47 @@ export default {
         this.resetEventForm()
       } catch (error) {
         console.error(error.response?.data || error)
-
-        this.showToast(
-          error.response?.data?.message || 'Failed to create distribution event',
-          'error'
-        )
+        this.showToast(error.response?.data?.message || 'Failed to create distribution event', 'error')
       }
     },
 
     async publishDistributionEvent(event) {
       try {
-        await axios.patch(`${API_BASE}/api/distribution-events/${event.id}/publish`)
-        await this.fetchDistributionEvents()
-        this.showToast('Distribution event published', 'success')
+        if (!event.lists || !event.lists.length) {
+          this.showToast('This event has no barangay lists to publish.', 'error')
+          return
+        }
+
+        const response = await axios.patch(`${API_BASE}/api/distribution-events/${event.id}/publish`)
+
+        if (response.data && response.data.event) {
+          this.selectedEvent = response.data.event
+        } else {
+          event.status = 'published'
+          event.lists.forEach(l => l.status = 'published')
+        }
+
+        await Promise.all([this.fetchDistributionEvents(), this.fetchSupplies()])
+        this.showToast('Distribution event published and stock updated!', 'success')
       } catch (error) {
         console.error(error.response?.data || error)
-        this.showToast('Unable to publish event', 'error')
+        this.showToast(error.response?.data?.message || 'Unable to publish event', 'error')
       }
     },
 
     async completeDistributionEvent(event) {
       try {
-        await axios.patch(`${API_BASE}/api/distribution-events/${event.id}/complete`)
+        if (!event.lists || !event.lists.length) return
+
+        const response = await axios.patch(`${API_BASE}/api/distribution-events/${event.id}/complete`)
+
+        if (response.data && response.data.event) {
+          this.selectedEvent = response.data.event
+        } else {
+          event.status = 'completed'
+          event.lists.forEach(l => l.status = 'completed')
+        }
+
         await this.fetchDistributionEvents()
         this.showToast('Distribution event completed', 'success')
       } catch (error) {
@@ -943,138 +917,152 @@ export default {
         description: '',
         barangay_lists: []
       }
+      this.wizardStep = 1
+      this.activeListIndex = 0
     }
   }
 }
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
 .inv-page {
-  font-family: 'DM Sans', sans-serif;
-  background: #F5F7F5;
-  padding: 2rem;
-  color: #263238;
+  --ink: #2C2A24;
+  --ink-soft: #6B6656;
+  --paper: #F7F4EC;
+  --paper-raised: #FFFFFF;
+  --line: #E4DFD0;
+  --green: #2F6B3F;
+  --green-soft: #E3EEE2;
+  --gold: #B5811F;
+  --gold-soft: #FBF0DA;
+  --blue: #3E6E9E;
+  --blue-soft: #E5EEF6;
+  --plum: #6E4E8C;
+  --plum-soft: #EDE6F3;
+  --red: #A83D36;
+  --red-soft: #F7E5E2;
+
+  font-family: 'Inter', sans-serif;
+  background: var(--paper);
+  padding: 2.25rem 2.5rem 3rem;
+  color: var(--ink);
+  line-height: 1.4;
 }
 
-/* Header */
+.icon { width: 16px; height: 16px; display: block; }
+.icon-sm { width: 13px; height: 13px; display: block; }
+
+/* ===== Header ===== */
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
+  align-items: flex-end;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
   flex-wrap: wrap;
 }
 
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #263238;
-  margin: 0 0 4px;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 6px;
 }
 
 .page-subtitle {
-  font-size: 0.9rem;
-  color: #5c6b64;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
   margin: 0;
 }
 
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
+.header-actions { display: flex; gap: 10px; }
 
-.btn-primary,
-.btn-secondary {
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   padding: 10px 18px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.2s ease, transform 0.1s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
 }
 
-.btn-primary {
-  background: #2E7D32;
-  color: #FFFFFF;
-}
+.btn:active { transform: translateY(1px); }
 
-.btn-primary:hover {
-  background: #256428;
-}
+.btn-primary { background: var(--green); color: #FFFFFF; }
+.btn-primary:hover { background: #275834; }
+.btn-primary:disabled { background: #B9C9BA; cursor: not-allowed; }
 
-.btn-secondary {
-  background: #FFFFFF;
-  color: #2E7D32;
-  border: 1px solid #66BB6A;
-}
+.btn-ghost { background: var(--paper-raised); color: var(--green); border: 1px solid var(--line); }
+.btn-ghost:hover { border-color: var(--green); background: var(--green-soft); }
 
-.btn-secondary:hover {
-  background: #eaf5ea;
-}
+.btn-block { width: 100%; justify-content: center; }
+.btn-sm { padding: 6px 12px; font-size: 0.78rem; }
 
-.btn-ghost {
-  background: transparent;
-  border: 1px dashed #66BB6A;
-  color: #2E7D32;
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.btn-ghost:hover {
-  background: #eaf5ea;
-}
-
-/* Metrics */
-.metrics-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.metric-card {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 1.1rem 1.3rem;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
-}
-
-.metric-label {
-  font-size: 0.78rem;
-  color: #5c6b64;
-  margin: 0 0 6px;
-  font-weight: 500;
-}
-
-.metric-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #263238;
-  margin: 0;
-}
-
-.val-green { color: #2E7D32; }
-.val-amber { color: #F9A825; }
-.val-blue { color: #1976D2; }
-.val-purple { color: #6A4C93; }
-
-/* Tabs */
-.tab-bar {
+/* ===== Ledger strip ===== */
+.ledger-strip {
   display: flex;
-  gap: 4px;
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 5px;
-  width: fit-content;
-  margin-bottom: 1.3rem;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
+  align-items: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.ledger-item { display: flex; flex-direction: column; gap: 3px; min-width: 90px; }
+
+.ledger-value {
+  font-family: 'Fraunces', serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ledger-label {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.tone-green { color: var(--green); }
+.tone-gold { color: var(--gold); }
+.tone-blue { color: var(--blue); }
+.tone-plum { color: var(--plum); }
+
+.ledger-divider { width: 1px; align-self: stretch; background: var(--line); }
+
+/* ===== Tabs ===== */
+.tab-bar {
+  display: inline-flex;
+  gap: 3px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 4px;
+  margin-bottom: 1.4rem;
 }
 
 .tab-btn {
@@ -1083,19 +1071,16 @@ export default {
   padding: 9px 20px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #5c6b64;
+  color: var(--ink-soft);
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.tab-btn.active {
-  background: #2E7D32;
-  color: #FFFFFF;
-}
+.tab-btn.active { background: var(--green); color: #FFFFFF; }
 
-/* Toolbar / filters */
+/* ===== Toolbar ===== */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -1105,9 +1090,17 @@ export default {
   margin-bottom: 1rem;
 }
 
-.search-wrap {
-  flex: 1;
-  min-width: 220px;
+.toolbar-stack { flex-direction: column; align-items: stretch; }
+
+.search-wrap { flex: 1; min-width: 220px; position: relative; }
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-soft);
+  pointer-events: none;
 }
 
 .search-input,
@@ -1115,35 +1108,33 @@ export default {
 .form-field select,
 .form-field textarea {
   width: 100%;
-  border: 1px solid #d7e2d8;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
   padding: 9px 12px;
   font-size: 0.85rem;
   font-family: inherit;
-  color: #263238;
-  background: #FFFFFF;
+  color: var(--ink);
+  background: var(--paper-raised);
   box-sizing: border-box;
 }
+
+.search-input { padding-left: 34px; }
 
 .search-input:focus,
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
   outline: none;
-  border-color: #66BB6A;
-  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(47, 107, 63, 0.15);
 }
 
-.filter-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.filter-group { display: flex; gap: 7px; flex-wrap: wrap; }
 
 .filter-tag {
-  border: 1px solid #d7e2d8;
-  background: #FFFFFF;
-  color: #5c6b64;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  color: var(--ink-soft);
   border-radius: 20px;
   padding: 6px 14px;
   font-size: 0.78rem;
@@ -1152,392 +1143,444 @@ export default {
   font-family: inherit;
 }
 
-.filter-tag.active {
-  background: #2E7D32;
-  border-color: #2E7D32;
-  color: #FFFFFF;
-}
+.filter-tag.active { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
 
-/* Table */
+/* ===== Table ===== */
 .table-card {
-  background: #FFFFFF;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
 }
 
-.data-table,
-.inner-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+.data-table, .inner-table { width: 100%; border-collapse: collapse; }
 
-.data-table th,
-.inner-table th {
+.data-table th, .inner-table th {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #5c6b64;
-  background: #F5F7F5;
-  padding: 12px 16px;
-  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  padding: 11px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
 }
 
-.data-table td,
-.inner-table td {
+.data-table td, .inner-table td {
   padding: 12px 16px;
   font-size: 0.85rem;
-  border-top: 1px solid #eef2ef;
-  color: #263238;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
 }
 
+.data-table tr:hover td { background: #FBFAF5; }
+.row-low td { background: var(--gold-soft); }
+.row-low:hover td { background: #f8e7c4; }
+.row-out td { background: var(--red-soft); }
+
+.num { text-align: right; }
 .td-name { font-weight: 600; }
-.td-muted { color: #5c6b64; }
-.td-qty { font-weight: 600; color: #2E7D32; }
-
-.td-empty {
-  text-align: center;
-  padding: 2rem !important;
-  color: #93a29a;
-}
+.td-muted { color: var(--ink-soft); }
+.td-qty { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--green); }
+.td-loading { text-align: center; padding: 2.5rem !important; color: var(--ink-soft); }
+.col-actions { width: 90px; }
 
 .cat-tag {
-  background: #eaf5ea;
-  color: #2E7D32;
+  background: var(--green-soft);
+  color: var(--green);
   border-radius: 6px;
   padding: 3px 9px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-/* Status pills */
-.status-pill {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: 20px;
   font-size: 0.72rem;
   font-weight: 700;
 }
 
-.sp-in-stock,
-.sp-published { background: #e5f4e6; color: #2E7D32; }
-
-.sp-low,
-.sp-draft { background: #fdf1d6; color: #b9790a; }
-
-.sp-out,
-.sp-cancelled { background: #fde3e3; color: #b3261e; }
-
-.sp-completed { background: #e6ecff; color: #3949ab; }
-
-.row-actions {
-  display: flex;
-  gap: 8px;
+/* ===== Status pills ===== */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px 4px 8px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
+
+.status-pill-lg { padding: 6px 14px 6px 10px; font-size: 0.75rem; }
+
+.status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+.sp-in-stock, .sp-published { background: var(--green-soft); color: var(--green); }
+.sp-low, .sp-draft { background: var(--gold-soft); color: var(--gold); }
+.sp-out, .sp-cancelled { background: var(--red-soft); color: var(--red); }
+.sp-completed { background: var(--blue-soft); color: var(--blue); }
+
+.row-actions { display: flex; gap: 4px; }
 
 .icon-btn {
   border: none;
   background: transparent;
-  color: #2E7D32;
-  font-size: 0.78rem;
-  font-weight: 600;
+  color: var(--ink-soft);
   cursor: pointer;
-  font-family: inherit;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
 }
 
-.icon-btn:hover { text-decoration: underline; }
+.icon-btn:hover { background: var(--green-soft); color: var(--green); }
+.icon-btn-danger:hover { background: var(--red-soft); color: var(--red); }
 
-/* Distribution lists */
-.lists-area {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 1.2rem;
-}
-
-.dist-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dist-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 1rem;
-  cursor: pointer;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
-  transition: border-color 0.15s ease;
-}
-
-.dist-card:hover { border-color: #66BB6A; }
-
-.dist-card.selected {
-  border-color: #2E7D32;
-  background: #f2f9f2;
-}
-
-.dc-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.dc-id {
-  font-size: 0.72rem;
-  color: #93a29a;
-  margin: 0 0 3px;
-  font-weight: 600;
-}
-
-.dc-barangay {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #263238;
-  margin: 0;
-}
-
-.dc-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 0.78rem;
-  color: #5c6b64;
-}
+/* ===== Empty states ===== */
+.empty-block { text-align: center; padding: 2.5rem 1rem; }
+.empty-title { font-weight: 700; color: var(--ink); margin: 0 0 4px; font-size: 0.9rem; }
+.empty-copy { color: var(--ink-soft); font-size: 0.82rem; margin: 0; }
+.empty-copy.small { font-size: 0.78rem; padding: 6px 2px; }
 
 .empty-state {
   text-align: center;
-  padding: 2rem;
-  color: #93a29a;
-  background: #FFFFFF;
+  padding: 2.5rem 1.25rem;
+  background: var(--paper-raised);
+  border: 1px dashed var(--line);
   border-radius: 12px;
-  font-size: 0.85rem;
 }
 
-.detail-card {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 1.4rem;
-  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
+/* ===== Distribution layout ===== */
+.lists-area { display: grid; grid-template-columns: 380px 1fr; gap: 1.25rem; align-items: start; }
+
+.dist-cards { display: flex; flex-direction: column; gap: 10px; }
+
+.dist-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--paper-raised);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-}
+.dist-card:hover { border-color: var(--green); }
+.dist-card.selected { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,107,63,0.12); background: #FBFDFB; }
 
-.detail-id {
-  font-size: 0.75rem;
-  color: #93a29a;
-  font-weight: 600;
-  margin: 0 0 4px;
-}
+.dc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 
-.detail-barangay {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #263238;
+.dc-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
   margin: 0;
+  font-weight: 600;
 }
+
+.dc-title { font-size: 0.95rem; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
+
+.dc-meta { display: flex; gap: 14px; font-size: 0.76rem; color: var(--ink-soft); flex-wrap: wrap; }
+.dc-meta-item { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ===== Manifest detail ===== */
+.manifest-card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.5rem 1.6rem;
+}
+
+.manifest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.1rem; gap: 1rem; }
+
+.detail-id { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--ink-soft); font-weight: 600; margin: 0 0 5px; }
+
+.detail-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 600; color: var(--ink); margin: 0; }
 
 .detail-meta-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 1rem;
-  background: #F5F7F5;
+  background: var(--paper);
   border-radius: 10px;
   padding: 1rem;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.1rem;
 }
 
-.dm-item {
+.dm-item { display: flex; flex-direction: column; gap: 3px; }
+.dm-label { font-size: 0.68rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.dm-val { font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+
+.perforation {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.dm-label {
-  font-size: 0.7rem;
-  color: #5c6b64;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-weight: 600;
-}
-
-.dm-val {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #263238;
-}
-
-.section-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #263238;
-  margin: 0 0 8px;
-}
-
-.farmer-chips {
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  margin-top: 0.6rem;
+  overflow: hidden;
+  margin: 0 -0.2rem 1.2rem;
+  height: 1px;
 }
+.perforation span {
+  flex: 1;
+  border-top: 1.5px dashed var(--line);
+}
+
+.section-label { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px; }
+
+.barangay-block { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+
+.barangay-block-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--paper);
+  border: none;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.bb-left { display: flex; align-items: center; gap: 8px; }
+.bb-name { font-weight: 700; font-size: 0.87rem; color: var(--ink); }
+.bb-right { display: flex; align-items: center; gap: 10px; }
+.bb-stat { font-size: 0.76rem; color: var(--ink-soft); }
+
+.chevron { transition: transform 0.15s ease; color: var(--ink-soft); }
+.chevron.open { transform: rotate(90deg); }
+
+.barangay-block-body { padding: 12px 14px 14px; }
+
+.mini-label { font-size: 0.72rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; margin: 12px 0 8px; }
+
+.farmer-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .farmer-chip {
-  background: #eaf5ea;
-  color: #2E7D32;
+  background: var(--green-soft);
+  color: var(--green);
   border-radius: 20px;
   padding: 4px 10px;
   font-size: 0.72rem;
   font-weight: 600;
 }
 
-.detail-actions {
-  margin-top: 1.2rem;
-  display: flex;
-  gap: 10px;
-}
-
-.action-btn {
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.btn-send {
-  background: #2E7D32;
-  color: #FFFFFF;
-}
-
-.btn-send:hover { background: #256428; }
+.detail-actions { margin-top: 1.2rem; }
 
 .detail-empty {
-  background: #FFFFFF;
-  border-radius: 14px;
+  background: var(--paper-raised);
+  border: 1px dashed var(--line);
+  border-radius: 16px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #93a29a;
-  font-size: 0.9rem;
-  min-height: 300px;
+  gap: 8px;
+  color: var(--ink-soft);
+  min-height: 320px;
+  text-align: center;
+  padding: 2rem;
 }
 
-/* Modal */
+.empty-icon { width: 40px; height: 40px; color: var(--line); margin-bottom: 4px; }
+
+/* ===== Modal ===== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(38, 50, 56, 0.55);
+  background: rgba(44, 42, 36, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
+  padding: 1.5rem;
 }
 
 .modal {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 1.6rem;
-  width: 90%;
-  max-width: 520px;
+  background: var(--paper-raised);
+  border-radius: 16px;
+  padding: 1.7rem;
+  width: 100%;
+  max-width: 540px;
   max-height: 88vh;
   overflow-y: auto;
 }
 
-.modal-wide { max-width: 800px; }
+.modal-wide { max-width: 900px; }
 
-.modal-head {
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.3rem; }
+.modal-head h4 { margin: 0; font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 600; color: var(--ink); }
+
+.modal-close { border: none; background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--ink-soft); }
+.modal-close:hover { color: var(--ink); }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.span-2 { grid-column: 1/-1; }
+
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+.optional { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.form-field textarea { min-height: 76px; resize: vertical; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
+
+/* ===== Wizard ===== */
+.wizard-steps { display: flex; align-items: center; margin-bottom: 1.4rem; }
+
+.wizard-step {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.2rem;
-}
-
-.modal-head h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #263238;
-}
-
-.modal-close {
+  gap: 8px;
   border: none;
   background: transparent;
-  font-size: 1.4rem;
-  line-height: 1;
   cursor: pointer;
-  color: #5c6b64;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 4px 0;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
+.wizard-step.active { color: var(--ink); }
+.wizard-step.done { color: var(--green); }
 
-.form-field {
+.wizard-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  flex-shrink: 0;
 }
 
-.form-field label {
+.wizard-step.active .wizard-step-num { border-color: var(--ink); color: var(--ink); }
+.wizard-step.done .wizard-step-num { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+
+.wizard-line { flex: 1; height: 1px; background: var(--line); margin: 0 12px; max-width: 60px; }
+
+.wizard-panel { min-height: 200px; }
+
+/* ===== Barangay tabs (wizard step 2) ===== */
+.barangay-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.2rem; }
+
+.barangay-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-radius: 9px;
+  padding: 7px 12px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #5c6b64;
-}
-
-.form-field textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 1.4rem;
-}
-
-.modal-btn {
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-size: 0.85rem;
-  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
 }
 
-.modal-cancel {
-  background: #F5F7F5;
-  color: #5c6b64;
+.barangay-tab.active { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+.barangay-tab.incomplete:not(.active)::after { content: ''; }
+.tab-check { color: var(--green); }
+.barangay-tab.active .tab-check { color: #b8e0c0; }
+
+.tab-remove { margin-left: 4px; opacity: 0.6; }
+.tab-remove:hover { opacity: 1; }
+
+.btn-add-tab { padding: 7px 12px; }
+
+.barangay-config { background: var(--paper); border-radius: 12px; padding: 1.2rem; }
+
+.config-step { margin-bottom: 1.3rem; }
+.config-step:last-child { margin-bottom: 0; }
+
+.config-step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 10px;
 }
 
-.modal-confirm {
-  background: #2E7D32;
-  color: #FFFFFF;
+.step-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
-.modal-confirm:hover { background: #256428; }
-.modal-confirm:disabled {
-  background: #a9c9ab;
-  cursor: not-allowed;
+.count-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 2px 9px;
 }
 
-.barangay-list-box {
-  background: #fafcfa;
+.item-chip-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.item-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  padding: 4px 6px 4px 10px;
+  border-radius: 8px;
 }
 
-.farmer-option:hover { color: #2E7D32; }
+.item-chip select { border: none; font-size: 0.78rem; padding: 2px; width: auto; background: transparent; }
+.item-chip select:focus { outline: none; box-shadow: none; }
 
-/* Toast */
+.chip-remove { border: none; background: transparent; color: var(--ink-soft); cursor: pointer; font-size: 1rem; line-height: 1; padding: 2px; }
+.chip-remove:hover { color: var(--red); }
+
+.recipient-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+
+.farmers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-height: 140px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  padding: 10px;
+  border-radius: 9px;
+  background: var(--paper-raised);
+}
+
+.farmer-option { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; color: var(--ink); }
+.farmer-option:hover { color: var(--green); }
+
+.allocation-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; background: var(--paper-raised); }
+
+.allocation-table th { white-space: nowrap; }
+
+.alloc-total { display: block; font-size: 0.65rem; color: var(--ink-soft); font-weight: 500; text-transform: none; margin-top: 2px; }
+
+.sticky-col { position: sticky; left: 0; background: inherit; z-index: 1; }
+.allocation-table thead .sticky-col { background: var(--paper); }
+.allocation-table tbody .sticky-col { background: var(--paper-raised); }
+
+.alloc-input {
+  width: 68px;
+  padding: 5px 7px;
+  font-size: 0.8rem;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ===== Toast ===== */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -1548,23 +1591,29 @@ export default {
   font-weight: 600;
   color: #FFFFFF;
   z-index: 1200;
-  box-shadow: 0 4px 12px rgba(38, 50, 56, 0.2);
+  box-shadow: 0 8px 24px rgba(44, 42, 36, 0.25);
 }
 
-.toast-success { background: #2E7D32; }
-.toast-error { background: #b3261e; }
+.toast-success { background: var(--green); }
+.toast-error { background: var(--red); }
 
-/* Transitions */
-.fade-enter-active,
-.fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from,
-.fade-leave-to { opacity: 0; }
+/* ===== Transitions ===== */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
-.slide-toast-enter-active,
-.slide-toast-leave-active { transition: transform 0.25s ease, opacity 0.25s ease; }
-.slide-toast-enter-from,
-.slide-toast-leave-to {
-  transform: translateY(20px);
-  opacity: 0;
+.slide-toast-enter-active, .slide-toast-leave-active { transition: transform 0.25s ease, opacity 0.25s ease; }
+.slide-toast-enter-from, .slide-toast-leave-to { transform: translateY(20px); opacity: 0; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .lists-area { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
+}
+
+@media (max-width: 640px) {
+  .inv-page { padding: 1.25rem; }
+  .page-header { flex-direction: column; align-items: stretch; }
+  .header-actions { flex-direction: column; }
 }
 </style>
