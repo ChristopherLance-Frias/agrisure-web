@@ -253,21 +253,27 @@
 
           <!-- Weather Card -->
           <div class="weather-card">
-            <div class="weather-bg-icon">
-              <i class="fa-solid fa-cloud-sun"></i>
-            </div>
-            
+    <div class="weather-bg-icon">
+      <i class="fa-solid fa-cloud-sun"></i>
+    </div>
+
             <div class="weather-content">
               <div class="weather-top">
                 <div>
                   <span class="weather-subtitle">San Guillermo Agro-Weather</span>
-                  <h3 class="weather-temp">{{ weather.temp }}</h3>
+                  <h3 class="weather-temp">
+                    <template v-if="!loading && !error">{{ weather.temp }}</template>
+                    <template v-else-if="loading">--°C</template>
+                    <template v-else>N/A</template>
+                  </h3>
                 </div>
                 <div class="weather-icon-box">
                   <i :class="weather.icon"></i>
                 </div>
               </div>
-              <p class="weather-condition">{{ weather.condition }}</p>
+              <p class="weather-condition">
+                {{ loading ? 'Loading...' : (error ? 'Unable to load weather' : weather.condition) }}
+              </p>
             </div>
 
             <div class="weather-stats">
@@ -280,6 +286,14 @@
                 <strong>{{ weather.rainChance }}</strong>
               </div>
             </div>
+
+            <button
+              v-if="error"
+              class="weather-retry-btn"
+              @click="fetchWeather"
+            >
+              Retry
+            </button>
           </div>
         </div>
 
@@ -356,6 +370,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 import ApexChart from 'vue3-apexcharts'
+import { onUnmounted } from 'vue'
+
+const LAT = 15.48
+const LON = 120.60
 
 const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' })
 const selectedSeason = ref('wet')
@@ -370,7 +388,18 @@ const stats = ref({
 
 const pendingTasks = ref([])
 const barangayData = ref([])
-const weather = ref({temp:'29°C',condition:'Partly Cloudy',humidity:'81%',rainChance:'70%',icon:'fa-solid fa-cloud-sun'})
+const weather = ref({
+  temp: '--°C',
+  condition: 'Loading...',
+  humidity: '--%',
+  rainChance: '--%',
+  icon: 'fa-solid fa-cloud-sun'
+})
+
+const loading = ref(true)
+const error = ref(false)
+let refreshTimer = null
+
 const distributionSummary = ref([])
 const recentActivities = ref([])
 
@@ -520,6 +549,71 @@ const loadDashboard = async()=>{
         console.error(e)
     }
 }
+function mapWeatherCode(code) {
+  const map = {
+    0:  { condition: 'Clear Sky',        icon: 'fa-solid fa-sun' },
+    1:  { condition: 'Mainly Clear',     icon: 'fa-solid fa-cloud-sun' },
+    2:  { condition: 'Partly Cloudy',    icon: 'fa-solid fa-cloud-sun' },
+    3:  { condition: 'Overcast',         icon: 'fa-solid fa-cloud' },
+    45: { condition: 'Foggy',            icon: 'fa-solid fa-smog' },
+    48: { condition: 'Foggy',            icon: 'fa-solid fa-smog' },
+    51: { condition: 'Light Drizzle',    icon: 'fa-solid fa-cloud-rain' },
+    53: { condition: 'Drizzle',          icon: 'fa-solid fa-cloud-rain' },
+    55: { condition: 'Heavy Drizzle',    icon: 'fa-solid fa-cloud-rain' },
+    61: { condition: 'Light Rain',       icon: 'fa-solid fa-cloud-rain' },
+    63: { condition: 'Rain',             icon: 'fa-solid fa-cloud-showers-heavy' },
+    65: { condition: 'Heavy Rain',       icon: 'fa-solid fa-cloud-showers-heavy' },
+    80: { condition: 'Rain Showers',     icon: 'fa-solid fa-cloud-showers-heavy' },
+    81: { condition: 'Rain Showers',     icon: 'fa-solid fa-cloud-showers-heavy' },
+    82: { condition: 'Violent Showers',  icon: 'fa-solid fa-cloud-showers-heavy' },
+    95: { condition: 'Thunderstorm',     icon: 'fa-solid fa-cloud-bolt' },
+    96: { condition: 'Thunderstorm',     icon: 'fa-solid fa-cloud-bolt' },
+    99: { condition: 'Severe Storm',     icon: 'fa-solid fa-cloud-bolt' },
+  }
+  return map[code] || { condition: 'Partly Cloudy', icon: 'fa-solid fa-cloud-sun' }
+}
+
+async function fetchWeather() {
+  loading.value = true
+  error.value = false
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code` +
+      `&timezone=Asia%2FManila`
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Weather request failed')
+
+    const data = await res.json()
+    const c = data.current
+
+    const { condition, icon } = mapWeatherCode(c.weather_code)
+
+    weather.value = {
+      temp: `${Math.round(c.temperature_2m)}°C`,
+      condition,
+      humidity: `${Math.round(c.relative_humidity_2m)}%`,
+      rainChance: `${Math.round(c.precipitation_probability ?? 0)}%`,
+      icon
+    }
+  } catch (err) {
+    console.error('Failed to fetch weather:', err)
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchWeather()
+  // Refresh every 15 minutes
+  refreshTimer = setInterval(fetchWeather, 15 * 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 
 onMounted(loadDashboard)
 </script>
@@ -1356,6 +1450,17 @@ onMounted(loadDashboard)
 }
 
 .weather-stat-row strong { color: #ffffff; }
+
+.weather-retry-btn {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: rgba(255,255,255,0.2);
+  color: inherit;
+}
 
 /* ACTIVITIES */
 .activity-list {
