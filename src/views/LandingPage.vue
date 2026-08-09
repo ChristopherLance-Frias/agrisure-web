@@ -3,24 +3,20 @@
     <div class="bg-grid"></div>
     <div class="bg-accent bg-accent--tr"></div>
     <div class="bg-accent bg-accent--bl"></div>
-
+ 
     <div class="portal-inner">
       <!-- Header -->
       <div class="portal-header">
         <div class="brand">
-          <div class="logo-mark"><span>M</span></div>
-          <div class="brand-text">
-            <h1>MAO</h1>
-            <p>Admin Portal</p>
-          </div>
+          <div class="logo-mark"><span></span></div>
         </div>
-        <h2>Municipal Agricultural Office</h2>
-        <p>Select your portal to continue. Access is restricted to authorized personnel only.</p>
+        <h2>AgriSure</h2>
+        <p>Digital Crop Insurance Application and Agricultural Assistance Management System for Rice and Corn Farmers. Select your portal to continue — access is restricted to authorized personnel only.</p>
       </div>
-
+ 
       <!-- Cards -->
       <div class="portal-cards">
-        <!-- MAO Admin Card -->
+        <!-- AgriSure Admin Card -->
         <div class="card card--mao" @click="$router.push({ name: 'login' })">
           <div class="badge badge--green">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -29,24 +25,24 @@
             Admin Access
           </div>
           <div class="icon-ring icon-ring--green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="1.6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#116D3E" stroke-width="1.6">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <p class="card-sub">MAO Staff</p>
+          <p class="card-sub">AgriSure Staff</p>
           <h3 class="card-title">Admin Portal</h3>
-          <p class="card-desc">For MAO administrators and staff managing agricultural programs, records, and operations.</p>
+          <p class="card-desc">For AgriSure administrators and staff managing crop insurance programs, farmer records, and agricultural assistance operations for rice and corn farmers.</p>
           <button class="card-btn card-btn--green" type="button" @click.stop="$router.push({ name: 'login' })">
-            Continue as MAO Admin
+            Continue as AgriSure Admin
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
             </svg>
           </button>
         </div>
-
+ 
         <!-- Barangay Official Card -->
         <div class="card card--brgy" @click="$router.push({ name: 'barangay-login' })">
           <div class="badge badge--blue">
@@ -57,14 +53,14 @@
             Official Access
           </div>
           <div class="icon-ring icon-ring--blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="1.6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#D29539" stroke-width="1.6">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
           </div>
           <p class="card-sub">Barangay Official</p>
           <h3 class="card-title">Official Portal</h3>
-          <p class="card-desc">For barangay officials accessing agricultural data, reports, and services for their community.</p>
+          <p class="card-desc">For barangay officials accessing crop insurance data, assistance reports, and services for rice and corn farmers in their community.</p>
           <button class="card-btn card-btn--blue" type="button" @click.stop="$router.push({ name: 'barangay-login' })">
             Continue as Barangay Official
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -73,15 +69,14 @@
           </button>
         </div>
       </div>
-
+ 
       <div class="portal-footer">
-        <p>MAO Admin System &copy; {{ currentYear }} &middot; Municipal Agricultural Office</p>
+        <p>AgriSure &copy; {{ currentYear }} &middot; Digital Crop Insurance and Agricultural Assistance Management System</p>
         <p>Authorized personnel only. Unauthorized access is prohibited.</p>
       </div>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   name: 'LandingPage',
@@ -94,127 +89,256 @@ export default {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+ 
+* { box-sizing: border-box; }
+ 
 .portal-wrapper {
   min-height: 100vh;
-  background: #0c1a0e;
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
   font-family: 'DM Sans', sans-serif;
-  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #116D3E 0%, #0A5232 45%, #0F212F 100%);
+  position: relative;
+  overflow: hidden;
 }
-
+ 
+/* Faint grid texture over the gradient backdrop */
 .bg-grid {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(52, 168, 83, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(52, 168, 83, 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  pointer-events: none;
 }
-
+ 
+/* Amber / deep-green decorative squares, echoing the OTP screen's floating accents */
+.bg-accent {
+  position: absolute;
+  border-radius: 16px;
+  pointer-events: none;
+}
+ 
 .bg-accent--tr {
-  position: absolute; width: 600px; height: 600px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(52,168,83,.1) 0%, transparent 70%);
-  top: -120px; right: -120px; pointer-events: none;
+  width: 220px;
+  height: 220px;
+  top: -60px;
+  right: 6%;
+  background: #D29539;
+  opacity: 0.14;
+  transform: rotate(18deg);
 }
-
+ 
 .bg-accent--bl {
-  position: absolute; width: 400px; height: 400px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(52,168,83,.07) 0%, transparent 70%);
-  bottom: -80px; left: -80px; pointer-events: none;
+  width: 170px;
+  height: 170px;
+  bottom: -40px;
+  left: 8%;
+  background: #0A5232;
+  opacity: 0.22;
+  transform: rotate(-12deg);
 }
-
+ 
 .portal-inner {
-  position: relative; z-index: 1;
-  width: 100%; max-width: 860px;
-  display: flex; flex-direction: column; align-items: center; gap: 3rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 980px;
 }
-
-/* Header */
-.portal-header { text-align: center; }
-
+ 
+/* HEADER */
+.portal-header {
+  text-align: center;
+  color: #FFFFFF;
+  margin-bottom: 2.75rem;
+}
+ 
 .brand {
-  display: flex; align-items: center; justify-content: center;
-  gap: 14px; margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.6rem;
 }
-
+ 
 .logo-mark {
-  width: 56px; height: 56px; background: #34a853;
-  border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #D29539, #AC7A2F);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(210, 149, 57, 0.35);
 }
-.logo-mark span { font-family: 'DM Serif Display', serif; font-size: 28px; color: #fff; }
-
-.brand-text h1 { font-family: 'DM Serif Display', serif; font-size: 24px; color: #e8f5e9; letter-spacing: 3px; }
-.brand-text p  { font-size: 11px; color: rgba(52,168,83,.7); letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
-
-.portal-header h2 { font-family: 'DM Serif Display', serif; font-size: 32px; color: #c8e6c9; line-height: 1.3; margin-bottom: .75rem; }
-.portal-header p  { font-size: 15px; color: rgba(200,230,201,.55); max-width: 420px; margin: 0 auto; line-height: 1.7; }
-
-/* Cards */
+ 
+.logo-mark span {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px;
+  color: #0F212F;
+}
+ 
+.brand-text h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  letter-spacing: 3.5px;
+  color: #FFFFFF;
+}
+ 
+.brand-text p {
+  font-size: 9.5px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+ 
+.portal-header h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.1rem;
+  font-weight: 400;
+  margin: 0 0 10px;
+  color: #FFFFFF;
+}
+ 
+.portal-header p {
+  max-width: 620px;
+  margin: 0 auto;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.72);
+}
+ 
+/* CARDS */
 .portal-cards {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 1.5rem; width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  max-width: 640px;
+  margin: 0 auto;
 }
-
+ 
 .card {
-  background: rgba(255,255,255,.04);
-  border-radius: 20px; padding: 2.5rem 2rem;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  cursor: pointer; transition: background .25s, border-color .25s, transform .15s;
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 1.4rem 1.3rem;
+  text-align: left;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  box-shadow: 0 14px 34px rgba(15, 33, 47, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
-
-.card--mao { border: 1px solid rgba(52,168,83,.18); }
-.card--brgy { border: 1px solid rgba(66,133,244,.18); }
-
-.card--mao:hover { background: rgba(52,168,83,.08); border-color: rgba(52,168,83,.45); transform: translateY(-4px); }
-.card--brgy:hover { background: rgba(66,133,244,.08); border-color: rgba(66,133,244,.45); transform: translateY(-4px); }
-
+ 
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 26px 60px rgba(15, 33, 47, 0.32);
+}
+ 
+.card--mao:hover { border-color: #116D3E; }
+.card--brgy:hover { border-color: #D29539; }
+ 
 .badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11.5px; padding: 4px 10px; border-radius: 20px; margin-bottom: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
 }
-.badge--green { background: rgba(52,168,83,.12); color: rgba(52,168,83,.9); border: 1px solid rgba(52,168,83,.2); }
-.badge--blue  { background: rgba(66,133,244,.12); color: rgba(66,133,244,.9); border: 1px solid rgba(66,133,244,.2); }
-
+ 
+.badge--green { background: rgba(17, 109, 62, 0.12); color: #116D3E; }
+.badge--blue  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
+ 
 .icon-ring {
-  width: 80px; height: 80px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.7rem;
 }
-.icon-ring svg { width: 36px; height: 36px; }
-.icon-ring--green { background: rgba(52,168,83,.15); border: 1.5px solid rgba(52,168,83,.3); }
-.icon-ring--blue  { background: rgba(66,133,244,.15); border: 1.5px solid rgba(66,133,244,.3); }
-
-.card--mao:hover .icon-ring--green { background: rgba(52,168,83,.25); border-color: rgba(52,168,83,.5); }
-.card--brgy:hover .icon-ring--blue { background: rgba(66,133,244,.25); border-color: rgba(66,133,244,.5); }
-
-.card-sub   { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; margin-bottom: 1rem; }
-.card--mao .card-sub { color: #34a853; }
-.card--brgy .card-sub { color: #4285f4; }
-
-.card-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #e8f5e9; margin-bottom: .5rem; }
-.card-desc  { font-size: 13.5px; color: rgba(200,230,201,.5); line-height: 1.65; margin-bottom: 1.75rem; }
-
+ 
+.icon-ring svg { width: 20px; height: 20px; }
+ 
+.icon-ring--green { background: #E7F0EC; border: 1px solid rgba(17, 109, 62, 0.18); }
+.icon-ring--blue  { background: #FAF2E7; border: 1px solid rgba(210, 149, 57, 0.22); }
+ 
+.card-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #5c6b64;
+  margin-bottom: 3px;
+}
+ 
+.card-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: #0F212F;
+  margin-bottom: 6px;
+}
+ 
+.card-desc {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #5c6b64;
+  margin-bottom: 1rem;
+}
+ 
 .card-btn {
-  width: 100%; padding: 11px; border-radius: 10px; border: none;
-  font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  gap: 8px; transition: background .2s, transform .1s; color: #fff;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: none;
+  border-radius: 9px;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-.card-btn:active { transform: scale(.98); }
-.card-btn--green { background: #34a853; }
-.card-btn--green:hover { background: #2a9248; }
-.card-btn--blue  { background: #4285f4; }
-.card-btn--blue:hover  { background: #3070d6; }
-
-/* Footer */
-.portal-footer { text-align: center; }
-.portal-footer p { font-size: 12px; color: rgba(200,230,201,.3); line-height: 1.7; }
-
-@media (max-width: 600px) {
+ 
+.card-btn:hover { transform: translateY(-1px); }
+ 
+.card-btn--green {
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  box-shadow: 0 10px 22px rgba(17, 109, 62, 0.32);
+}
+.card-btn--green:hover { box-shadow: 0 12px 26px rgba(17, 109, 62, 0.42); }
+ 
+.card-btn--blue {
+  background: linear-gradient(135deg, #D29539, #AC7A2F);
+  box-shadow: 0 10px 22px rgba(210, 149, 57, 0.35);
+}
+.card-btn--blue:hover { box-shadow: 0 12px 26px rgba(210, 149, 57, 0.45); }
+ 
+/* FOOTER */
+.portal-footer {
+  text-align: center;
+  margin-top: 2.75rem;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+ 
+@media (max-width: 720px) {
   .portal-cards { grid-template-columns: 1fr; }
-  .portal-header h2 { font-size: 24px; }
+  .portal-header h2 { font-size: 1.6rem; }
 }
 </style>

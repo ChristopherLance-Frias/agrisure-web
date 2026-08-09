@@ -62,7 +62,14 @@
 
     <!-- Farmer list -->
     <div v-else class="farmer-list">
-      <div v-for="farmer in farmers" :key="farmer.id" class="farmer-card">
+      <div
+        v-for="farmer in farmers"
+        :key="farmer.id"
+        class="farmer-card"
+        tabindex="0"
+        @click="openDetail(farmer)"
+        @keyup.enter="openDetail(farmer)"
+      >
 
         <div class="farmer-avatar">{{ initials(farmer) }}</div>
 
@@ -101,13 +108,13 @@
 
         <!-- Actions — pending tab only -->
         <div v-if="activeTab === 'pending'" class="farmer-actions">
-          <button class="btn-approve" @click="openModal(farmer, 'approve')">
+          <button class="btn-approve" @click.stop="openModal(farmer, 'approve')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             Approve
           </button>
-          <button class="btn-reject" @click="openModal(farmer, 'reject')">
+          <button class="btn-reject" @click.stop="openModal(farmer, 'reject')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -115,6 +122,81 @@
           </button>
         </div>
 
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+
+      </div>
+    </div>
+
+    <!-- Farmer Detail Modal -->
+    <div v-if="detail.show" class="modal-overlay" @click.self="closeDetail">
+      <div class="modal detail-modal">
+        <div class="modal-header detail-header">
+          <div class="detail-avatar">{{ detail.farmer ? initials(detail.farmer) : '' }}</div>
+          <div class="detail-header-text">
+            <h3>{{ detail.farmer?.last_name }}, {{ detail.farmer?.first_name }} {{ detail.farmer?.middle_name || '' }}</h3>
+            <span :class="['status-badge', `status-${detail.farmer?.account_status}`]">
+              {{ detail.farmer?.account_status }}
+            </span>
+          </div>
+          <button class="modal-close" @click="closeDetail">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body detail-body">
+          <div class="detail-grid">
+            <div class="detail-field">
+              <span class="detail-label">Email Address</span>
+              <span class="detail-value">{{ detail.farmer?.email || '—' }}</span>
+            </div>
+            <div class="detail-field">
+              <span class="detail-label">Phone Number</span>
+              <span class="detail-value">{{ detail.farmer?.phone_number || '—' }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.barangay">
+              <span class="detail-label">Barangay</span>
+              <span class="detail-value">{{ detail.farmer?.barangay }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.address">
+              <span class="detail-label">Address</span>
+              <span class="detail-value">{{ detail.farmer?.address }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.rsbsa_reference">
+              <span class="detail-label">RSBSA Number</span>
+              <span class="detail-value">{{ detail.farmer?.rsbsa_reference }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.farm_size">
+              <span class="detail-label">Farm Size</span>
+              <span class="detail-value">{{ detail.farmer?.farm_size }} ha</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.crop_type">
+              <span class="detail-label">Primary Crop</span>
+              <span class="detail-value">{{ detail.farmer?.crop_type }}</span>
+            </div>
+            <div class="detail-field">
+              <span class="detail-label">Registered</span>
+              <span class="detail-value">{{ formatDate(detail.farmer?.created_at) }}</span>
+            </div>
+          </div>
+
+          <div v-if="detail.farmer?.remarks" class="detail-remarks">
+            <span class="detail-label">Remarks</span>
+            <p>{{ detail.farmer?.remarks }}</p>
+          </div>
+        </div>
+
+        <div class="modal-footer" v-if="detail.farmer?.account_status === 'pending'">
+          <button class="btn-reject" @click="openModal(detail.farmer, 'reject'); closeDetail()">
+            Reject
+          </button>
+          <button class="btn-approve" @click="openModal(detail.farmer, 'approve'); closeDetail()">
+            Approve
+          </button>
+        </div>
       </div>
     </div>
 
@@ -139,9 +221,9 @@
             {{ modal.farmer?.last_name }}, {{ modal.farmer?.first_name }}
             {{ modal.farmer?.middle_name ? modal.farmer.middle_name : '' }}
           </div>
-          
+
           <div v-if="modal.action === 'approve'" class="field">
-            <label>RSBSA Number <span style="color:red">*</span></label>
+            <label>RSBSA Number <span class="required">*</span></label>
             <input
                 v-model="modal.rsbsa_reference"
                 type="text"
@@ -217,7 +299,12 @@ export default {
         rsbsa_reference: '',
         processing: false,
         error: '',
-        },
+      },
+
+      detail: {
+        show: false,
+        farmer: null,
+      },
     }
   },
 
@@ -275,15 +362,15 @@ export default {
     },
 
     openModal(farmer, action) {
-     this.modal = {
-            show: true,
-            action,
-            farmer,
-            remarks: '',
-            rsbsa_reference: '',
-            processing: false,
-            error: '',
-        }
+      this.modal = {
+        show: true,
+        action,
+        farmer,
+        remarks: '',
+        rsbsa_reference: '',
+        processing: false,
+        error: '',
+      }
     },
 
     closeModal() {
@@ -292,13 +379,15 @@ export default {
     },
 
     async confirmAction() {
-    const { farmer, action, remarks, rsbsa_reference } = this.modal
+      const { farmer, action, remarks, rsbsa_reference } = this.modal
 
-    if (action === 'approve' && !rsbsa_reference.trim()) {
-    this.modal.error = 'RSBSA Number is required.'
-    this.modal.processing = false
-    return
-    }
+      if (action === 'approve' && !rsbsa_reference.trim()) {
+        this.modal.error = 'RSBSA Number is required.'
+        return
+      }
+
+      this.modal.processing = true
+      this.modal.error = ''
 
       const endpoint = action === 'approve'
         ? `${API_BASE}/api/farmers/${farmer.id}/verify`
@@ -306,12 +395,12 @@ export default {
 
       try {
         const payload = action === 'approve'
-            ? { rsbsa_reference }
-            : { remarks }
+          ? { rsbsa_reference }
+          : { remarks }
 
-            await axios.post(endpoint, payload, {
-            headers: this.authHeaders()
-            })
+        await axios.post(endpoint, payload, {
+          headers: this.authHeaders()
+        })
 
         this.farmers = this.farmers.filter(f => f.id !== farmer.id)
         this.counts.pending = Math.max(0, this.counts.pending - 1)
@@ -325,284 +414,496 @@ export default {
         this.modal.processing = false
       }
     },
+
+    openDetail(farmer) {
+      this.detail.farmer = farmer
+      this.detail.show = true
+    },
+
+    closeDetail() {
+      this.detail.show = false
+      this.detail.farmer = null
+    },
   },
 }
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
 
 .page {
-  padding: 2rem;
-  min-height: 100vh;
-  background: #f0f4f0;
   font-family: 'DM Sans', sans-serif;
+  padding: 1.75rem;
+  background: #F8FAF8;
+  min-height: 100%;
 }
 
 /* TOPBAR */
 .topbar {
-  display: flex; align-items: flex-start;
-  justify-content: space-between; margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.4rem;
+  gap: 12px;
 }
 
 .page-title {
   font-family: 'DM Serif Display', serif;
-  font-size: 26px; color: #1a2e1c;
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: #0F212F;
 }
 
-.page-sub { font-size: 13px; color: #7a9e7c; margin-top: 3px; }
+.page-sub {
+  font-size: 0.84rem;
+  color: #5c6b64;
+  margin-top: 2px;
+}
 
 .btn-refresh {
-  display: flex; align-items: center; gap: 7px;
-  padding: 8px 16px;
-  background: #fff; border: 1.5px solid #d1dfd2;
-  border-radius: 9px; font-size: 13px; font-weight: 500;
-  font-family: 'DM Sans', sans-serif;
-  color: #4a6a4c; cursor: pointer; transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFFFFF;
+  border: 1.5px solid #E0EAE3;
+  color: #116D3E;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 15px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.btn-refresh:hover { border-color: #34a853; color: #34a853; }
-.btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.refresh-icon { transition: transform 0.3s; }
-.spinning { animation: spin 0.7s linear infinite; }
+.btn-refresh:hover:not(:disabled) { border-color: #116D3E; background: #F1F6F2; }
+.btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.refresh-icon.spinning { animation: spin 0.9s linear infinite; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* TABS */
 .tabs {
-  display: flex; gap: 6px; margin-bottom: 1.5rem;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1.4rem;
+  border-bottom: 1px solid #EAF1EC;
 }
 
 .tab {
-  display: flex; align-items: center; gap: 7px;
-  padding: 8px 18px;
-  border: 1.5px solid #d1dfd2;
-  border-radius: 9px;
-  background: #fff;
-  font-size: 13.5px; font-weight: 500;
-  font-family: 'DM Sans', sans-serif;
-  color: #6b7c6d; cursor: pointer; transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  color: #5c6b64;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.tab:hover { border-color: #34a853; color: #2d4a2f; }
+.tab:hover { color: #116D3E; }
 
 .tab.active {
-  background: #34a853; border-color: #34a853;
-  color: #fff;
+  color: #116D3E;
+  border-bottom-color: #116D3E;
 }
 
 .tab-badge {
-  background: #fff;
-  color: #34a853;
-  font-size: 11px; font-weight: 700;
-  padding: 1px 7px; border-radius: 20px;
-  min-width: 20px; text-align: center;
-}
-
-.tab.active .tab-badge {
-  background: rgba(255,255,255,0.25);
-  color: #fff;
+  background: #D29539;
+  color: #FFFFFF;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
 }
 
 /* ALERT */
 .alert {
-  display: flex; align-items: center; gap: 10px;
-  padding: 11px 14px; border-radius: 10px;
-  font-size: 13.5px; margin-bottom: 1.25rem; font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  margin-bottom: 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-left: 4px solid transparent;
 }
-.alert-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+.alert-error { background: #fde3e3; color: #b3261e; border-left-color: #b3261e; }
 
 /* SKELETON */
 .skeleton-list { display: flex; flex-direction: column; gap: 10px; }
+
 .skeleton-card {
-  background: #fff; border-radius: 14px; padding: 1.1rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem;
-  border: 1px solid #e8ede8;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
 }
-.sk { background: #e8ede8; border-radius: 6px; animation: shimmer 1.4s infinite; }
+
+.sk { background: #EAF1EC; border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
 .sk-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
 .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.sk-line-lg { height: 14px; width: 55%; }
-.sk-line-sm { height: 12px; width: 38%; }
-.sk-btn { width: 80px; height: 32px; border-radius: 8px; }
+.sk-line-lg { height: 12px; width: 40%; }
+.sk-line-sm { height: 10px; width: 60%; }
+.sk-btn { width: 90px; height: 32px; border-radius: 8px; }
 
-@keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* EMPTY */
+/* EMPTY STATE */
 .empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 4rem 2rem;
-  color: #9aad9b; gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 3.5rem 1rem;
+  color: #8a9791;
+  text-align: center;
 }
-.empty-state p { font-size: 15px; }
+
+.empty-state svg { color: #C7D6CB; }
+.empty-state p { font-size: 0.88rem; }
+.empty-state strong { color: #5c6b64; text-transform: capitalize; }
 
 /* FARMER LIST */
 .farmer-list { display: flex; flex-direction: column; gap: 10px; }
 
 .farmer-card {
-  background: #fff;
-  border: 1px solid #e4ebe4;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
   border-radius: 14px;
-  padding: 1.1rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem;
-  transition: box-shadow 0.2s;
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
-.farmer-card:hover { box-shadow: 0 2px 12px rgba(52,168,83,0.08); }
+
+.farmer-card:hover {
+  border-color: #116D3E;
+  box-shadow: 0 10px 24px rgba(15, 33, 47, 0.08);
+  transform: translateY(-1px);
+}
+
+.farmer-card:focus-visible {
+  outline: none;
+  border-color: #116D3E;
+  box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.16);
+}
 
 .farmer-avatar {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: #e8f5e9;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; color: #34a853;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(17, 109, 62, 0.1);
+  color: #116D3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.82rem;
   flex-shrink: 0;
 }
 
 .farmer-info { flex: 1; min-width: 0; }
 
 .farmer-name {
-  font-size: 14.5px; font-weight: 600;
-  color: #1a2e1c; margin-bottom: 5px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0F212F;
+  margin-bottom: 4px;
 }
 
 .farmer-meta {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .farmer-meta span {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12.5px; color: #7a9e7c;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: #5c6b64;
 }
 
 .status-badge {
-  padding: 4px 12px; border-radius: 20px;
-  font-size: 11.5px; font-weight: 600;
-  text-transform: capitalize; flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  text-transform: capitalize;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.status-pending  { background: #fff8e1; color: #d97706; border: 1px solid #fde68a; }
-.status-verified { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-.status-rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.status-pending   { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
+.status-approved  { background: rgba(17, 109, 62, 0.1);   color: #116D3E; }
+.status-rejected  { background: rgba(193, 71, 61, 0.1);   color: #C1473D; }
+.status-suspended { background: rgba(107, 91, 149, 0.1);  color: #6B5B95; }
 
 .farmer-actions {
-  display: flex; gap: 8px; flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
+.chevron { color: #C7D6CB; flex-shrink: 0; }
+
+/* BUTTONS */
 .btn-approve, .btn-reject {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 8px;
-  font-size: 13px; font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
-  cursor: pointer; transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
 }
 
-.btn-approve { background: #34a853; color: #fff; border: none; }
-.btn-approve:hover:not(:disabled) { background: #2a9248; }
+.btn-approve {
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  box-shadow: 0 6px 14px rgba(17, 109, 62, 0.28);
+}
+.btn-approve:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-approve:disabled { opacity: 0.65; cursor: not-allowed; }
 
-.btn-reject { background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; }
-.btn-reject:hover:not(:disabled) { background: #fee2e2; }
-
-.btn-approve:disabled, .btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-reject {
+  background: #FFFFFF;
+  color: #C1473D;
+  border: 1.5px solid rgba(193, 71, 61, 0.3);
+}
+.btn-reject:hover:not(:disabled) { background: rgba(193, 71, 61, 0.06); }
+.btn-reject:disabled { opacity: 0.65; cursor: not-allowed; }
 
 /* MODAL */
 .modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200; padding: 1rem;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 33, 47, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
 }
 
 .modal {
-  background: #fff; border-radius: 16px;
-  width: 100%; max-width: 440px;
+  background: #FFFFFF;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 420px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  box-shadow: 0 30px 70px rgba(15, 33, 47, 0.4);
 }
 
 .modal-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1.3rem 1.4rem;
 }
 
-.modal-approve { background: #f0fdf4; border-bottom: 1px solid #bbf7d0; }
-.modal-reject  { background: #fef2f2; border-bottom: 1px solid #fecaca; }
+.modal-approve { background: #E7F0EC; }
+.modal-reject  { background: #FBEAE8; }
 
 .modal-icon {
-  width: 38px; height: 38px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-.modal-approve .modal-icon { background: #dcfce7; color: #16a34a; }
-.modal-reject  .modal-icon { background: #fee2e2; color: #dc2626; }
+
+.modal-approve .modal-icon { background: #116D3E; color: #FFFFFF; }
+.modal-reject .modal-icon  { background: #C1473D; color: #FFFFFF; }
 
 .modal-header h3 {
   font-family: 'DM Serif Display', serif;
-  font-size: 18px; color: #1a2e1c;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: #0F212F;
 }
 
-.modal-body { padding: 1.5rem; }
-.modal-body p { font-size: 14px; color: #4a6a4c; margin-bottom: 10px; }
+.modal-body { padding: 1.4rem; }
+
+.modal-body p { font-size: 0.86rem; color: #5c6b64; }
 
 .modal-farmer-name {
-  font-size: 15px; font-weight: 600; color: #1a2e1c;
-  background: #f5f7f5; padding: 10px 14px;
-  border-radius: 8px; margin-bottom: 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0F212F;
+  margin: 6px 0 1.1rem;
 }
+
+.field { margin-bottom: 0.6rem; }
 
 .field label {
-  display: block; font-size: 13px; font-weight: 600;
-  color: #2d4a2f; margin-bottom: 7px;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0F212F;
+  margin-bottom: 6px;
 }
-.optional { font-weight: 400; color: #9aad9b; }
 
-.field textarea {
-  width: 100%; padding: 10px 12px;
-  border: 1.5px solid #d1dfd2; border-radius: 10px;
-  font-size: 13.5px; font-family: 'DM Sans', sans-serif;
-  color: #1a2e1c; resize: vertical; outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.field textarea:focus {
-  border-color: #34a853;
-  box-shadow: 0 0 0 3px rgba(52,168,83,0.1);
-}
-.field input {
+.field .required { color: #C1473D; }
+.field .optional { color: #8a9791; font-weight: 400; }
+
+.field input, .field textarea {
   width: 100%;
+  border: 1.5px solid #d7e2d8;
+  border-radius: 9px;
   padding: 10px 12px;
-  border: 1.5px solid #d1dfd2;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-family: 'DM Sans', sans-serif;
-  color: #1a2e1c;
+  font-size: 0.86rem;
+  font-family: inherit;
+  color: #0F212F;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.field input:focus {
-  border-color: #34a853;
-  box-shadow: 0 0 0 3px rgba(52,168,83,0.1);
+.field input:focus, .field textarea:focus {
+  border-color: #116D3E;
+  box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.14);
 }
 
 .modal-footer {
-  display: flex; justify-content: flex-end; gap: 10px;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e8ede8; background: #fafcfa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 1rem 1.4rem 1.4rem;
 }
 
 .btn-cancel {
-  padding: 9px 18px; border-radius: 9px;
-  border: 1.5px solid #d1dfd2; background: #fff;
-  font-size: 13.5px; font-weight: 500;
-  font-family: 'DM Sans', sans-serif;
-  color: #4a6a4c; cursor: pointer; transition: all 0.2s;
+  background: none;
+  border: 1.5px solid #E0EAE3;
+  color: #5c6b64;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
 }
-.btn-cancel:hover:not(:disabled) { border-color: #9aad9b; }
-.btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel:hover:not(:disabled) { background: #F1F6F2; }
+.btn-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .spinner { animation: spin 0.8s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* DETAIL MODAL */
+.detail-modal { max-width: 480px; }
+
+.detail-header {
+  align-items: center;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  position: relative;
+}
+
+.detail-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.16);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.detail-header-text { flex: 1; min-width: 0; }
+
+.detail-header-text h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+}
+
+.detail-header .status-badge { background: rgba(255,255,255,0.2); color: #FFFFFF; }
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255,255,255,0.14);
+  border: none;
+  color: #FFFFFF;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.modal-close:hover { background: rgba(255,255,255,0.24); }
+
+.detail-body { padding: 1.4rem; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.detail-field { display: flex; flex-direction: column; gap: 3px; }
+
+.detail-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #8a9791;
+}
+
+.detail-value {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #0F212F;
+  word-break: break-word;
+}
+
+.detail-remarks {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #EAF1EC;
+}
+
+.detail-remarks p {
+  font-size: 0.84rem;
+  color: #5c6b64;
+  margin-top: 4px;
+  line-height: 1.5;
+}
 
 @media (max-width: 640px) {
-  .page { padding: 1.25rem; }
   .farmer-card { flex-wrap: wrap; }
-  .farmer-actions { width: 100%; justify-content: flex-end; margin-top: 0.5rem; }
-  .tabs { flex-wrap: wrap; }
+  .farmer-actions { width: 100%; }
+  .btn-approve, .btn-reject { flex: 1; justify-content: center; }
+  .detail-grid { grid-template-columns: 1fr; }
 }
 </style>
