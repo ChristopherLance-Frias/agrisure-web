@@ -93,6 +93,7 @@
       <span>Applications Matrix</span>
     </div>
 
+    <!-- Application Window Navigation Tabs -->
     <div class="tab-bar">
       <button
         class="tab-btn"
@@ -152,6 +153,7 @@
         <option value="Corn">Corn</option>
       </select>
 
+      <!-- Previous Season Selector Dropdown (Active on History tab) -->
       <select
         v-if="activeAppTab === 'history'"
         v-model="historySeasonId"
@@ -172,9 +174,10 @@
       <button
         v-if="hasPcicPreparations"
         class="btn-print-pcic"
-        @click="printPcicBatchManifest"
+        @click="downloadPcicBatchManifest"
+        :disabled="isGeneratingPdf"
       >
-        🖨️ Print Batch for PCIC ({{ countByStatus('approved_for_pcic') }})
+        📥 {{ isGeneratingPdf ? 'Generating PDF...' : 'Download PCIC Batch PDF (' + countByStatus('approved_for_pcic') + ')' }}
       </button>
     </div>
 
@@ -221,9 +224,10 @@
 
             <button
               class="btn-print-pcic"
-              @click="printSelectedPcicBatch"
+              @click="downloadSelectedPcicBatch"
+              :disabled="isGeneratingPdf"
             >
-              🖨️ Print Batch ({{ selectedIds.length }})
+              📥 {{ isGeneratingPdf ? 'Generating...' : 'Download Selected Batch PDF (' + selectedIds.length + ')' }}
             </button>
           </template>
 
@@ -526,60 +530,29 @@
       </table>
     </div>
 
-    <!-- Hidden Printable Transmittal Element -->
-    <div v-if="isPrintingPcicBatch" id="print-area" class="print-area pcic-batch-layout">
-      <div class="print-letterhead">
-        <h1>Office of the Municipal Agriculture Office</h1>
-        <h2>PCIC Master Batch Endorsement Transmittal Manifest</h2>
-        <p>
-          <strong>Target Insurance Season Window:</strong>
-          {{ currentSeason ? currentSeason.season_name : '' }}
-        </p>
-        <p>
-          <strong>Transmittal Dispatch Date:</strong>
-          {{ formatDate(new Date()) }}
-        </p>
-      </div>
-
-      <div class="print-divider"></div>
-
-      <table class="print-batch-table">
-        <thead>
-          <tr>
-            <th>App ID</th>
-            <th>Farmer Legal Name</th>
-            <th>Barangay Location</th>
-            <th>Commodity</th>
-            <th>Farm Area</th>
-            <th>Sowing Date</th>
-            <th>Tenure Position</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="app in pcicBatchList" :key="app.id">
-            <td>{{ app.id }}</td>
-            <td>{{ farmerName(app) }}</td>
-            <td>{{ truncateAddress(app.farm?.farmer_profile?.address) }}</td>
-            <td>{{ app.farm ? app.farm.crop_type : '' }} ({{ app.variety || '' }})</td>
-            <td>{{ app.farm ? app.farm.farm_area : '' }} ha</td>
-            <td>{{ formatDate(app.sowing_date) }}</td>
-            <td>{{ app.tenure_status || 'Owner' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- Externalized PDF Export Component -->
+    <PcicPdf
+      v-if="isPrintingPcicBatch"
+      ref="pdfGenerator"
+      :pcic-batch-list="pcicBatchList"
+      :current-season="currentSeason"
+    />
 
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import PcicPdf from '@/components/PcicPdf.vue'
 
 const API_BASE = 'http://192.168.100.173:8000'
 
 export default {
   name: 'CropInsuranceApplicationPage',
+
+  components: {
+    PcicPdf,
+  },
 
   data() {
     return {
@@ -611,6 +584,7 @@ export default {
       batchProcessing: false,
 
       isPrintingPcicBatch: false,
+      isGeneratingPdf: false,
       pcicBatchList: [],
       currentSeason: null,
 
@@ -633,7 +607,6 @@ export default {
   },
 
   computed: {
-    // FIXED: Uses deadline_date setup logic to prevent structural override blocks
     hasConfiguredSeason() {
       return !!(this.currentSeason && this.currentSeason.deadline_date)
     },
@@ -996,31 +969,61 @@ export default {
       }
     },
 
-    printPcicBatchManifest() {
-      this.pcicBatchList = this.activeApplications.filter(function(app) {
-        return app.status === 'approved_for_pcic'
-      })
-      this.runPrint()
-    },
+   async downloadPcicBatchManifest() {
+  this.pcicBatchList = this.activeApplications.filter(
+    app => app.status === 'approved_for_pcic'
+  )
 
-    printSelectedPcicBatch() {
-      if (this.selectedPcicReady.length === 0) {
-        alert('Select applications with "To be submitted to PCIC" status only.')
+  this.isPrintingPcicBatch = true
+
+  await this.$nextTick()
+
+  await this.$refs.pdfGenerator.generate(
+    'PCIC_Transmittal_Batch.pdf'
+  )
+
+  this.isPrintingPcicBatch = false
+},
+
+    async downloadSelectedPcicBatch() {
+  if (!this.selectedPcicReady.length) {
+    alert('Select applications first.')
+    return
+  }
+
+  this.pcicBatchList = [...this.selectedPcicReady]
+
+  this.isPrintingPcicBatch = true
+
+  await this.$nextTick()
+
+  await this.$refs.pdfGenerator.generate(
+    'PCIC_Selected_Batch.pdf'
+  )
+
+  this.isPrintingPcicBatch = false
+},
+
+    async generatePDF(filename) {
+      if (!this.pcicBatchList || this.pcicBatchList.length === 0) {
+        alert('No applications found to export.')
         return
       }
-      this.pcicBatchList = this.selectedPcicReady
-      this.runPrint()
-    },
 
-    runPrint() {
       this.isPrintingPcicBatch = true
-      var self = this
-      this.$nextTick(function() {
-        window.print()
-        setTimeout(function() {
-          self.isPrintingPcicBatch = false
-        }, 500)
-      })
+      this.isGeneratingPdf = true
+
+      await this.$nextTick()
+
+      try {
+        await this.$refs.pdfGenerator.generate(filename)
+      } catch (err) {
+        console.error('PDF Generation Failed:', err)
+        alert('Failed to generate PDF document.')
+      } finally {
+        this.isPrintingPcicBatch = false
+        this.isGeneratingPdf = false
+      }
     },
 
     toggleSelection(id) {
@@ -1104,7 +1107,6 @@ export default {
       this.seasonModalError = ''
     },
 
-    // FIXED: Properly routes targeting actions into POST new vs PUT current
     async saveSeason() {
       if (!this.seasonForm.season_name.trim()) {
         this.seasonModalError = 'Please enter a season name.'
@@ -1637,6 +1639,7 @@ export default {
   white-space: nowrap;
 }
 .btn-print-pcic:hover { background: #e0960f; }
+.btn-print-pcic:disabled { background: #fbe6af; cursor: not-allowed; }
 
 .status-filter-row {
   display: flex;
@@ -1898,19 +1901,4 @@ export default {
 .detail-item.full-width { grid-column: 1 / -1; }
 .detail-label { font-size: 0.7rem; color: #93a29a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
 .detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
-
-.print-area { display: none; }
-
-@media print {
-  .insurance-page > *:not(.print-area) { display: none !important; }
-  .print-area { display: block !important; padding: 2rem; font-family: 'DM Sans', sans-serif; color: #263238; }
-  .print-letterhead { text-align: center; margin-bottom: 1rem; }
-  .print-letterhead h1 { font-size: 1.2rem; margin: 0 0 4px; }
-  .print-letterhead h2 { font-size: 1rem; margin: 0 0 8px; font-weight: 600; }
-  .print-letterhead p { font-size: 0.85rem; margin: 2px 0; }
-  .print-divider { border-top: 2px solid #263238; margin: 1rem 0; }
-  .print-batch-table { width: 100%; border-collapse: collapse; }
-  .print-batch-table th, .print-batch-table td { border: 1px solid #263238; padding: 6px 8px; font-size: 0.78rem; text-align: left; }
-  .print-batch-table th { background: #F5F7F5; font-weight: 700; }
-}
 </style>
