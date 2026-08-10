@@ -1,6 +1,6 @@
 <template>
   <div class="insurance-page">
-    <div class="page-header">
+    <div class="page-header no-print">
       <div>
         <h2 class="page-title">Crop Insurance Applications</h2>
         <p class="page-sub">Review, update, and manage farmer insurance applications submitted to MAO</p>
@@ -8,7 +8,7 @@
     </div>
 
     <!-- Active Season Display Window -->
-    <div v-if="hasConfiguredSeason" class="season-card">
+    <div v-if="hasConfiguredSeason" class="season-card no-print">
       <div class="season-info">
         <div class="season-icon open">⏱</div>
 
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Setup Prompt Card fallback -->
-    <div v-else class="setup-card">
+    <div v-else class="setup-card no-print">
       <div class="setup-icon">📅</div>
       <h3>Season Setup Required</h3>
       <p>Configure the current active insurance window to start processing applications.</p>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Settings Modification Modal Popup -->
-    <div v-if="showSeasonModal" class="modal-overlay" @click.self="closeSeasonModal">
+    <div v-if="showSeasonModal" class="modal-overlay no-print" @click.self="closeSeasonModal">
       <div class="modal-box">
         <h3 class="modal-title">{{ isStartingNewSeason ? 'Start New Season' : 'Season Settings' }}</h3>
 
@@ -89,12 +89,12 @@
       </div>
     </div>
 
-    <div class="section-divider">
+    <div class="section-divider no-print">
       <span>Applications Matrix</span>
     </div>
 
     <!-- Application Window Navigation Tabs -->
-    <div class="tab-bar">
+    <div class="tab-bar no-print">
       <button
         class="tab-btn"
         :class="{ active: activeAppTab === 'current' }"
@@ -112,7 +112,7 @@
       </button>
     </div>
 
-    <div class="refresh-bar">
+    <div class="refresh-bar no-print">
       <div class="refresh-status">
         <span class="refresh-dot" :class="{ live: autoRefresh }"></span>
         <span v-if="autoRefresh">Auto-refresh on · every {{ refreshIntervalSeconds }}s</span>
@@ -137,7 +137,7 @@
       </div>
     </div>
 
-    <div class="filters-row">
+    <div class="filters-row no-print">
       <div class="search-wrap">
         <input
           v-model="searchName"
@@ -153,7 +153,6 @@
         <option value="Corn">Corn</option>
       </select>
 
-      <!-- Previous Season Selector Dropdown (Active on History tab) -->
       <select
         v-if="activeAppTab === 'history'"
         v-model="historySeasonId"
@@ -181,7 +180,7 @@
       </button>
     </div>
 
-    <div class="status-filter-row">
+    <div class="status-filter-row no-print">
       <button
         v-for="f in statusFilters"
         :key="f.value"
@@ -196,7 +195,7 @@
 
     <!-- Status-aware floating bulk action bar -->
     <transition name="float-bar">
-      <div v-if="selectedIds.length > 0" class="bulk-action-bar floating" :class="{ mixed: !selectedStatus }">
+      <div v-if="selectedIds.length > 0" class="bulk-action-bar floating no-print" :class="{ mixed: !selectedStatus }">
         <div class="bulk-left">
           <strong>{{ selectedIds.length }}</strong>
           <span>application(s) selected</span>
@@ -250,7 +249,7 @@
       </div>
     </transition>
 
-    <div class="stats-row">
+    <div class="stats-row no-print">
       <div class="stat-card">
         <span class="stat-label">Total</span>
         <span class="stat-value">{{ activeApplications.length }}</span>
@@ -287,16 +286,16 @@
       </div>
     </div>
 
-    <div v-if="isLoading" class="state-box">
+    <div v-if="isLoading" class="state-box no-print">
       <div class="spinner"></div>
       <span>Fetching applications registry...</span>
     </div>
 
-    <div v-else-if="errorMessage" class="state-box error-box">
+    <div v-else-if="errorMessage" class="state-box error-box no-print">
       <span>{{ errorMessage }}</span>
     </div>
 
-    <div v-else class="table-wrap">
+    <div v-else class="table-wrap no-print">
       <div v-if="filtered.length === 0" class="empty-state">
         No application records correspond to your filter parameters.
       </div>
@@ -365,7 +364,7 @@
                 </span>
               </td>
 
-              <td>{{ app.insurance_season?.season_name || currentSeasonName(app) }}</td>
+              <td>{{ app.season?.season_name || currentSeasonName(app) }}</td>
               <td>{{ formatDate(app.application_date) }}</td>
             </tr>
 
@@ -378,7 +377,6 @@
                         <strong>Available Action:</strong>
                       </span>
 
-                      <!-- Single target workflows -->
                       <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
                         <button
                           class="btn-action-approve"
@@ -429,22 +427,47 @@
 
                         <div class="detail-item">
                           <span class="detail-label">Civil Status</span>
-                          <span class="detail-val">{{ app.civil_status || '—' }}</span>
+                          <span class="detail-val">{{ app.civil_status || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">Beneficiary</span>
-                          <span class="detail-val">{{ app.beneficiary_name || '—' }}</span>
+                          <span class="detail-val">{{ app.beneficiary_name || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Spouse Name</span>
+                          <span class="detail-val">{{ app.spouse_name || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Parent / Guardian</span>
+                          <span class="detail-val">{{ app.parent_guardian_name || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">Phone</span>
-                          <span class="detail-val">{{ app.farm?.farmer_profile?.user?.phone_number || '—' }}</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.user?.phone_number || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Email</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.email_or_phone || app.farm?.farmer_profile?.user?.email || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">RSBSA Reference</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.rsbsa_reference || ' ' }}</span>
                         </div>
 
                         <div class="detail-item full-width">
                           <span class="detail-label">Address</span>
-                          <span class="detail-val">{{ app.farm?.farmer_profile?.address || '—' }}</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.address || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.remarks">
+                          <span class="detail-label">Remarks</span>
+                          <span class="detail-val">{{ app.remarks }}</span>
                         </div>
                       </div>
                     </div>
@@ -455,22 +478,22 @@
                       <div class="detail-grid">
                         <div class="detail-item">
                           <span class="detail-label">Crop Type</span>
-                          <span class="detail-val">{{ app.farm?.crop_type || '—' }}</span>
+                          <span class="detail-val">{{ app.farm?.crop_type || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">Variety</span>
-                          <span class="detail-val">{{ app.variety || '—' }}</span>
+                          <span class="detail-val">{{ app.variety || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">Farm Type</span>
-                          <span class="detail-val">{{ app.farm_type || '—' }}</span>
+                          <span class="detail-val">{{ app.farm_type || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">Area Size</span>
-                          <span class="detail-val">{{ app.farm?.farm_area ? app.farm.farm_area + ' ha' : '—' }}</span>
+                          <span class="detail-val">{{ app.farm?.farm_area ? app.farm.farm_area + ' ha' : ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
@@ -482,6 +505,16 @@
                           <span class="detail-label">Transplanting</span>
                           <span class="detail-val">{{ formatDate(app.transplanting_date) }}</span>
                         </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Farm Location</span>
+                          <span class="detail-val">{{ app.farm_location || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Land Category</span>
+                          <span class="detail-val">{{ app.land_category || ' ' }}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -491,22 +524,22 @@
                       <div class="detail-grid">
                         <div class="detail-item">
                           <span class="detail-label">North</span>
-                          <span class="detail-val">{{ app.north_boundary || '—' }}</span>
+                          <span class="detail-val">{{ app.north_boundary || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">East</span>
-                          <span class="detail-val">{{ app.east_boundary || '—' }}</span>
+                          <span class="detail-val">{{ app.east_boundary || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">West</span>
-                          <span class="detail-val">{{ app.west_boundary || '—' }}</span>
+                          <span class="detail-val">{{ app.west_boundary || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
                           <span class="detail-label">South</span>
-                          <span class="detail-val">{{ app.south_boundary || '—' }}</span>
+                          <span class="detail-val">{{ app.south_boundary || ' ' }}</span>
                         </div>
 
                         <div class="detail-item">
@@ -516,7 +549,101 @@
 
                         <div class="detail-item">
                           <span class="detail-label">Tenure Status</span>
-                          <span class="detail-val">{{ app.tenure_status || '—' }}</span>
+                          <span class="detail-val">{{ app.tenure_status || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.farm?.latitude && app.farm?.longitude">
+                          <span class="detail-label">Farm Coordinates</span>
+                          <span class="detail-val">{{ app.farm.latitude }}, {{ app.farm.longitude }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Coverage &amp; Payment</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">Insured Area</span>
+                          <span class="detail-val">{{ app.insured_area ? app.insured_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Covered Free Area</span>
+                          <span class="detail-val">{{ app.covered_free_area ? app.covered_free_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Excess Area</span>
+                          <span class="detail-val">{{ app.excess_area ? app.excess_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Free Coverage Before</span>
+                          <span class="detail-val">{{ app.free_coverage_before ? app.free_coverage_before + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Free Coverage After</span>
+                          <span class="detail-val">{{ app.free_coverage_after ? app.free_coverage_after + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Premium Amount</span>
+                          <span class="detail-val">{{ formatCurrency(app.premium_amount) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Status</span>
+                          <span class="detail-val">{{ paymentStatusLabel(app.payment_status) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Method</span>
+                          <span class="detail-val">{{ app.payment_method || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">GCash Reference #</span>
+                          <span class="detail-val">{{ app.gcash_reference_number || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Submitted</span>
+                          <span class="detail-val">{{ app.payment_submitted_at ? formatDate(app.payment_submitted_at) : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.payment_proof_path">
+                          <span class="detail-label">Payment Proof</span>
+                          <a class="detail-link" :href="assetUrl(app.payment_proof_path)" target="_blank" rel="noopener">View uploaded proof</a>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Documents</div>
+
+                      <div class="documents-row">
+                        <div class="document-tile">
+                          <span class="detail-label">Farmer's Signature</span>
+                          <img
+                            v-if="app.signature_path"
+                            :src="assetUrl(app.signature_path)"
+                            alt="Farmer signature"
+                            class="signature-img"
+                          />
+                          <span v-else class="detail-val">—</span>
+                        </div>
+
+                        <div class="document-tile">
+                          <span class="detail-label">Farm Photo</span>
+                          <img
+                            v-if="app.farm?.farm_image_path"
+                            :src="assetUrl(app.farm.farm_image_path)"
+                            alt="Farm photo"
+                            class="farm-photo-img"
+                          />
+                          <span v-else class="detail-val">—</span>
                         </div>
                       </div>
                     </div>
@@ -530,29 +657,216 @@
       </table>
     </div>
 
-    <!-- Externalized PDF Export Component -->
-    <PcicPdf
-      v-if="isPrintingPcicBatch"
-      ref="pdfGenerator"
-      :pcic-batch-list="pcicBatchList"
-      :current-season="currentSeason"
-    />
+    <!-- PDF Legal-Size Batch Export Container -->
+    <div v-if="isPrintingPcicBatch" id="pdf-export-wrapper" class="pdf-export-wrapper">
+      <div id="pdf-download-area" class="pdf-export-container legal-size-print">
+
+        <template v-for="(pageRows, setIdx) in pcicBatchPages" :key="'set-' + setIdx">
+          
+          <!-- ================= PAGE 1: APPLICATION FORM ================= -->
+          <div :class="{ 'pdf-page-break': setIdx > 0 }" class="pcic-page-container">
+            <!-- Header Block -->
+            <div class="pcic-official-header">
+              <div class="pcic-header-top">
+                <div class="pcic-logo-placeholder"></div>
+                <div class="pcic-title-box">
+                  <div class="pcic-republic">Republic of the Philippines</div>
+                  <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
+                  <div class="pcic-dept">DEPARTMENT OF AGRICULTURE</div>
+                  <div class="pcic-form-title">APPLICATION FOR CROP INSURANCE (GROUP APPLICATION)</div>
+                </div>
+                <div class="pcic-form-code">PCIC-RO-01</div>
+              </div>
+
+              <!-- Meta Data Grid Header -->
+              <div class="pcic-meta-table">
+                <div class="meta-row">
+                  <div class="meta-cell flex-2"><strong>NAME OF FO / FA / COOP / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP SEASON:</strong> {{ currentSeason ? currentSeason.season_name : 'REGULAR' }}</div>
+                </div>
+                <div class="meta-row">
+                  <div class="meta-cell flex-2"><strong>OFFICE ADDRESS / BARANGAY:</strong> ECHAGUE, CAGAYAN VALLEY</div>
+                  <div class="meta-cell flex-1"><strong>BATCH NO:</strong> BATCH-{{ setIdx + 1 }}</div>
+                  <div class="meta-cell flex-1"><strong>DATE SUBMITTED:</strong> {{ formatDate(new Date()) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Page 1 Table -->
+            <table class="pcic-official-table">
+              <thead>
+                <tr>
+                  <th rowspan="2" class="col-num">NO.</th>
+                  <th colspan="4" class="col-name-group">NAME OF FARMER</th>
+                  <th rowspan="2" class="col-sex">SEX</th>
+                  <th rowspan="2" class="col-civil">CIVIL STATUS</th>
+                  <th rowspan="2" class="col-addr">ADDRESS (Sitio/Barangay)</th>
+                  <th rowspan="2" class="col-dob">DATE OF BIRTH</th>
+                  <th rowspan="2" class="col-rsbsa">RSBSA REF. NO.</th>
+                  <th rowspan="2" class="col-pay">PAYMENT MODE</th>
+                  <th rowspan="2" class="col-phone">TEL / PHONE</th>
+                  <th rowspan="2" class="col-spouse">SPOUSE NAME</th>
+                  <th rowspan="2" class="col-parent">PARENT / GUARDIAN</th>
+                  <th rowspan="2" class="col-ben">BENEFICIARY NAME</th>
+                  <th rowspan="2" class="col-area">AREA (ha)</th>
+                  <th rowspan="2" class="col-date">SOWING / DS</th>
+                  <th rowspan="2" class="col-date">TRANSPLANT</th>
+                  <th rowspan="2" class="col-var">VARIETY</th>
+                </tr>
+                <tr>
+                  <th class="col-lname">LAST NAME</th>
+                  <th class="col-fname">FIRST NAME</th>
+                  <th class="col-mname">MIDDLE</th>
+                  <th class="col-ext">EXT</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr v-for="(app, idx) in pageRows" :key="'p1-' + setIdx + '-' + idx" class="pcic-data-row">
+                  <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.last_name || '' }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.first_name || '' }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.middle_name || '' }}</td>
+                  <td class="text-center">{{ app?.farm?.farmer_profile?.user?.extension_name || '' }}</td>
+                  <td class="text-center">{{ genderLabel(app?.farm?.farmer_profile?.user?.sex) }}</td>
+                  <td class="text-center">{{ app?.civil_status || '' }}</td>
+                  <td>{{ truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.farm?.farmer_profile?.birthdate) : '' }}</td>
+                  <td class="text-center font-mono">{{ app?.farm?.farmer_profile?.rsbsa_reference || '' }}</td>
+                  <td class="text-center">{{ app?.payment_method || '' }}</td>
+                  <td class="text-center">{{ app?.farm?.farmer_profile?.user?.phone_number || '' }}</td>
+                  <td>{{ app?.spouse_name || '' }}</td>
+                  <td>{{ app?.parent_guardian_name || '' }}</td>
+                  <td>{{ app?.beneficiary_name || '' }}</td>
+                  <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.sowing_date) : '' }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.transplanting_date) : '' }}</td>
+                  <td>{{ app?.variety || '' }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Page Footer / Signatures -->
+            <div class="pcic-footer-block">
+              <div class="pcic-cert-text">
+                I hereby certify that the information provided above is true and correct to the best of my knowledge and belief.
+              </div>
+              <div class="pcic-sig-grid">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Prepared / Submitted By (MAO Officer)</div>
+                </div>
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Validated / Received By (PCIC Representative)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= PAGE 2: LOCATION & BOUNDARIES SCHEDULE ================= -->
+          <div class="pdf-page-break pcic-page-container">
+            <!-- Page 2 Header -->
+            <div class="pcic-official-header">
+              <div class="pcic-header-top">
+                <div class="pcic-logo-placeholder"></div>
+                <div class="pcic-title-box">
+                  <div class="pcic-republic">Republic of the Philippines</div>
+                  <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
+                  <div class="pcic-form-title">FARM LOCATION & BOUNDARY SCHEDULE (PAGE 2)</div>
+                </div>
+                <div class="pcic-form-code">PCIC-RO-01B</div>
+              </div>
+
+              <div class="pcic-meta-table">
+                <div class="meta-row">
+                  <div class="meta-cell flex-1"><strong>BATCH PAGE:</strong> SET {{ setIdx + 1 }} OF {{ pcicBatchPages.length }}</div>
+                  <div class="meta-cell flex-2"><strong>ORGANIZATION / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
+                  <div class="meta-cell flex-1"><strong>DATE:</strong> {{ formatDate(new Date()) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Page 2 Table -->
+            <table class="pcic-official-table">
+              <thead>
+                <tr>
+                  <th class="col-num">NO.</th>
+                  <th class="col-p2-name">NAME OF FARMER</th>
+                  <th class="col-p2-georef">GEOREF ID / FARM ID</th>
+                  <th class="col-p2-loc">FARM LOCATION (Sitio / Barangay)</th>
+                  <th class="col-area">AREA (ha)</th>
+                  <th class="col-p2-cat">LAND CATEGORY</th>
+                  <th class="col-p2-tenure">TENURIAL STATUS</th>
+                  <th class="col-p2-bnd">NORTH BOUNDARY</th>
+                  <th class="col-p2-bnd">SOUTH BOUNDARY</th>
+                  <th class="col-p2-bnd">EAST BOUNDARY</th>
+                  <th class="col-p2-bnd">WEST BOUNDARY</th>
+                  <th class="col-p2-sig">SIGNATURE OF FARMER</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr v-for="(app, idx) in pageRows" :key="'p2-' + setIdx + '-' + idx" class="pcic-data-row">
+                  <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
+                  <td class="bold">{{ app ? pcicFormName(app) : '' }}</td>
+                  <td class="text-center font-mono">{{ app?.farm?.id ? 'FM-' + app.farm.id : '' }}</td>
+                  <td>{{ app?.farm_location || truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
+                  <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
+                  <td class="text-center">{{ app?.land_category || '' }}</td>
+                  <td class="text-center">{{ app?.tenure_status || '' }}</td>
+                  <td>{{ app?.north_boundary || '' }}</td>
+                  <td>{{ app?.south_boundary || '' }}</td>
+                  <td>{{ app?.east_boundary || '' }}</td>
+                  <td>{{ app?.west_boundary || '' }}</td>
+                  <td class="text-center signature-cell">
+                    <img
+                      v-if="app?.signature_path"
+                      :src="assetUrl(app.signature_path)"
+                      alt="Signature"
+                      class="pdf-signature-img"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Page 2 Footer -->
+            <div class="pcic-footer-block">
+              <div class="pcic-cert-text">
+                Note: All boundary details specified above correspond strictly to actual ground layout and RSBSA-registered agricultural plots.
+              </div>
+              <div class="pcic-sig-grid">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">MAO Inspector / Verifier Signature</div>
+                </div>
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Municipal Agricultural Officer</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </template>
+
+      </div>
+    </div>
 
   </div>
 </template>
 
 <script>
 import axios from 'axios'
-import PcicPdf from '@/components/PcicPdf.vue'
+import html2pdf from 'html2pdf.js'
 
 const API_BASE = 'http://192.168.100.173:8000'
 
 export default {
   name: 'CropInsuranceApplicationPage',
-
-  components: {
-    PcicPdf,
-  },
 
   data() {
     return {
@@ -686,6 +1000,41 @@ export default {
     selectedPcicReady() {
       return this.selectedApplications.filter(function(app) {
         return app.status === 'approved_for_pcic'
+      })
+    },
+
+    farmerOrgName() {
+      return ''
+    },
+
+    pdfCropLabel() {
+      var crops = this.pcicBatchList
+        .map(function(app) { return app.farm?.crop_type })
+        .filter(Boolean)
+      var unique = Array.from(new Set(crops))
+      if (unique.length === 0) return 'RICE / CORN'
+      if (unique.length === 1) return unique[0].toUpperCase()
+      return 'MIXED (' + unique.join(', ').toUpperCase() + ')'
+    },
+
+    pcicBatchPages() {
+      var PAGE_SIZE = 15
+      var list = this.pcicBatchList
+      var chunks = []
+
+      for (var i = 0; i < list.length; i += PAGE_SIZE) {
+        chunks.push(list.slice(i, i + PAGE_SIZE))
+      }
+      if (chunks.length === 0) {
+        chunks.push([])
+      }
+
+      return chunks.map(function(chunk) {
+        var padded = chunk.slice()
+        while (padded.length < PAGE_SIZE) {
+          padded.push(null)
+        }
+        return padded
       })
     },
   },
@@ -969,40 +1318,21 @@ export default {
       }
     },
 
-   async downloadPcicBatchManifest() {
-  this.pcicBatchList = this.activeApplications.filter(
-    app => app.status === 'approved_for_pcic'
-  )
+    downloadPcicBatchManifest() {
+      this.pcicBatchList = this.activeApplications.filter(function(app) {
+        return app.status === 'approved_for_pcic'
+      })
+      this.generatePDF('PCIC_Transmittal_Batch.pdf')
+    },
 
-  this.isPrintingPcicBatch = true
-
-  await this.$nextTick()
-
-  await this.$refs.pdfGenerator.generate(
-    'PCIC_Transmittal_Batch.pdf'
-  )
-
-  this.isPrintingPcicBatch = false
-},
-
-    async downloadSelectedPcicBatch() {
-  if (!this.selectedPcicReady.length) {
-    alert('Select applications first.')
-    return
-  }
-
-  this.pcicBatchList = [...this.selectedPcicReady]
-
-  this.isPrintingPcicBatch = true
-
-  await this.$nextTick()
-
-  await this.$refs.pdfGenerator.generate(
-    'PCIC_Selected_Batch.pdf'
-  )
-
-  this.isPrintingPcicBatch = false
-},
+    downloadSelectedPcicBatch() {
+      if (this.selectedPcicReady.length === 0) {
+        alert('Select applications with "To be submitted to PCIC" status only.')
+        return
+      }
+      this.pcicBatchList = this.selectedPcicReady
+      this.generatePDF('PCIC_Selected_Batch.pdf')
+    },
 
     async generatePDF(filename) {
       if (!this.pcicBatchList || this.pcicBatchList.length === 0) {
@@ -1015,15 +1345,52 @@ export default {
 
       await this.$nextTick()
 
-      try {
-        await this.$refs.pdfGenerator.generate(filename)
-      } catch (err) {
-        console.error('PDF Generation Failed:', err)
-        alert('Failed to generate PDF document.')
-      } finally {
-        this.isPrintingPcicBatch = false
-        this.isGeneratingPdf = false
-      }
+      setTimeout(async () => {
+        const element = document.getElementById('pdf-download-area')
+
+        if (!element) {
+          console.error('PDF element not found in DOM')
+          this.isPrintingPcicBatch = false
+          this.isGeneratingPdf = false
+          return
+        }
+
+        const captureWidth = element.scrollWidth
+
+        const opt = {
+          margin: [5, 5, 5, 5],
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            windowWidth: captureWidth,
+            width: captureWidth,
+            onclone: (clonedDoc) => {
+              const wrapper = clonedDoc.getElementById('pdf-export-wrapper')
+              if (wrapper) {
+                wrapper.style.visibility = 'visible'
+                wrapper.style.position = 'static'
+              }
+            },
+          },
+          // LEGAL LANDSCAPE FORMAT (8.5 x 14 in / 215.9 x 355.6 mm)
+          jsPDF: { unit: 'mm', format: [215.9, 355.6], orientation: 'landscape' },
+          pagebreak: { mode: ['css'], before: '.pdf-page-break' },
+        }
+
+        try {
+          await html2pdf().set(opt).from(element).save()
+        } catch (err) {
+          console.error('PDF Generation Failed:', err)
+          alert('Failed to generate PDF document.')
+        } finally {
+          this.isPrintingPcicBatch = false
+          this.isGeneratingPdf = false
+        }
+      }, 100)
     },
 
     toggleSelection(id) {
@@ -1209,6 +1576,56 @@ export default {
       return map[status] || status || '—'
     },
 
+    pcicFormName(app) {
+      var user = app?.farm?.farmer_profile?.user || null
+      if (!user) return ''
+
+      var firstInitials = (user.first_name || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(function(part) { return part.charAt(0).toUpperCase() + '.' })
+        .join(' ')
+
+      var middleInitial = user.middle_name
+        ? user.middle_name.charAt(0).toUpperCase() + '.'
+        : ''
+
+      var parts = [firstInitials, middleInitial, user.last_name, user.extension_name]
+        .filter(Boolean)
+
+      return parts.join(' ')
+    },
+
+    genderLabel(sex) {
+      if (!sex) return ''
+      var s = sex.toString().trim().toLowerCase()
+      if (s === 'male' || s === 'm') return 'M'
+      if (s === 'female' || s === 'f') return 'F'
+      return sex
+    },
+
+    assetUrl(path) {
+      if (!path) return ''
+      return API_BASE + '/api/storage/' + path
+    },
+
+    paymentStatusLabel(status) {
+      var map = {
+        not_required: 'Not Required',
+        pending: 'Pending',
+        paid: 'Paid',
+        failed: 'Failed',
+      }
+      return map[status] || status || '—'
+    },
+
+    formatCurrency(amount) {
+      if (amount === null || amount === undefined || amount === '') return '—'
+      var num = Number(amount)
+      if (Number.isNaN(num)) return '—'
+      return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    },
+
     countByStatus(status) {
       return this.activeApplications.filter(function(app) {
         return app.status === status
@@ -1242,22 +1659,9 @@ export default {
   color: #263238;
 }
 
-.page-header {
-  margin-bottom: 1.5rem;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #263238;
-  margin: 0 0 4px;
-}
-
-.page-sub {
-  font-size: 0.9rem;
-  color: #5c6b64;
-  margin: 0;
-}
+.page-header { margin-bottom: 1.5rem; }
+.page-title { font-size: 1.5rem; font-weight: 700; color: #263238; margin: 0 0 4px; }
+.page-sub { font-size: 0.9rem; color: #5c6b64; margin: 0; }
 
 .season-card {
   background: #FFFFFF;
@@ -1273,13 +1677,7 @@ export default {
   border-left: 4px solid #2E7D32;
 }
 
-.season-info {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
+.season-info { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
 .season-icon {
   width: 44px;
   height: 44px;
@@ -1292,30 +1690,10 @@ export default {
   color: #2E7D32;
 }
 
-.season-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.season-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #5c6b64;
-  font-weight: 600;
-}
-
-.season-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #263238;
-}
-
-.season-actions {
-  display: flex;
-  gap: 10px;
-}
+.season-text { display: flex; flex-direction: column; gap: 3px; }
+.season-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: #5c6b64; font-weight: 600; }
+.season-name { font-size: 1rem; font-weight: 700; color: #263238; }
+.season-actions { display: flex; gap: 10px; }
 
 .btn-season-secondary,
 .btn-season-danger,
@@ -1329,25 +1707,11 @@ export default {
   font-family: inherit;
 }
 
-.btn-season-secondary {
-  background: #FFFFFF;
-  color: #2E7D32;
-  border: 1px solid #66BB6A;
-}
+.btn-season-secondary { background: #FFFFFF; color: #2E7D32; border: 1px solid #66BB6A; }
 .btn-season-secondary:hover { background: #eaf5ea; }
-
-.btn-season-danger {
-  background: #FFFFFF;
-  color: #b3261e;
-  border: 1px solid #f3c6c6;
-}
+.btn-season-danger { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
 .btn-season-danger:hover { background: #fdf0f0; }
-
-.btn-season-primary {
-  background: #2E7D32;
-  color: #FFFFFF;
-  width: 100%;
-}
+.btn-season-primary { background: #2E7D32; color: #FFFFFF; width: 100%; }
 .btn-season-primary:hover { background: #256428; }
 .btn-season-primary:disabled { background: #a9c9ab; cursor: not-allowed; }
 
@@ -1363,28 +1727,10 @@ export default {
 .setup-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
 .setup-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: #263238; }
 .setup-card p { margin: 0 0 1.2rem; color: #5c6b64; font-size: 0.88rem; }
+.setup-form { max-width: 360px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; text-align: left; }
 
-.setup-form {
-  max-width: 360px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  text-align: left;
-}
-
-.modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.modal-field label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #5c6b64;
-}
-
+.modal-field { display: flex; flex-direction: column; gap: 6px; }
+.modal-field label { font-size: 0.78rem; font-weight: 600; color: #5c6b64; }
 .modal-input {
   border: 1px solid #d7e2d8;
   border-radius: 8px;
@@ -1425,13 +1771,7 @@ export default {
 }
 
 .modal-title { margin: 0; font-size: 1.05rem; color: #263238; }
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 0.4rem;
-}
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 0.4rem; }
 
 .btn-modal-cancel,
 .btn-modal-save {
@@ -1449,20 +1789,9 @@ export default {
 .btn-modal-save:hover { background: #256428; }
 .btn-modal-save:disabled { background: #a9c9ab; cursor: not-allowed; }
 
-.section-divider {
-  display: flex;
-  align-items: center;
-  margin: 1.8rem 0 1.2rem;
-}
-
+.section-divider { display: flex; align-items: center; margin: 1.8rem 0 1.2rem; }
 .section-divider::before,
-.section-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #dde8de;
-}
-
+.section-divider::after { content: ''; flex: 1; height: 1px; background: #dde8de; }
 .section-divider span {
   padding: 0 14px;
   font-size: 0.78rem;
@@ -1498,18 +1827,9 @@ export default {
 
 .tab-btn.active { background: #2E7D32; color: #FFFFFF; }
 
-.refresh-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
+.refresh-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .refresh-status { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #5c6b64; }
 .refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: #93a29a; flex-shrink: 0; }
-
 .refresh-dot.live {
   background: #2E7D32;
   box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5);
@@ -1541,54 +1861,16 @@ export default {
 }
 .btn-icon-refresh:hover { background: #eaf5ea; }
 .btn-icon-refresh:disabled { color: #93a29a; cursor: not-allowed; background: #FFFFFF; }
+.btn-icon-refresh .spinning { display: inline-block; animation: spin 0.8s linear infinite; }
 
-.btn-icon-refresh .spinning {
-  display: inline-block;
-  animation: spin 0.8s linear infinite;
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 38px;
-  height: 21px;
-  flex-shrink: 0;
-}
-
+.toggle-switch { position: relative; display: inline-block; width: 38px; height: 21px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #d7e2d8;
-  border-radius: 999px;
-  transition: background-color 0.2s ease;
-}
-
-.toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 15px;
-  width: 15px;
-  left: 3px;
-  bottom: 3px;
-  background-color: #FFFFFF;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-}
-
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #d7e2d8; border-radius: 999px; transition: background-color 0.2s ease; }
+.toggle-slider::before { content: ''; position: absolute; height: 15px; width: 15px; left: 3px; bottom: 3px; background-color: #FFFFFF; border-radius: 50%; transition: transform 0.2s ease; }
 .toggle-switch input:checked + .toggle-slider { background-color: #2E7D32; }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
 
-.filters-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 0.9rem;
-}
-
+.filters-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.9rem; }
 .search-wrap { flex: 1; min-width: 220px; }
 
 .search-input,
@@ -1605,7 +1887,6 @@ export default {
 }
 
 .filter-select { width: auto; min-width: 170px; }
-
 .search-input:focus,
 .filter-select:focus {
   outline: none;
@@ -1641,13 +1922,7 @@ export default {
 .btn-print-pcic:hover { background: #e0960f; }
 .btn-print-pcic:disabled { background: #fbe6af; cursor: not-allowed; }
 
-.status-filter-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 1.2rem;
-}
-
+.status-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.2rem; }
 .status-filter-tag {
   display: inline-flex;
   align-items: center;
@@ -1664,18 +1939,9 @@ export default {
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .status-filter-tag:hover { border-color: #66BB6A; }
-
-.sf-count {
-  background: rgba(38, 50, 56, 0.08);
-  border-radius: 10px;
-  padding: 1px 7px;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
+.sf-count { background: rgba(38, 50, 56, 0.08); border-radius: 10px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; }
 .status-filter-tag.active { color: #FFFFFF; border-color: transparent; }
 .status-filter-tag.active .sf-count { background: rgba(255, 255, 255, 0.25); }
-
 .status-filter-tag.sf-all.active { background: #263238; }
 .status-filter-tag.sf-submitted_to_mao.active { background: #1976D2; }
 .status-filter-tag.sf-approved_for_pcic.active { background: #F9A825; color: #263238; }
@@ -1713,11 +1979,8 @@ export default {
 
 .bulk-action-bar.floating.mixed { border-left-color: #F9A825; background: #FFFFFF; }
 .bulk-action-bar.mixed { background: #fdf1d6; border-color: #f3d38a; }
-
-.float-bar-enter-active,
-.float-bar-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
-.float-bar-enter-from,
-.float-bar-leave-to { transform: translateX(-50%) translateY(16px); opacity: 0; }
+.float-bar-enter-active, .float-bar-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
+.float-bar-enter-from, .float-bar-leave-to { transform: translateX(-50%) translateY(16px); opacity: 0; }
 
 .bulk-left { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #263238; }
 .bulk-warning { font-size: 0.82rem; color: #7a5205; flex: 1; }
@@ -1739,13 +2002,10 @@ export default {
 
 .btn-action-approve { background: #1976D2; color: #FFFFFF; }
 .btn-action-approve:hover { background: #145ea8; }
-
 .btn-action-submit-pcic { background: #F9A825; color: #263238; }
 .btn-action-submit-pcic:hover { background: #e0960f; }
-
 .btn-action-finalize { background: #2E7D32; color: #FFFFFF; }
 .btn-action-finalize:hover { background: #256428; }
-
 .btn-action-reject { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
 .btn-action-reject:hover { background: #fdf0f0; }
 
@@ -1766,14 +2026,7 @@ export default {
   box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
 }
 
-.stat-label {
-  font-size: 0.72rem;
-  color: #5c6b64;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
+.stat-label { font-size: 0.72rem; color: #5c6b64; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
 .stat-value { font-size: 1.35rem; font-weight: 700; color: #263238; }
 .stat-value.mao { color: #1976D2; }
 .stat-value.pcic { color: #F9A825; }
@@ -1796,16 +2049,7 @@ export default {
 }
 
 .error-box { color: #b3261e; }
-
-.spinner {
-  width: 26px;
-  height: 26px;
-  border: 3px solid #dde8de;
-  border-top-color: #2E7D32;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
+.spinner { width: 26px; height: 26px; border: 3px solid #dde8de; border-top-color: #2E7D32; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { text-align: center; padding: 2.5rem; color: #93a29a; font-size: 0.88rem; }
 
@@ -1817,7 +2061,6 @@ export default {
 }
 
 .app-table { width: 100%; border-collapse: collapse; }
-
 .app-table th {
   text-align: left;
   font-size: 0.72rem;
@@ -1830,13 +2073,7 @@ export default {
   white-space: nowrap;
 }
 
-.app-table td {
-  padding: 12px 14px;
-  font-size: 0.83rem;
-  border-top: 1px solid #eef2ef;
-  color: #263238;
-}
-
+.app-table td { padding: 12px 14px; font-size: 0.83rem; border-top: 1px solid #eef2ef; color: #263238; }
 .main-row { cursor: pointer; transition: background 0.15s ease; }
 .main-row:hover { background: #f7faf7; }
 .main-row.selected { background: #eaf5ea; }
@@ -1849,15 +2086,7 @@ export default {
 .farmer-name { font-weight: 600; color: #263238; }
 .farmer-sub { font-size: 0.75rem; color: #93a29a; }
 
-.status-badge {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
+.status-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
 .status-badge.submitted_to_mao { background: #e3edfa; color: #1976D2; }
 .status-badge.approved_for_pcic { background: #fdf1d6; color: #b9790a; }
 .status-badge.submitted_to_pcic { background: #ece4f5; color: #6A4C93; }
@@ -1866,39 +2095,294 @@ export default {
 .status-badge.rejected { background: #fde3e3; color: #b3261e; }
 
 .detail-row td { padding: 0; border-top: none; }
-
-.detail-box {
-  background: #fafcfa;
-  padding: 1.4rem;
-  border-top: 1px solid #eef2ef;
-  border-bottom: 2px solid #dde8de;
-}
-
+.detail-box { background: #fafcfa; padding: 1.4rem; border-top: 1px solid #eef2ef; border-bottom: 2px solid #dde8de; }
 .detail-actions-panel { margin-bottom: 1.2rem; }
 .action-sub-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .action-panel-label { font-size: 0.8rem; color: #5c6b64; }
 .action-hint { font-size: 0.8rem; color: #5c6b64; font-style: italic; }
 
-.detail-grid-wrapper {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.2rem;
-}
-
+.detail-grid-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem; }
 .detail-section { background: #FFFFFF; border: 1px solid #eef2ef; border-radius: 10px; padding: 1rem; }
-
-.section-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #2E7D32;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 0.8rem;
-}
+.section-title { font-size: 0.78rem; font-weight: 700; color: #2E7D32; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.8rem; }
 
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
 .detail-item { display: flex; flex-direction: column; gap: 2px; }
 .detail-item.full-width { grid-column: 1 / -1; }
 .detail-label { font-size: 0.7rem; color: #93a29a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
 .detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
+.detail-link { font-size: 0.85rem; color: #2E7D32; font-weight: 600; text-decoration: none; }
+.detail-link:hover { text-decoration: underline; }
+
+.documents-row { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.document-tile { display: flex; flex-direction: column; gap: 6px; }
+
+.signature-img { max-width: 220px; max-height: 100px; object-fit: contain; border: 1px solid #eef2ef; border-radius: 8px; background: #FFFFFF; padding: 6px; }
+.farm-photo-img { max-width: 220px; max-height: 140px; object-fit: cover; border: 1px solid #eef2ef; border-radius: 8px; }
+
+/* -------------------------------------------------------------
+   EXACT PCIC OFFICIAL GOVERNMENT FORM STYLES (LEGAL LANDSCAPE)
+------------------------------------------------------------- */
+.pdf-export-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pdf-export-container {
+  width: 1300px; /* Legal Landscape Target Capture Bounds */
+  background: #ffffff;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000000;
+  box-sizing: border-box;
+}
+
+.pcic-page-container {
+  padding: 15px 20px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+/* Header Structure */
+.pcic-official-header {
+  border: 2px solid #000000;
+  margin-bottom: 8px;
+}
+
+.pcic-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 2px solid #000000;
+}
+
+.pcic-logo-placeholder {
+  width: 50px;
+  height: 50px;
+  border: 1px dashed #666;
+  position: relative;
+}
+.pcic-logo-placeholder::after {
+  content: 'LOGO';
+  font-size: 8pt;
+  color: #888;
+  display: block;
+  text-align: center;
+  line-height: 50px;
+}
+
+.pcic-title-box {
+  text-align: center;
+  flex: 1;
+}
+
+.pcic-republic {
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pcic-corp-name {
+  font-size: 12pt;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.pcic-dept {
+  font-size: 8pt;
+  font-weight: bold;
+}
+
+.pcic-form-title {
+  font-size: 10.5pt;
+  font-weight: bold;
+  margin-top: 3px;
+  text-decoration: underline;
+}
+
+.pcic-form-code {
+  font-size: 9pt;
+  font-weight: bold;
+  border: 1px solid #000;
+  padding: 4px 8px;
+}
+
+/* Meta Table Grid */
+.pcic-meta-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-row {
+  display: flex;
+  border-bottom: 1px solid #000000;
+}
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-cell {
+  padding: 4px 8px;
+  font-size: 7.5pt;
+  border-right: 1px solid #000000;
+}
+.meta-cell:last-child {
+  border-right: none;
+}
+
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+
+/* PCIC Table Precision Grid */
+.pcic-official-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 2px solid #000000;
+}
+
+.pcic-official-table th,
+.pcic-official-table td {
+  border: 1px solid #000000;
+  padding: 2px 3px;
+  font-size: 6.8pt;
+  line-height: 1.1;
+  color: #000000;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+
+.pcic-official-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+.pcic-data-row td {
+  height: 22px;
+  vertical-align: middle;
+}
+
+/* Column Width Specifications (Page 1) */
+.col-num { width: 22px; }
+.col-lname { width: 65px; }
+.col-fname { width: 65px; }
+.col-mname { width: 45px; }
+.col-ext { width: 22px; }
+.col-sex { width: 25px; }
+.col-civil { width: 45px; }
+.col-addr { width: 110px; }
+.col-dob { width: 55px; }
+.col-rsbsa { width: 75px; }
+.col-pay { width: 50px; }
+.col-phone { width: 65px; }
+.col-spouse { width: 75px; }
+.col-parent { width: 75px; }
+.col-ben { width: 75px; }
+.col-area { width: 35px; }
+.col-date { width: 50px; }
+.col-var { width: 50px; }
+
+/* Column Width Specifications (Page 2) */
+.col-p2-name { width: 120px; }
+.col-p2-georef { width: 85px; }
+.col-p2-loc { width: 130px; }
+.col-p2-cat { width: 65px; }
+.col-p2-tenure { width: 65px; }
+.col-p2-bnd { width: 80px; }
+.col-p2-sig { width: 90px; }
+
+/* Formatting Utilities */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.bold { font-weight: bold; }
+.font-mono { font-family: monospace, sans-serif; font-size: 6.5pt; }
+
+.signature-cell {
+  padding: 0;
+  vertical-align: middle;
+}
+
+.pdf-signature-img {
+  max-width: 80px;
+  max-height: 20px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.pdf-page-break {
+  break-before: page;
+  page-break-before: always;
+}
+
+/* Footer Section */
+.pcic-footer-block {
+  margin-top: 10px;
+  border: 1px solid #000000;
+  padding: 8px 12px;
+}
+
+.pcic-cert-text {
+  font-size: 7pt;
+  font-style: italic;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.pcic-sig-grid {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+}
+
+.sig-box {
+  width: 260px;
+  text-align: center;
+}
+
+.sig-line {
+  border-bottom: 1px solid #000000;
+  height: 20px;
+  margin-bottom: 4px;
+}
+
+.sig-title {
+  font-size: 7.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Direct Browser Printing Support */
+@media print {
+  @page {
+    size: 14in 8.5in; /* Legal Landscape Format */
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .pdf-export-wrapper {
+    position: static !important;
+    visibility: visible !important;
+  }
+
+  .pdf-export-container {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
 </style>
