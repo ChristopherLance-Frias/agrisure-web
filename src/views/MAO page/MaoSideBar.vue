@@ -195,11 +195,11 @@ export default {
   background: #F8FAF8;
 }
 
-/* SIDEBAR */
+/* SIDEBAR — recolored to match the OTP screen's deep green → charcoal gradient with amber accents */
 .sidebar {
   width: 252px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #1B5E20 0%, #17511C 100%);
+  background: linear-gradient(180deg, #116D3E 0%, #0A5232 55%, #0F212F 100%);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
@@ -228,17 +228,18 @@ export default {
   margin-bottom: 1.35rem;
 }
 
+/* Logo mark now uses the amber tone from the OTP card's corner accents */
 .logo-mark {
   width: 38px; height: 38px;
-  background: linear-gradient(135deg, #FBC02D, #F0A800);
+  background: linear-gradient(135deg, #D29539, #AC7A2F);
   border-radius: 11px; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(251,192,45,0.35);
+  box-shadow: 0 3px 10px rgba(210,149,57,0.35);
 }
 
 .logo-mark span {
   font-family: 'DM Serif Display', serif;
-  font-size: 19px; color: #14481A;
+  font-size: 19px; color: #0F212F;
 }
 
 .brand-text h1 {
@@ -294,12 +295,13 @@ export default {
   width: 100%;
 }
 
+/* Active-state rail now amber, echoing the OTP button/timer accent color */
 .nav-item::before {
   content: '';
   position: absolute;
   left: -8px; top: 50%;
   width: 3px; height: 0%;
-  background: #FBC02D;
+  background: #D29539;
   border-radius: 3px;
   transform: translateY(-50%);
   transition: height 0.18s ease;
@@ -313,14 +315,14 @@ export default {
 }
 
 .nav-item:hover {
-  background: rgba(251,192,45,0.1);
+  background: rgba(210,149,57,0.12);
   color: #F8FAF8;
 }
 .nav-item:hover .nav-icon { transform: translateX(1px); opacity: 1; }
 
 .nav-item.router-link-active {
-  background: rgba(251,192,45,0.16);
-  color: #FBC02D;
+  background: rgba(210,149,57,0.18);
+  color: #D29539;
 }
 .nav-item.router-link-active .nav-icon { opacity: 1; }
 .nav-item.router-link-active::before { height: 60%; }
@@ -337,11 +339,11 @@ export default {
 
 .admin-avatar {
   width: 33px; height: 33px;
-  background: rgba(251,192,45,0.18);
-  border: 1px solid rgba(251,192,45,0.3);
+  background: rgba(210,149,57,0.18);
+  border: 1px solid rgba(210,149,57,0.32);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11.5px; font-weight: 600; color: #FBC02D;
+  font-size: 11.5px; font-weight: 600; color: #D29539;
   flex-shrink: 0;
 }
 

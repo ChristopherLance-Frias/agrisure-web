@@ -1,8 +1,6 @@
 <template>
   <div class="dashboard-layout">
 
-   
-
     <!-- MAIN CONTENT AREA -->
     <div class="main-wrapper">
 
@@ -10,31 +8,10 @@
       <header class="top-header">
         <div class="header-title-group">
           <h1>Dashboard Overview</h1>
-          <p>San Guillermo Municipal Agriculture Office</p>
+          <p>San Guillermo Municipal Agriculture Office &middot; AgriSure</p>
         </div>
 
         <div class="header-actions">
-          <!-- Search Bar -->
-          <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input 
-              type="text" 
-              placeholder="Search farmer, claim, ID..." 
-              class="search-input"
-            />
-          </div>
-
-          <!-- Season Dropdown -->
-          <select v-model="selectedSeason" class="season-select">
-            <option value="wet">🌾 Wet Season (2026)</option>
-            <option value="dry">☀️ Dry Season (2026)</option>
-          </select>
-
-          <!-- Notifications Button -->
-          <button class="icon-btn">
-            <i class="fa-regular fa-bell"></i>
-            <span class="notification-badge"></span>
-          </button>
 
           <div class="v-divider"></div>
 
@@ -209,7 +186,7 @@
               <div v-for="item in distributionSummary" :key="item.label" class="summary-card">
                 <p class="summary-label">{{ item.label }}</p>
                 <p :class="['summary-value', item.colorClass]">
-                  {{ item.value }} 
+                  {{ item.value }}
                   <span v-if="item.unit" class="summary-unit">{{ item.unit }}</span>
                 </p>
               </div>
@@ -253,9 +230,9 @@
 
           <!-- Weather Card -->
           <div class="weather-card">
-    <div class="weather-bg-icon">
-      <i class="fa-solid fa-cloud-sun"></i>
-    </div>
+            <div class="weather-bg-icon">
+              <i class="fa-solid fa-cloud-sun"></i>
+            </div>
 
             <div class="weather-content">
               <div class="weather-top">
@@ -263,7 +240,7 @@
                   <span class="weather-subtitle">San Guillermo Agro-Weather</span>
                   <h3 class="weather-temp">
                     <template v-if="!loading && !error">{{ weather.temp }}</template>
-                    <template v-else-if="loading">--°C</template>
+                    <template v-else-if="loading">--&deg;C</template>
                     <template v-else>N/A</template>
                   </h3>
                 </div>
@@ -339,15 +316,15 @@
               GIS Module Connected
             </span>
           </div>
-          
+
           <div class="map-placeholder">
             <div class="map-bg-icon">
               <i class="fa-solid fa-map-location-dot"></i>
             </div>
 
             <div class="map-grid">
-              <button 
-                v-for="bgy in barangayData" 
+              <button
+                v-for="bgy in barangayData"
                 :key="bgy.name"
                 class="map-card"
               >
@@ -367,29 +344,38 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ApexChart from 'vue3-apexcharts'
-import { onUnmounted } from 'vue'
 
 const LAT = 15.48
 const LON = 120.60
 
+/* ---------------- AgriSure palette ---------------- */
+const palette = {
+  green: '#116D3E',
+  greenDark: '#0A5232',
+  amber: '#D29539',
+  amberDark: '#AC7A2F',
+  blue: '#2E6F8E',
+  red: '#C1473D',
+  purple: '#6B5B95'
+}
+
 const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' })
-const selectedSeason = ref('wet')
 
 const stats = ref({
-    farmers:{count:0,change:''},
-    applications:{count:0,pending:''},
-    claims:{count:0,inspecting:''},
-    damage:{count:0,critical:''},
-    inventory:{items:0,lowStock:''}
+  farmers: { count: 0, change: '' },
+  applications: { count: 0, pending: '' },
+  claims: { count: 0, inspecting: '' },
+  damage: { count: 0, critical: '' },
+  inventory: { items: 0, lowStock: '' }
 })
 
 const pendingTasks = ref([])
 const barangayData = ref([])
 const weather = ref({
-  temp: '--°C',
+  temp: '--\u00b0C',
   condition: 'Loading...',
   humidity: '--%',
   rainChance: '--%',
@@ -404,151 +390,166 @@ const distributionSummary = ref([])
 const recentActivities = ref([])
 
 const chartConfigs = reactive({
-    applicationTrend:{
-        series:[{name:'Applications',data:[]}],
-        options:{
-            chart:{toolbar:{show:false},fontFamily:'inherit'},
-            colors:['#047857'],
-            plotOptions:{bar:{borderRadius:6,columnWidth:'40%'}},
-            xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']},
-            grid:{borderColor:'#f1f5f9'}
-        }
-    },
-    damageAnalytics:{
-        series:[{name:'Incidents',data:[]}],
-        options:{
-            chart:{toolbar:{show:false}},
-            colors:['#e11d48'],
-            plotOptions:{bar:{horizontal:true,borderRadius:6}},
-            xaxis:{categories:[]}
-        }
-    },
-    insuranceStatus:{
-        series:[],
-        options:{
-            labels:[],
-            colors:['#059669','#d97706','#2563eb','#7c3aed','#dc2626'],
-            legend:{position:'bottom'}
-        }
-    },
-    inventoryStatus:{
-        series:[{name:'Stock',data:[]}],
-        options:{
-            chart:{toolbar:{show:false}},
-            colors:['#059669'],
-            plotOptions:{bar:{horizontal:true,borderRadius:6}},
-            xaxis:{categories:[],max:100}
-        }
+  applicationTrend: {
+    series: [{ name: 'Applications', data: [] }],
+    options: {
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      colors: [palette.green],
+      plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+      },
+      yaxis: { labels: { style: { colors: '#5c6b64', fontSize: '11px' } } },
+      grid: { borderColor: '#EAF1EC' }
     }
+  },
+  damageAnalytics: {
+    series: [{ name: 'Incidents', data: [] }],
+    options: {
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      colors: [palette.red],
+      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: [],
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+      },
+      grid: { borderColor: '#EAF1EC' }
+    }
+  },
+  insuranceStatus: {
+    series: [],
+    options: {
+      chart: { fontFamily: 'DM Sans, sans-serif' },
+      labels: [],
+      colors: [palette.green, palette.amber, palette.blue, palette.purple, palette.red],
+      legend: { position: 'bottom', labels: { colors: '#5c6b64' }, fontSize: '12px' },
+      dataLabels: { enabled: false },
+      stroke: { width: 0 }
+    }
+  },
+  inventoryStatus: {
+    series: [{ name: 'Stock', data: [] }],
+    options: {
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      colors: [palette.amber],
+      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: [],
+        max: 100,
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+      },
+      grid: { borderColor: '#EAF1EC' }
+    }
+  }
 })
 
-const loadDashboard = async()=>{
-    try{
+const loadDashboard = async () => {
+  try {
+    const [
+      overview,
+      insurance,
+      damage,
+      distribution,
+      inventory,
+      executive
+    ] = await Promise.all([
+      axios.get('/api/reports/overview'),
+      axios.get('/api/reports/insurance'),
+      axios.get('/api/reports/damage-reports'),
+      axios.get('/api/reports/distribution'),
+      axios.get('/api/reports/inventory'),
+      axios.get('/api/reports/executive')
+    ])
 
-        const [
-            overview,
-            insurance,
-            damage,
-            distribution,
-            inventory,
-            executive
-        ] = await Promise.all([
-            axios.get('/api/reports/overview'),
-            axios.get('/api/reports/insurance'),
-            axios.get('/api/reports/damage-reports'),
-            axios.get('/api/reports/distribution'),
-            axios.get('/api/reports/inventory'),
-            axios.get('/api/reports/executive')
-        ])
+    const ov = overview.data.summary
+    const ins = insurance.data
+    const dmg = damage.data
+    const dist = distribution.data
+    const inv = inventory.data
+    const exe = executive.data
 
-        const ov=overview.data.summary
-        const ins=insurance.data
-        const dmg=damage.data
-        const dist=distribution.data
-        const inv=inventory.data
-        const exe=executive.data
-
-        stats.value={
-            farmers:{
-                count:ov.total_farmers,
-                change:`${ov.total_farms} Farms`
-            },
-            applications:{
-                count:ov.insurance_applications,
-                pending:`${ins.summary.submitted_to_mao} Pending`
-            },
-            claims:{
-                count:ov.claims,
-                inspecting:`₱${Number(exe.kpis.claims_released_amount).toLocaleString()}`
-            },
-            damage:{
-                count:ov.damage_reports,
-                critical:`${dmg.summary.validated_by_mao} Validated`
-            },
-            inventory:{
-                items:ov.inventory_supplies,
-                lowStock:`${inv.summary.low_stock_items} Low Stock`
-            }
-        }
-
-        chartConfigs.applicationTrend.series=[{
-            name:'Applications',
-            data:ins.monthly_applications.map(i=>i.total)
-        }]
-
-        chartConfigs.applicationTrend.options.xaxis.categories=ins.monthly_applications.map(i=>`Month ${i.month}`)
-
-        chartConfigs.damageAnalytics.series=[{
-            name:'Incidents',
-            data:dmg.damage_causes.map(i=>i.total)
-        }]
-
-        chartConfigs.damageAnalytics.options.xaxis.categories=dmg.damage_causes.map(i=>i.damage_cause)
-
-        chartConfigs.insuranceStatus.series=ins.status_distribution.map(i=>i.total)
-
-        chartConfigs.insuranceStatus.options.labels=ins.status_distribution.map(i=>i.status)
-
-        chartConfigs.inventoryStatus.series=[{
-            name:'Quantity',
-            data:inv.current_inventory.map(i=>i.quantity)
-        }]
-
-        chartConfigs.inventoryStatus.options.xaxis.categories=inv.current_inventory.map(i=>i.supply_name)
-
-        barangayData.value=exe.top_barangays_by_farmers.map(i=>({
-            name:i.name,
-            farmers:i.total,
-            claims:0,
-            damage:0,
-            statusBg:'dot-green'
-        }))
-
-        distributionSummary.value=[
-            {label:'Distribution Events',value:dist.summary.distribution_events,colorClass:'text-green'},
-            {label:'Beneficiaries',value:dist.summary.beneficiary_farmers,colorClass:'text-dark'},
-            {label:'Barangays Served',value:dist.summary.barangays_served,colorClass:'text-amber'},
-            {label:'Items Distributed',value:dist.summary.distributed_items,unit:'units',colorClass:'text-dark'}
-        ]
-
-        pendingTasks.value=[
-            {id:1,title:'Applications Pending',badgeText:ins.summary.submitted_to_mao,dotColor:'dot-amber',badgeColor:'badge-amber'},
-            {id:2,title:'Validated Damage Reports',badgeText:dmg.summary.validated_by_mao,dotColor:'dot-red',badgeColor:'badge-red'},
-            {id:3,title:'Low Stock Supplies',badgeText:inv.summary.low_stock_items,dotColor:'dot-red',badgeColor:'badge-red'},
-            {id:4,title:'Claims Ready',badgeText:exe.kpis.claims_processed,dotColor:'dot-green',badgeColor:'badge-green'}
-        ]
-
-        recentActivities.value=[
-            {id:1,colorClass:'dot-green',text:`${ov.insurance_applications} insurance applications recorded.`,time:'Today'},
-            {id:2,colorClass:'dot-red',text:`${ov.damage_reports} damage reports submitted.`,time:'Today'},
-            {id:3,colorClass:'dot-amber',text:`${inv.summary.low_stock_items} supplies are low on stock.`,time:'Today'},
-            {id:4,colorClass:'dot-blue',text:`₱${Number(exe.kpis.claims_released_amount).toLocaleString()} claims released.`,time:'Today'}
-        ]
-
-    }catch(e){
-        console.error(e)
+    stats.value = {
+      farmers: {
+        count: ov.total_farmers,
+        change: `${ov.total_farms} Farms`
+      },
+      applications: {
+        count: ov.insurance_applications,
+        pending: `${ins.summary.submitted_to_mao} Pending`
+      },
+      claims: {
+        count: ov.claims,
+        inspecting: `\u20b1${Number(exe.kpis.claims_released_amount).toLocaleString()}`
+      },
+      damage: {
+        count: ov.damage_reports,
+        critical: `${dmg.summary.validated_by_mao} Validated`
+      },
+      inventory: {
+        items: ov.inventory_supplies,
+        lowStock: `${inv.summary.low_stock_items} Low Stock`
+      }
     }
+
+    chartConfigs.applicationTrend.series = [{
+      name: 'Applications',
+      data: ins.monthly_applications.map(i => i.total)
+    }]
+    chartConfigs.applicationTrend.options.xaxis.categories = ins.monthly_applications.map(i => `Month ${i.month}`)
+
+    chartConfigs.damageAnalytics.series = [{
+      name: 'Incidents',
+      data: dmg.damage_causes.map(i => i.total)
+    }]
+    chartConfigs.damageAnalytics.options.xaxis.categories = dmg.damage_causes.map(i => i.damage_cause)
+
+    chartConfigs.insuranceStatus.series = ins.status_distribution.map(i => i.total)
+    chartConfigs.insuranceStatus.options.labels = ins.status_distribution.map(i => i.status)
+
+    chartConfigs.inventoryStatus.series = [{
+      name: 'Quantity',
+      data: inv.current_inventory.map(i => i.quantity)
+    }]
+    chartConfigs.inventoryStatus.options.xaxis.categories = inv.current_inventory.map(i => i.supply_name)
+
+    barangayData.value = exe.top_barangays_by_farmers.map(i => ({
+      name: i.name,
+      farmers: i.total,
+      claims: 0,
+      damage: 0,
+      statusBg: 'status-green'
+    }))
+
+    distributionSummary.value = [
+      { label: 'Distribution Events', value: dist.summary.distribution_events, colorClass: 'text-green' },
+      { label: 'Beneficiaries', value: dist.summary.beneficiary_farmers, colorClass: 'text-dark' },
+      { label: 'Barangays Served', value: dist.summary.barangays_served, colorClass: 'text-amber' },
+      { label: 'Items Distributed', value: dist.summary.distributed_items, unit: 'units', colorClass: 'text-dark' }
+    ]
+
+    pendingTasks.value = [
+      { id: 1, title: 'Applications Pending', badgeText: ins.summary.submitted_to_mao, dotColor: 'dot-amber', badgeColor: 'badge-amber' },
+      { id: 2, title: 'Validated Damage Reports', badgeText: dmg.summary.validated_by_mao, dotColor: 'dot-red', badgeColor: 'badge-red' },
+      { id: 3, title: 'Low Stock Supplies', badgeText: inv.summary.low_stock_items, dotColor: 'dot-red', badgeColor: 'badge-red' },
+      { id: 4, title: 'Claims Ready', badgeText: exe.kpis.claims_processed, dotColor: 'dot-green', badgeColor: 'badge-green' }
+    ]
+
+    recentActivities.value = [
+      { id: 1, colorClass: 'dot-green', text: `${ov.insurance_applications} insurance applications recorded.`, time: 'Today' },
+      { id: 2, colorClass: 'dot-red', text: `${ov.damage_reports} damage reports submitted.`, time: 'Today' },
+      { id: 3, colorClass: 'dot-amber', text: `${inv.summary.low_stock_items} supplies are low on stock.`, time: 'Today' },
+      { id: 4, colorClass: 'dot-blue', text: `\u20b1${Number(exe.kpis.claims_released_amount).toLocaleString()} claims released.`, time: 'Today' }
+    ]
+
+  } catch (e) {
+    console.error(e)
+  }
 }
+
 function mapWeatherCode(code) {
   const map = {
     0:  { condition: 'Clear Sky',        icon: 'fa-solid fa-sun' },
@@ -591,7 +592,7 @@ async function fetchWeather() {
     const { condition, icon } = mapWeatherCode(c.weather_code)
 
     weather.value = {
-      temp: `${Math.round(c.temperature_2m)}°C`,
+      temp: `${Math.round(c.temperature_2m)}\u00b0C`,
       condition,
       humidity: `${Math.round(c.relative_humidity_2m)}%`,
       rainChance: `${Math.round(c.precipitation_probability ?? 0)}%`,
@@ -619,193 +620,32 @@ onMounted(loadDashboard)
 </script>
 
 <style scoped>
-/* GENERAL STYLES & RESET */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
 
 .dashboard-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background-color: #f8fafc;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color: #334155;
-  -webkit-font-smoothing: antialiased;
+  font-family: 'DM Sans', sans-serif;
+  background: #F8FAF8;
 }
 
-/* SIDEBAR */
-.sidebar {
-  width: 256px;
-  background-color: #0f3822;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex-shrink: 0;
-  z-index: 30;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
-  border-right: 1px solid rgba(6, 78, 59, 0.4);
-}
-
-.brand-header {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  background-color: rgba(2, 44, 34, 0.4);
-  border-bottom: 1px solid rgba(6, 95, 70, 0.4);
-}
-
-.brand-logo-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-logo-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fbbf24, #fcd34d);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #022c22;
-  font-weight: 900;
-  box-shadow: 0 4px 10px rgba(251, 191, 36, 0.2);
-}
-
-.brand-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #ffffff;
-  display: block;
-  line-height: 1;
-}
-
-.brand-subtitle {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: #6ee7b7;
-  display: block;
-  margin-top: 4px;
-}
-
-.nav-container {
-  margin-top: 20px;
-  padding: 0 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 12px;
-  color: rgba(167, 243, 208, 0.8);
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.nav-item:hover {
-  background-color: rgba(6, 95, 70, 0.5);
-  color: #ffffff;
-}
-
-.nav-item.active {
-  background-color: rgba(5, 150, 105, 0.9);
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(6, 78, 59, 0.3);
-}
-
-.nav-icon {
-  width: 20px;
-  text-align: center;
-  font-size: 16px;
-  color: rgba(110, 231, 183, 0.7);
-}
-
-.nav-item.active .nav-icon {
-  color: #fcd34d;
-}
-
-.nav-badge {
-  margin-left: auto;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 9999px;
-  background-color: #fbbf24;
-  color: #022c22;
-}
-
-.sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid rgba(6, 95, 70, 0.4);
-  background-color: rgba(2, 44, 34, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.footer-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  color: rgba(167, 243, 208, 0.7);
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.footer-link:hover {
-  background-color: rgba(6, 95, 70, 0.4);
-  color: #ffffff;
-}
-
-.footer-link.logout {
-  color: rgba(fda4af, 0.8);
-}
-
-.footer-link.logout:hover {
-  background-color: rgba(76, 5, 25, 0.4);
-  color: #fecdd3;
-}
-
-.footer-icon {
-  width: 20px;
-  text-align: center;
-}
-
-/* MAIN CONTENT WRAPPER */
 .main-wrapper {
   flex: 1;
+  min-width: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow-y: auto;
 }
 
 /* TOP HEADER */
 .top-header {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid #e2e8f0;
-  position: sticky;
-  top: 0;
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
   z-index: 20;
   padding: 14px 32px;
   display: flex;
@@ -814,15 +654,16 @@ onMounted(loadDashboard)
 }
 
 .header-title-group h1 {
+  font-family: 'DM Serif Display', serif;
   font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 400;
+  color: #0F212F;
   letter-spacing: -0.01em;
 }
 
 .header-title-group p {
   font-size: 12px;
-  color: #64748b;
+  color: #5c6b64;
 }
 
 .header-actions {
@@ -831,86 +672,10 @@ onMounted(loadDashboard)
   gap: 16px;
 }
 
-.search-box {
-  position: relative;
-  width: 256px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.search-input {
-  width: 100%;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 6px 12px 6px 36px;
-  font-size: 12px;
-  color: #334155;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.search-input:focus {
-  background-color: #ffffff;
-  border-color: #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
-}
-
-.season-select {
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.season-select:hover {
-  background-color: #e2e8f0;
-}
-
-.icon-btn {
-  position: relative;
-  padding: 8px;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  font-size: 16px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.icon-btn:hover {
-  background-color: #f1f5f9;
-  color: #047857;
-}
-
-.notification-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  background-color: #f43f5e;
-  border-radius: 9999px;
-  border: 2px solid #ffffff;
-}
-
 .v-divider {
   height: 24px;
   width: 1px;
-  background-color: #e2e8f0;
+  background-color: #E7F0EC;
 }
 
 .user-profile {
@@ -924,20 +689,20 @@ onMounted(loadDashboard)
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #047857, #059669);
-  color: #ffffff;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 12px;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
 }
 
 .user-name {
   font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
+  color: #0F212F;
   line-height: 1.2;
 }
 
@@ -949,139 +714,106 @@ onMounted(loadDashboard)
   letter-spacing: 0.05em;
 }
 
-/* BODY CONTAINER */
+/* BODY */
 .dashboard-body {
-  padding: 32px;
-  max-width: 1600px;
-  width: 100%;
-  margin: 0 auto;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1.5rem;
 }
 
 /* METRICS GRID */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 1200px) {
-  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 768px) {
-  .metrics-grid { grid-template-columns: repeat(1, 1fr); }
+  gap: 1rem;
 }
 
 .metric-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
   border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.15s ease;
-}
-
-.metric-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border-color: #cbd5e1;
+  padding: 1.2rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
 }
 
 .card-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5c6b64;
 }
 
 .icon-badge {
-  padding: 8px;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
-.icon-badge.green { background-color: #ecfdf5; color: #047857; }
-.icon-badge.blue { background-color: #eff6ff; color: #2563eb; }
-.icon-badge.amber { background-color: #fffbeb; color: #d97706; }
-.icon-badge.red { background-color: #fff1f2; color: #e11d48; }
-.icon-badge.purple { background-color: #faf5ff; color: #9333ea; }
-
-.card-value {
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-top: 8px;
-  letter-spacing: -0.02em;
-}
-
-.unit-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-}
-
-.card-footer {
-  margin-top: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
+
+.icon-badge.green  { background: rgba(17, 109, 62, 0.12); color: #116D3E; }
+.icon-badge.blue   { background: rgba(46, 111, 142, 0.12); color: #2E6F8E; }
+.icon-badge.amber  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
+.icon-badge.red    { background: rgba(193, 71, 61, 0.12); color: #C1473D; }
+.icon-badge.purple { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
+
+.card-value {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: #0F212F;
+  margin-bottom: 0.6rem;
+}
+
+.unit-text { font-size: 0.85rem; color: #5c6b64; font-family: 'DM Sans', sans-serif; }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 700;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
-.status-pill.green { background-color: #ecfdf5; color: #047857; }
-.status-pill.amber { background-color: #fffbeb; color: #b45309; }
-.status-pill.red { background-color: #fff1f2; color: #be123c; }
+.status-pill.green { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
+.status-pill.amber { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
+.status-pill.red   { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
 
-/* GRID LAYOUT HELPER CLASSES */
+/* PANEL GRIDS */
 .row-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 1rem;
 }
 
 .row-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 1rem;
 }
 
-@media (max-width: 1024px) {
-  .row-grid-3, .row-grid-2 { grid-template-columns: 1fr; }
-}
+.col-span-2 { grid-column: span 2; }
 
-.col-span-2 {
-  grid-column: span 2 / span 2;
-}
-
-@media (max-width: 1024px) {
-  .col-span-2 { grid-column: span 1; }
-}
-
-/* PANELS */
 .panel {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
   border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
 
 .flex-column-between {
@@ -1092,490 +824,408 @@ onMounted(loadDashboard)
 
 .panel-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
+  gap: 12px;
 }
 
 .panel-header h2 {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #0F212F;
 }
 
-.panel-header p {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.subtext {
-  font-size: 12px;
-  color: #94a3b8;
+.panel-header p, .subtext {
+  font-size: 0.76rem;
+  color: #5c6b64;
+  margin-top: 2px;
 }
 
 .panel-title-spaced {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 16px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #0F212F;
+  margin-bottom: 1rem;
 }
 
-/* BUTTONS & LINKS */
-.btn-secondary {
-  font-size: 12px;
+.count-pill {
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #047857;
-  background-color: #ecfdf5;
-  border: none;
-  padding: 4px 10px;
+  color: #AC7A2F;
+  background: rgba(210, 149, 57, 0.14);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* BUTTONS */
+.btn-secondary {
+  background: #F1F6F2;
+  border: 1px solid #E0EAE3;
+  color: #116D3E;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 14px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
-
-.btn-secondary:hover {
-  background-color: #d1fae5;
-}
+.btn-secondary:hover { background: #E7F0EC; }
 
 .btn-block {
   width: 100%;
-  margin-top: 16px;
-  padding: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  background-color: #f1f5f9;
+  padding: 10px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
   border: none;
-  border-radius: 12px;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-block:hover {
-  background-color: #e2e8f0;
+  margin-top: 1rem;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
 
 .btn-primary {
-  background-color: #047857;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 12px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.15s ease;
-}
-
-.btn-primary:hover {
-  background-color: #065f46;
+  padding: 11px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
 
 .btn-outline {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 10px;
-  border-radius: 12px;
-  cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  transition: all 0.15s ease;
+  gap: 8px;
+  padding: 10px;
+  background: #FFFFFF;
+  color: #0F212F;
+  border: 1.5px solid #E0EAE3;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
+.btn-outline:hover { border-color: #116D3E; background: #F1F6F2; }
 
-.btn-outline:hover {
-  background-color: #f1f5f9;
-}
+.icon-green { color: #116D3E; }
 
 .link-btn {
-  font-size: 12px;
-  font-weight: 600;
-  color: #047857;
-  background: transparent;
+  background: none;
   border: none;
+  color: #116D3E;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
 }
-
 .link-btn:hover { text-decoration: underline; }
 
 .link-btn-muted {
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748b;
-  background: transparent;
+  background: none;
   border: none;
+  color: #5c6b64;
+  font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
 }
+.link-btn-muted:hover { color: #116D3E; }
 
-.link-btn-muted:hover { color: #0f172a; }
-
-/* TASKS LIST */
-.count-pill {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-.task-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* TASK LIST */
+.task-list { display: flex; flex-direction: column; gap: 10px; }
 
 .task-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  background-color: #f8fafc;
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #F1F6F2;
 }
 
-.task-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.task-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
 .task-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
+  font-size: 0.8rem;
+  color: #0F212F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green  { background: #116D3E; }
+.dot-amber  { background: #D29539; }
+.dot-red    { background: #C1473D; }
+.dot-blue   { background: #2E6F8E; }
+.dot-purple { background: #6B5B95; }
 
 .task-badge {
-  font-size: 10px;
+  font-size: 0.66rem;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* DOTS & BADGE COLORS */
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-}
-
-.dot-amber { background-color: #fbbf24; box-shadow: 0 0 0 4px #fef3c7; }
-.dot-red { background-color: #f43f5e; box-shadow: 0 0 0 4px #ffe4e6; }
-.dot-green { background-color: #10b981; box-shadow: 0 0 0 4px #d1fae5; }
-.dot-blue { background-color: #3b82f6; box-shadow: 0 0 0 4px #dbeafe; }
-
-.badge-amber { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-.badge-red { background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-.badge-green { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.badge-green  { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
+.badge-amber  { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
+.badge-red    { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
+.badge-blue   { background: rgba(46, 111, 142, 0.1); color: #2E6F8E; }
+.badge-purple { background: rgba(107, 91, 149, 0.1); color: #6B5B95; }
 
 /* SUMMARY GRID */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 0.9rem;
 }
 
 .summary-card {
-  padding: 14px;
-  background-color: #f8fafc;
-  border: 1px solid #f1f5f9;
+  background: #F8FAF8;
+  border: 1px solid #EAF1EC;
   border-radius: 12px;
+  padding: 0.9rem;
 }
 
-.summary-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.summary-label { font-size: 0.72rem; color: #5c6b64; margin-bottom: 4px; }
+.summary-value { font-size: 1.15rem; font-weight: 700; }
+.summary-unit { font-size: 0.72rem; font-weight: 500; color: #5c6b64; }
 
-.summary-value {
-  font-size: 24px;
-  font-weight: 900;
-  margin-top: 4px;
-  letter-spacing: -0.02em;
-}
+.text-green  { color: #116D3E; }
+.text-amber  { color: #AC7A2F; }
+.text-blue   { color: #2E6F8E; }
+.text-purple { color: #6B5B95; }
+.text-dark   { color: #0F212F; }
 
-.summary-unit {
-  font-size: 12px;
-  font-weight: 400;
-  color: #94a3b8;
-}
+/* TABLE */
+.table-responsive { overflow-x: auto; }
 
-.text-green { color: #047857; }
-.text-amber { color: #d97706; }
-.text-dark { color: #1e293b; }
+.data-table { width: 100%; border-collapse: collapse; }
 
-/* DATA TABLES */
-.table-responsive {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
+.data-table thead th {
   text-align: left;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.data-table th {
-  padding: 10px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #94a3b8;
-  text-transform: uppercase;
-  font-size: 10px;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #5c6b64;
+  padding: 8px 10px;
+  background: #F1F6F2;
 }
 
-.data-table td {
-  padding: 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
-  font-weight: 500;
+.data-table tbody td {
+  font-size: 0.82rem;
+  color: #0F212F;
+  padding: 10px;
+  border-bottom: 1px solid #F1F6F2;
 }
 
-.font-bold { font-weight: 700; color: #0f172a; }
+.font-bold { font-weight: 700; }
 
 .severity-badge {
-  font-size: 10px;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  border: 1px solid;
+  padding: 3px 9px;
+  border-radius: 999px;
 }
 
-.severity-badge.warning { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
-.severity-badge.success { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.severity-badge.warning { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
+.severity-badge.success { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
 
 /* WEATHER CARD */
 .weather-card {
-  background: linear-gradient(135deg, #0f3822, #154d2e, #064e3b);
-  color: #ffffff;
+  position: relative;
+  background: linear-gradient(150deg, #116D3E 0%, #0A5232 55%, #0F212F 100%);
   border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 1.3rem;
+  color: #FFFFFF;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
-  overflow: hidden;
 }
 
 .weather-bg-icon {
   position: absolute;
-  right: -24px;
-  top: -24px;
-  font-size: 120px;
-  color: rgba(255, 255, 255, 0.05);
-  pointer-events: none;
+  right: -18px;
+  bottom: -18px;
+  font-size: 6rem;
+  opacity: 0.1;
 }
 
-.weather-content {
-  position: relative;
-  z-index: 10;
-}
+.weather-content { position: relative; z-index: 1; }
 
 .weather-top {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .weather-subtitle {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6ee7b7;
+  letter-spacing: 0.6px;
+  color: rgba(255,255,255,0.65);
 }
 
 .weather-temp {
-  font-size: 36px;
-  font-weight: 800;
+  font-family: 'DM Serif Display', serif;
+  font-size: 2rem;
+  font-weight: 400;
   margin-top: 4px;
-  letter-spacing: -0.02em;
 }
 
 .weather-icon-box {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
+  background: rgba(210, 149, 57, 0.22);
+  color: #D29539;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fcd34d;
-  font-size: 24px;
+  font-size: 1.2rem;
 }
 
 .weather-condition {
-  font-size: 12px;
-  color: #a7f3d0;
-  font-weight: 500;
-  margin-top: 4px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+  margin-top: 6px;
 }
 
 .weather-stats {
   position: relative;
-  z-index: 10;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(4, 120, 87, 0.5);
+  z-index: 1;
+  margin-top: 1rem;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12px;
+  border-top: 1px solid rgba(255,255,255,0.14);
+  padding-top: 0.9rem;
 }
 
 .weather-stat-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  color: #a7f3d0;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.75);
 }
 
-.weather-stat-row strong { color: #ffffff; }
+.weather-stat-row strong { color: #FFFFFF; }
 
 .weather-retry-btn {
-  margin-top: 8px;
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+  margin-top: 0.9rem;
+  background: #D29539;
+  color: #0F212F;
   border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
-  background: rgba(255,255,255,0.2);
-  color: inherit;
 }
 
-/* ACTIVITIES */
-.activity-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  font-size: 12px;
-}
+/* ACTIVITY LIST */
+.activity-list { display: flex; flex-direction: column; gap: 12px; }
 
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.activity-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .activity-text {
-  color: #475569;
+  flex: 1;
+  font-size: 0.8rem;
+  color: #3f4a45;
   line-height: 1.4;
 }
 
 .activity-time {
-  font-size: 10px;
-  color: #94a3b8;
-  font-weight: 600;
-  margin-left: auto;
+  font-size: 0.72rem;
+  color: #8a9791;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* QUICK ACTIONS GRID */
+/* ACTIONS GRID */
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 0.7rem;
 }
 
-.col-span-full {
-  grid-column: 1 / -1;
-}
+.col-span-full { grid-column: span 2; }
 
-.icon-green {
-  color: #047857;
-  font-size: 14px;
-}
-
-/* MAP PLACEHOLDER */
+/* GIS / MAP */
 .gis-badge {
-  font-size: 10px;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #065f46;
-  background-color: #ecfdf5;
+  color: #116D3E;
+  background: rgba(17, 109, 62, 0.1);
   padding: 4px 10px;
-  border-radius: 9999px;
-  border: 1px solid rgba(167, 243, 208, 0.6);
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .map-placeholder {
-  width: 100%;
-  height: 240px;
-  border-radius: 12px;
-  border: 1px dashed rgba(110, 231, 183, 0.8);
-  background-color: rgba(236, 253, 245, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   position: relative;
+  background: #F8FAF8;
+  border: 1px dashed #D7E2D8;
+  border-radius: 14px;
+  padding: 1.5rem;
   overflow: hidden;
-  padding: 24px;
 }
 
 .map-bg-icon {
   position: absolute;
-  font-size: 180px;
-  color: #064e3b;
-  opacity: 0.05;
-  pointer-events: none;
+  right: 1rem;
+  top: 1rem;
+  font-size: 3rem;
+  color: #116D3E;
+  opacity: 0.06;
 }
 
 .map-grid {
   position: relative;
-  z-index: 10;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  width: 100%;
-  max-width: 768px;
-}
-
-@media (max-width: 768px) {
-  .map-grid { grid-template-columns: repeat(2, 1fr); }
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
 }
 
 .map-card {
-  padding: 14px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(4px);
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 0.85rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.map-card:hover {
-  border-color: #059669;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+.map-card:hover { border-color: #116D3E; transform: translateY(-2px); }
 
 .map-card-top {
   display: flex;
@@ -1584,21 +1234,27 @@ onMounted(loadDashboard)
   margin-bottom: 4px;
 }
 
-.map-card-title {
-  font-weight: 700;
-  font-size: 12px;
-  color: #1e293b;
+.map-card-title { font-size: 0.82rem; font-weight: 700; color: #0F212F; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.status-green { background: #116D3E; }
+.status-amber { background: #D29539; }
+.status-red   { background: #C1473D; }
+
+.map-card-desc { font-size: 0.72rem; color: #5c6b64; }
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+  .row-grid-3 { grid-template-columns: 1fr; }
+  .col-span-2 { grid-column: span 1; }
+  .map-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.map-card-desc {
-  font-size: 11px;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
+@media (max-width: 768px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .row-grid-2 { grid-template-columns: 1fr; }
+  .actions-grid, .col-span-full { grid-template-columns: 1fr; }
+  .map-grid { grid-template-columns: 1fr; }
 }
 </style>
