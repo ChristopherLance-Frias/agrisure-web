@@ -946,8 +946,7 @@ export default {
 }
 
 .page-header {
-  margin: 0 -32px 22px;
-  padding: 32px;
+  padding: 0px 15px;
   background: linear-gradient(120deg, #1A3320 0%, #1E3A8A 100%);
 }
 

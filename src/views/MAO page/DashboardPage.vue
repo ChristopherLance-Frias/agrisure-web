@@ -8,7 +8,7 @@
       <header class="top-header">
         <div class="header-title-group">
           <h1>Dashboard Overview</h1>
-          <p>San Guillermo Municipal Agriculture Office &middot; AgriSure</p>
+          <p>San Agustin Municipal Agriculture Office &middot; AgriSure</p>
         </div>
 
         <div class="header-actions">
@@ -647,16 +647,16 @@ onMounted(loadDashboard)
   border-bottom: 1px solid #E7F0EC;
   flex-shrink: 0;
   z-index: 20;
-  padding: 14px 32px;
+  padding: 0px 15px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .header-title-group h1 {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 700;
   color: #0F212F;
   letter-spacing: -0.01em;
 }

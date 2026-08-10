@@ -1,20 +1,36 @@
 <template>
   <div class="page">
 
-    <!-- Top bar -->
-    <div class="topbar">
-      <div>
-        <h2 class="page-title">Farmer Verification</h2>
-        <p class="page-sub">Review and manage farmer registration requests.</p>
+    <!-- Top bar (matches dashboard header) -->
+    <header class="top-header">
+      <div class="header-title-group">
+        <h1>Farmer Verification</h1>
+        <p>Review and manage farmer registration requests.</p>
       </div>
-      <button class="btn-refresh" @click="fetchFarmers" :disabled="isLoading">
-        <svg :class="['refresh-icon', { spinning: isLoading }]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Refresh
-      </button>
-    </div>
+
+      <div class="header-actions">
+        <button class="btn-refresh" @click="fetchFarmers" :disabled="isLoading">
+          <svg :class="['refresh-icon', { spinning: isLoading }]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Refresh
+        </button>
+
+        <div class="v-divider"></div>
+
+        <!-- User Profile -->
+        <div class="user-profile">
+          <div class="user-avatar">
+            {{ currentUser.initials }}
+          </div>
+          <div class="user-info">
+            <p class="user-name">{{ currentUser.name }}</p>
+            <p class="user-role">{{ currentUser.role }}</p>
+          </div>
+        </div>
+      </div>
+    </header>
 
     <!-- Status tabs -->
     <div class="tabs">
@@ -305,6 +321,8 @@ export default {
         show: false,
         farmer: null,
       },
+
+      currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
     }
   },
 
@@ -429,37 +447,91 @@ export default {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
 * { box-sizing: border-box; }
 
 .page {
-  font-family: 'DM Sans', sans-serif;
-  padding: 1.75rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: #F8FAF8;
   min-height: 100%;
 }
 
-/* TOPBAR */
-.topbar {
+.page > *:not(.top-header):not(.modal-overlay) {
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
+}
+
+.page > .top-header + *:not(.modal-overlay) { margin-top: 1.4rem; }
+
+/* TOP HEADER (copied from dashboard) */
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E7F0EC;
+  padding: 0px 15px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 1.4rem;
-  gap: 12px;
 }
 
-.page-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.4rem;
-  font-weight: 400;
+.header-title-group h1 {
+  font-size: 18px;
+  font-weight: 700;
   color: #0F212F;
+  letter-spacing: -0.01em;
 }
 
-.page-sub {
-  font-size: 0.84rem;
-  color: #5c6b64;
-  margin-top: 2px;
+.header-title-group p {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #E7F0EC;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F212F;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-refresh {
@@ -539,7 +611,7 @@ export default {
 .alert-error { background: #fde3e3; color: #b3261e; border-left-color: #b3261e; }
 
 /* SKELETON */
-.skeleton-list { display: flex; flex-direction: column; gap: 10px; }
+.skeleton-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 1.75rem; }
 
 .skeleton-card {
   display: flex;
@@ -577,7 +649,7 @@ export default {
 .empty-state strong { color: #5c6b64; text-transform: capitalize; }
 
 /* FARMER LIST */
-.farmer-list { display: flex; flex-direction: column; gap: 10px; }
+.farmer-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 1.75rem; }
 
 .farmer-card {
   display: flex;
@@ -739,9 +811,8 @@ export default {
 .modal-reject .modal-icon  { background: #C1473D; color: #FFFFFF; }
 
 .modal-header h3 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.15rem;
-  font-weight: 400;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: #0F212F;
 }
 
@@ -836,9 +907,8 @@ export default {
 .detail-header-text { flex: 1; min-width: 0; }
 
 .detail-header-text h3 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.05rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 700;
   color: #FFFFFF;
   margin-bottom: 6px;
 }
