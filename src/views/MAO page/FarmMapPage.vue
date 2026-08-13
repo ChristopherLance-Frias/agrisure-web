@@ -1,49 +1,82 @@
 <template>
   <div class="farm-map-page">
-
-    <!-- Page Header -->
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">🗺️ Farm Map</h2>
-        <p class="page-sub">Showing farm locations across all barangays</p>
+ 
+    <!-- Top bar (matches dashboard header) -->
+    <header class="top-header">
+      <div class="header-title-group">
+        <h1>Farm Map</h1>
+        <p>Showing farm locations across all barangays</p>
       </div>
-    </div>
 
+      <div class="header-actions">
+        <div class="v-divider"></div>
+        <div class="user-profile">
+          <div class="user-avatar">
+            {{ currentUser.initials }}
+          </div>
+          <div class="user-info">
+            <p class="user-name">{{ currentUser.name }}</p>
+            <p class="user-role">{{ currentUser.role }}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+ 
     <!-- Stats Row -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon farms">🌾</div>
+        <div class="stat-icon farms">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 22V12"/>
+            <path d="M12 12C12 8 9 6 5 6c0 4 2 7 7 7z"/>
+            <path d="M12 12c0-4 3-6 7-6 0 4-2 7-7 7z"/>
+          </svg>
+        </div>
         <div class="stat-text">
           <span class="stat-label">Total Farms</span>
           <span class="stat-value">{{ farms.length }}</span>
         </div>
       </div>
-
+ 
       <div class="stat-card">
-        <div class="stat-icon pins">📍</div>
+        <div class="stat-icon pins">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
         <div class="stat-text">
           <span class="stat-label">With Coordinates</span>
           <span class="stat-value">{{ mappableFarms.length }}</span>
         </div>
       </div>
-
+ 
       <div class="stat-card">
-        <div class="stat-icon area">📐</div>
+        <div class="stat-icon area">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 15h6v6"/>
+          </svg>
+        </div>
         <div class="stat-text">
           <span class="stat-label">Total Area</span>
           <span class="stat-value">{{ totalArea }} <small>ha</small></span>
         </div>
       </div>
-
+ 
       <div class="stat-card">
-        <div class="stat-icon insured">🛡️</div>
+        <div class="stat-icon insured">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>
+          </svg>
+        </div>
         <div class="stat-text">
           <span class="stat-label">Insured Farms</span>
           <span class="stat-value">{{ insuredCount }}</span>
         </div>
       </div>
     </div>
-
+ 
     <!-- Search bar -->
     <div class="search-bar-row">
       <div class="search-wrap">
@@ -59,16 +92,16 @@
           @keyup.enter="jumpToFirstResult"
         />
       </div>
-
+ 
       <div class="legend">
         <span class="legend-item"><span class="legend-dot green"></span> Insured</span>
         <span class="legend-item"><span class="legend-dot gray"></span> Uninsured</span>
       </div>
     </div>
-
+ 
     <!-- Map + Detail Panel -->
     <div class="map-layout">
-
+ 
       <!-- Map -->
       <div class="map-container">
         <div v-if="isLoading" class="map-overlay">
@@ -76,11 +109,14 @@
           <span>Loading farms...</span>
         </div>
         <div v-if="errorMessage" class="map-overlay error-overlay">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
           <span>{{ errorMessage }}</span>
         </div>
         <div ref="mapRef" class="leaflet-map-el"></div>
       </div>
-
+ 
       <!-- Detail Panel -->
       <div class="detail-panel">
         <div v-if="!selectedFarm" class="detail-empty">
@@ -91,36 +127,49 @@
           </svg>
           <p>Click a pin on the map to view farm details</p>
         </div>
-
+ 
         <div v-else class="detail-content">
-
+ 
           <!-- Farm image banner -->
           <div class="farm-image-wrap">
             <img
-              v-if="farmImageUrl"
+              v-if="farmImageUrl && !farmImageError"
               :src="farmImageUrl"
               :alt="selectedFarm.farm_name || 'Farm photo'"
               class="farm-image"
               @error="onImageError"
             />
-            <div v-else class="farm-image-placeholder">🌾</div>
-
+            <div v-else class="farm-image-placeholder">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M12 22V12"/>
+                <path d="M12 12C12 8 9 6 5 6c0 4 2 7 7 7z"/>
+                <path d="M12 12c0-4 3-6 7-6 0 4-2 7-7 7z"/>
+              </svg>
+            </div>
+ 
             <span class="insurance-badge" :class="selectedFarm.insurance_status === 'insured' ? 'insured' : 'uninsured'">
-              {{ selectedFarm.insurance_status === 'insured' ? '🛡️ Insured' : 'Uninsured' }}
+              <svg v-if="selectedFarm.insurance_status === 'insured'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>
+              </svg>
+              {{ selectedFarm.insurance_status === 'insured' ? 'Insured' : 'Uninsured' }}
             </span>
-
-            <button class="close-btn" @click="selectedFarm = null">✕</button>
+ 
+            <button class="close-btn" @click="selectedFarm = null">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
-
+ 
           <div class="detail-title-row">
             <h3>{{ selectedFarm.farm_name || 'Unnamed Farm' }}</h3>
             <span class="crop-pill">{{ selectedFarm.crop_type || '—' }}</span>
           </div>
-
+ 
           <div class="detail-divider"></div>
-
+ 
           <div class="section-title">Farm Information</div>
-
+ 
           <div class="detail-grid">
             <div class="detail-item">
               <span class="detail-label">Farm Size</span>
@@ -135,27 +184,27 @@
               </span>
             </div>
           </div>
-
+ 
           <div class="detail-divider"></div>
-
+ 
           <div class="section-title">Farmer Information</div>
-
+ 
           <div class="farmer-profile-row">
             <img
-              v-if="farmerProfilePhotoUrl"
+              v-if="farmerProfilePhotoUrl && !avatarImageError"
               :src="farmerProfilePhotoUrl"
               class="farmer-avatar"
               alt="Farmer photo"
               @error="onAvatarError"
             />
             <div v-else class="farmer-avatar-placeholder">{{ ownerInitials }}</div>
-
+ 
             <div class="farmer-name-block">
               <span class="detail-val">{{ ownerName }}</span>
               <span class="detail-sub">{{ selectedFarm.farmer_profile?.user?.sex || '—' }}</span>
             </div>
           </div>
-
+ 
           <div class="detail-grid">
             <div class="detail-item">
               <span class="detail-label">Email</span>
@@ -170,13 +219,17 @@
               <span class="detail-val">{{ selectedFarm.farmer_profile?.address || '—' }}</span>
             </div>
           </div>
-
+ 
           <button class="btn-center" @click="centerOnFarm(selectedFarm)">
-            📍 Center on Map
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            Center on Map
           </button>
         </div>
       </div>
-
+ 
     </div>
   </div>
 </template>
@@ -185,6 +238,8 @@
 import axios from 'axios'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+
+
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -213,6 +268,8 @@ const GRAY_ICON = L.icon({
   shadowSize: [41, 41],
 })
 
+
+
 export default {
   name: 'FarmMapPage',
 
@@ -226,6 +283,7 @@ export default {
       map: null,
       zoomControl: null,
       markers: [],
+      currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
     }
   },
 
@@ -440,50 +498,121 @@ export default {
 }
 </script>
 
+
 <style scoped>
+* { box-sizing: border-box; }
+ 
 .farm-map-page {
-  padding: 28px 32px;
-  font-family: 'DM Sans', sans-serif;
-  min-height: 100vh;
-  background: #F5F7F5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #F8FAF8;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
-
-.page-header {
-  margin-bottom: 20px;
+ 
+.farm-map-page > *:not(.top-header) {
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
 }
-
-.page-title {
-  font-size: 20px;
+ 
+.farm-map-page > .top-header + * { margin-top: 0.5rem; }
+ 
+.map-layout { padding-bottom: 1.75rem; }
+ 
+/* TOP HEADER (copied from dashboard) */
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
+  padding: 0px 15px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+ 
+.header-title-group h1 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 18px;
   font-weight: 700;
   color: #0F212F;
-  margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
-
-.page-sub {
-  font-size: 13px;
-  color: #6b7280;
+ 
+.header-title-group p {
+  font-size: 12px;
+  color: #5c6b64;
 }
-
-/* Stats */
-.stats-row {
+ 
+.header-actions {
   display: flex;
-  gap: 14px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
 }
-
-.stat-card {
-  background: white;
-  border-radius: 14px;
-  padding: 14px 18px;
+ 
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #E7F0EC;
+}
+ 
+.user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 160px;
-  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
-  flex: 1;
+  cursor: pointer;
 }
-
+ 
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
+}
+ 
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F212F;
+  line-height: 1.2;
+}
+ 
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+ 
+/* STATS ROW */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+ 
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
+}
+ 
 .stat-icon {
   width: 40px;
   height: 40px;
@@ -491,386 +620,322 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
-  background: rgba(17, 109, 62, 0.1);
 }
-
-.stat-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #116D3E;
-}
-
-.stat-value small {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-}
-
-/* Search + legend */
+ 
+.stat-icon.farms   { background: rgba(17, 109, 62, 0.1);  color: #116D3E; }
+.stat-icon.pins    { background: rgba(46, 111, 142, 0.1); color: #2E6F8E; }
+.stat-icon.area    { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
+.stat-icon.insured { background: rgba(107, 91, 149, 0.1); color: #6B5B95; }
+ 
+.stat-text { display: flex; flex-direction: column; gap: 2px; }
+ 
+.stat-label { font-size: 0.72rem; color: #5c6b64; font-weight: 600; }
+.stat-value { font-size: 1.25rem; font-weight: 700; color: #0F212F; }
+.stat-value small { font-size: 0.7rem; font-weight: 600; color: #8a9791; }
+ 
+/* SEARCH BAR */
 .search-bar-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
-
+ 
 .search-wrap {
   position: relative;
   flex: 1;
-  min-width: 220px;
-  max-width: 380px;
+  min-width: 240px;
+  max-width: 420px;
 }
-
+ 
 .search-icon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: #8a9791;
 }
-
+ 
 .search-input {
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  border: 1.5px solid #d7e2d8;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
-  background: white;
-}
-
-.search-input:focus {
+  padding: 9px 12px 9px 34px;
+  font-size: 0.84rem;
+  font-family: inherit;
+  color: #0F212F;
   outline: none;
-  border-color: #116D3E;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
+ 
+.search-input:focus {
+  border-color: #116D3E;
+  box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.14);
+}
+ 
 .legend {
   display: flex;
+  align-items: center;
   gap: 14px;
-  font-size: 12px;
-  color: #6b7280;
 }
-
+ 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 0.78rem;
+  color: #5c6b64;
+  font-weight: 600;
 }
-
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.legend-dot.green { background: #34A853; }
-.legend-dot.gray { background: #9ca3af; }
-
-/* Map layout */
+ 
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+.legend-dot.green { background: #116D3E; }
+.legend-dot.gray  { background: #8a9791; }
+ 
+/* MAP LAYOUT */
 .map-layout {
-  display: flex;
-  gap: 16px;
-  height: 540px;
-}
-
-.map-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.1rem;
   flex: 1;
-  border-radius: 14px;
-  overflow: hidden;
+  min-height: 520px;
+}
+ 
+.map-container {
   position: relative;
-  box-shadow: 0 2px 12px rgba(26,51,32,0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #EAF1EC;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
-
-.leaflet-map-el {
-  width: 100%;
-  height: 100%;
-}
-
+ 
+.leaflet-map-el { width: 100%; height: 100%; min-height: 520px; }
+ 
 .map-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1000;
-  background: rgba(245,247,245,0.9);
+  z-index: 30;
+  background: rgba(248, 250, 248, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 14px;
-  color: #116D3E;
+  font-size: 0.85rem;
+  color: #5c6b64;
+  font-weight: 600;
 }
-
-.error-overlay {
-  color: #b91c1c;
-  background: rgba(254,242,242,0.9);
-}
-
+ 
+.error-overlay { color: #C1473D; }
+ 
 .spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(17,109,62,0.15);
+  width: 26px;
+  height: 26px;
+  border: 3px solid #E7F0EC;
   border-top-color: #116D3E;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Detail panel */
+ 
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+ 
+/* DETAIL PANEL */
 .detail-panel {
-  width: 280px;
-  flex-shrink: 0;
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(26,51,32,0.1);
-  display: flex;
-  flex-direction: column;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
   overflow-y: auto;
 }
-
+ 
 .detail-empty {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding: 2rem;
   text-align: center;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 20px;
+  color: #8a9791;
+  font-size: 0.85rem;
 }
-
-.detail-content {
-  padding: 0 0 18px;
-}
-
+ 
+.detail-content { display: flex; flex-direction: column; }
+ 
 .farm-image-wrap {
   position: relative;
-  width: 100%;
-  height: 140px;
-  background: #F5F7F5;
+  height: 150px;
+  background: linear-gradient(135deg, #E7F0EC, #F1F6F2);
 }
-
-.farm-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
+ 
+.farm-image { width: 100%; height: 100%; object-fit: cover; }
+ 
 .farm-image-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  color: #116D3E;
+  opacity: 0.5;
 }
-
+ 
 .insurance-badge {
   position: absolute;
   bottom: 10px;
   left: 12px;
-  font-size: 11px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
   padding: 4px 10px;
   border-radius: 999px;
-  backdrop-filter: blur(4px);
 }
-
-.insurance-badge.insured {
-  background: rgba(17, 109, 62, 0.85);
-  color: white;
-}
-
-.insurance-badge.uninsured {
-  background: rgba(107, 114, 128, 0.85);
-  color: white;
-}
-
+ 
+.insurance-badge.insured   { background: rgba(17, 109, 62, 0.9); color: #FFFFFF; }
+.insurance-badge.uninsured { background: rgba(15, 33, 47, 0.7); color: #FFFFFF; }
+ 
 .close-btn {
   position: absolute;
   top: 10px;
   right: 10px;
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 8px;
+  background: rgba(15, 33, 47, 0.55);
+  color: #FFFFFF;
   border: none;
-  background: rgba(255,255,255,0.9);
-  color: #0F212F;
-  cursor: pointer;
-  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
-
-.close-btn:hover { background: white; }
-
+.close-btn:hover { background: rgba(15, 33, 47, 0.75); }
+ 
 .detail-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 14px 18px 0;
+  gap: 10px;
+  padding: 1rem 1.1rem 0;
 }
-
+ 
 .detail-title-row h3 {
-  font-size: 15px;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #0F212F;
-  line-height: 1.3;
 }
-
+ 
 .crop-pill {
-  font-size: 11px;
-  font-weight: 600;
-  color: #116D3E;
-  background: rgba(17, 109, 62, 0.1);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #AC7A2F;
+  background: rgba(210, 149, 57, 0.14);
   padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
-
+ 
 .detail-divider {
   height: 1px;
-  background: #e5e7eb;
-  margin: 14px 18px;
+  background: #EAF1EC;
+  margin: 0.9rem 1.1rem;
 }
-
+ 
 .section-title {
-  font-size: 11px;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #116D3E;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0 18px;
-  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+  color: #8a9791;
+  padding: 0 1.1rem;
+  margin-bottom: 0.7rem;
 }
-
+ 
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 18px;
-  margin-bottom: 4px;
+  gap: 0.9rem;
+  padding: 0 1.1rem;
 }
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.detail-item.span-2 {
-  grid-column: span 2;
-}
-
-.detail-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9ca3af;
-}
-
-.detail-val {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0F212F;
-}
-
-.detail-val.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.coords {
-  font-size: 11px;
-  font-family: monospace;
-  color: #6b7280;
-  font-weight: 500;
-}
-
+ 
+.detail-item { display: flex; flex-direction: column; gap: 3px; }
+.detail-item.span-2 { grid-column: span 2; }
+ 
+.detail-label { font-size: 0.68rem; color: #8a9791; font-weight: 600; }
+.detail-val { font-size: 0.84rem; color: #0F212F; font-weight: 600; }
+.detail-val.coords { font-variant-numeric: tabular-nums; }
+.detail-val.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.detail-sub { font-size: 0.74rem; color: #5c6b64; text-transform: capitalize; }
+ 
 .farmer-profile-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 18px;
-  margin-bottom: 14px;
+  gap: 10px;
+  padding: 0 1.1rem;
+  margin-bottom: 0.9rem;
 }
-
-.farmer-avatar,
-.farmer-avatar-placeholder {
+ 
+.farmer-avatar {
   width: 42px;
   height: 42px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
-
+ 
 .farmer-avatar-placeholder {
-  background: rgba(17, 109, 62, 0.12);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(17, 109, 62, 0.1);
   color: #116D3E;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.78rem;
+  flex-shrink: 0;
 }
-
-.farmer-name-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.detail-sub {
-  font-size: 12px;
-  color: #6b7280;
-}
-
+ 
+.farmer-name-block { display: flex; flex-direction: column; gap: 2px; }
+ 
 .btn-center {
-  margin: 16px 18px 0;
-  width: calc(100% - 36px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 1.1rem;
   padding: 10px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
   border: none;
-  background: #116D3E;
-  color: white;
-  font-weight: 600;
-  font-size: 13px;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  transition: background 0.15s ease;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
-
-.btn-center:hover {
-  background: #0A5232;
+ 
+/* LEAFLET OVERRIDES */
+:global(.farm-pin) { background: transparent; border: none; }
+:global(.leaflet-popup-content-wrapper) { border-radius: 10px; }
+ 
+/* RESPONSIVE */
+@media (max-width: 1100px) {
+  .map-layout { grid-template-columns: 1fr; min-height: unset; }
+  .leaflet-map-el { min-height: 380px; }
+  .detail-panel { max-height: 480px; }
 }
-
-@media (max-width: 768px) {
-  .farm-map-page { padding: 16px; }
-  .map-layout { flex-direction: column; height: auto; }
-  .map-container { height: 360px; }
-  .detail-panel { width: 100%; }
+ 
+@media (max-width: 720px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
+ 

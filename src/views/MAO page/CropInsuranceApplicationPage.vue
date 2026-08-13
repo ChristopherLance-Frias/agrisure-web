@@ -1,11 +1,26 @@
 <template>
   <div class="insurance-page">
-    <div class="page-header no-print">
-      <div>
-        <h2 class="page-title">Crop Insurance Applications</h2>
-        <p class="page-sub">Review, update, and manage farmer insurance applications submitted to MAO</p>
+    <header class="top-header no-print">
+      <div class="header-title-group">
+        <h1>Crop Insurance Applications</h1>
+        <p>Review, update, and manage farmer insurance applications submitted to MAO</p>
       </div>
-    </div>
+
+      <div class="header-actions">
+        <div class="v-divider"></div>
+
+        <!-- User Profile -->
+        <div class="user-profile">
+          <div class="user-avatar">
+            {{ currentUser.initials }}
+          </div>
+          <div class="user-info">
+            <p class="user-name">{{ currentUser.name }}</p>
+            <p class="user-role">{{ currentUser.role }}</p>
+          </div>
+        </div>
+      </div>
+    </header>
 
     <!-- Active Season Display Window -->
     <div v-if="hasConfiguredSeason" class="season-card no-print">
@@ -917,6 +932,7 @@ export default {
       lastRefreshedAt: null,
       refreshIntervalSeconds: 30,
       refreshTimer: null,
+      currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
     }
   },
 
@@ -1658,10 +1674,80 @@ export default {
   padding: 2rem 2rem 6rem;
   color: #263238;
 }
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
+  padding: 0px 15px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-.page-header { margin-bottom: 1.5rem; }
-.page-title { font-size: 1.5rem; font-weight: 700; color: #263238; margin: 0 0 4px; }
-.page-sub { font-size: 0.9rem; color: #5c6b64; margin: 0; }
+.header-title-group h1 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F212F;
+  letter-spacing: -0.01em;
+}
+
+.header-title-group p {
+  font-size: 12px;
+  color: #5c6b64;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #E7F0EC;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F212F;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 
 .season-card {
   background: #FFFFFF;

@@ -243,12 +243,35 @@
             </div>
           </div>
 
-          <div class="detail-actions" v-if="selectedEvent.status === 'draft' || selectedEvent.status === 'published'">
-            <button v-if="selectedEvent.status === 'draft'" class="btn btn-primary btn-block" @click="publishDistributionEvent(selectedEvent)">
+          <div
+            class="detail-actions"
+            v-if="
+              selectedEvent.status === 'draft' ||
+              selectedEvent.status === 'published'
+            "
+          >
+            <button
+              v-if="selectedEvent.status === 'draft'"
+              class="btn btn-primary btn-block"
+              @click="publishDistributionEvent(selectedEvent)"
+            >
               Publish to barangays
             </button>
-            <button v-if="selectedEvent.status === 'published'" class="btn btn-primary btn-block" @click="completeDistributionEvent(selectedEvent)">
+
+            <button
+              v-if="selectedEvent.status === 'published'"
+              class="btn btn-primary btn-block"
+              @click="completeDistributionEvent(selectedEvent)"
+            >
               Mark as completed
+            </button>
+
+            <button
+              v-if="selectedEvent.status === 'draft'"
+              class="btn btn-danger btn-block"
+              @click="deleteDistributionEvent(selectedEvent)"
+            >
+              Delete distribution
             </button>
           </div>
         </div>
@@ -919,7 +942,47 @@ export default {
       }
       this.wizardStep = 1
       this.activeListIndex = 0
-    }
+    },
+    async deleteDistributionEvent(event) {
+      if (!event) return
+
+      const confirmed = confirm(
+        `Are you sure you want to delete "${event.title}"?\n\nThis action cannot be undone.`
+      )
+
+      if (!confirmed) return
+
+      try {
+        await axios.delete(
+          `${API_BASE}/api/distribution-events/${event.id}`
+        )
+
+        // Remove from list
+        this.distributionEvents = this.distributionEvents.filter(
+          e => e.id !== event.id
+        )
+
+        // Clear selected event
+        this.selectedEvent = null
+
+        // Close any opened barangay lists
+        this.openListIds = []
+
+        this.showToast(
+          'Distribution event deleted successfully.',
+          'success'
+        )
+
+      } catch (error) {
+        console.error(error.response?.data || error)
+
+        this.showToast(
+          error.response?.data?.message ||
+          'Failed to delete distribution event.',
+          'error'
+        )
+      }
+    },
   }
 }
 </script>

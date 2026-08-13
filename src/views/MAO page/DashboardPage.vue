@@ -1,20 +1,20 @@
 <template>
   <div class="dashboard-layout">
-
+ 
     <!-- MAIN CONTENT AREA -->
     <div class="main-wrapper">
-
+ 
       <!-- TOP BAR / HEADER -->
       <header class="top-header">
         <div class="header-title-group">
           <h1>Dashboard Overview</h1>
           <p>San Agustin Municipal Agriculture Office &middot; AgriSure</p>
         </div>
-
+ 
         <div class="header-actions">
-
+ 
           <div class="v-divider"></div>
-
+ 
           <!-- User Profile -->
           <div class="user-profile">
             <div class="user-avatar">
@@ -27,95 +27,114 @@
           </div>
         </div>
       </header>
-
+ 
       <!-- DASHBOARD BODY CONTAINER -->
       <main class="dashboard-body">
-
+ 
         <!-- METRICS ROW (5 Cards) -->
         <div class="metrics-grid">
-          <!-- Card 1: Farmers -->
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Registered Farmers</span>
-              <div class="icon-badge green">
-                <i class="fa-solid fa-users"></i>
+            <!-- Card 1: Farmers -->
+            <div class="metric-card">
+              <div class="card-header">
+                <span class="card-label">Registered Farmers</span>
+                <div class="icon-badge green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+              </div>
+              <h3 class="card-value">{{ stats.farmers.count }}</h3>
+              <div class="card-footer green">
+                <span class="status-pill green">
+                  {{ stats.farmers.change }}
+                </span>
               </div>
             </div>
-            <h3 class="card-value">{{ stats.farmers.count }}</h3>
-            <div class="card-footer green">
-              <span class="status-pill green">
-                <i class="fa-solid fa-arrow-trend-up"></i> {{ stats.farmers.change }}
-              </span>
-            </div>
-          </div>
 
-          <!-- Card 2: Applications -->
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Applications</span>
-              <div class="icon-badge blue">
-                <i class="fa-solid fa-file-signature"></i>
+            <!-- Card 2: Applications -->
+            <div class="metric-card">
+              <div class="card-header">
+                <span class="card-label">Applications</span>
+                <div class="icon-badge blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <path d="M9 15l2 2 4-4" />
+                  </svg>
+                </div>
+              </div>
+              <h3 class="card-value">{{ stats.applications.count }}</h3>
+              <div class="card-footer amber">
+                <span class="status-pill amber">
+                  {{ stats.applications.pending }}
+                </span>
               </div>
             </div>
-            <h3 class="card-value">{{ stats.applications.count }}</h3>
-            <div class="card-footer amber">
-              <span class="status-pill amber">
-                <i class="fa-solid fa-clock"></i> {{ stats.applications.pending }}
-              </span>
-            </div>
-          </div>
 
-          <!-- Card 3: Claims -->
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Active Claims</span>
-              <div class="icon-badge amber">
-                <i class="fa-solid fa-hand-holding-dollar"></i>
+            <!-- Card 3: Claims -->
+            <div class="metric-card">
+              <div class="card-header">
+                <span class="card-label">Active Claims</span>
+                <div class="icon-badge amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1v22" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </svg>
+                </div>
+              </div>
+              <h3 class="card-value">{{ stats.claims.count }}</h3>
+              <div class="card-footer amber">
+                <span class="status-pill amber">
+                  {{ stats.claims.inspecting }}
+                </span>
               </div>
             </div>
-            <h3 class="card-value">{{ stats.claims.count }}</h3>
-            <div class="card-footer amber">
-              <span class="status-pill amber">
-                <i class="fa-solid fa-magnifying-glass"></i> {{ stats.claims.inspecting }}
-              </span>
-            </div>
-          </div>
 
-          <!-- Card 4: Damage Reports -->
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Damage Reports</span>
-              <div class="icon-badge red">
-                <i class="fa-solid fa-triangle-exclamation"></i>
+            <!-- Card 4: Damage Reports -->
+            <div class="metric-card">
+              <div class="card-header">
+                <span class="card-label">Damage Reports</span>
+                <div class="icon-badge red">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+              </div>
+              <h3 class="card-value">{{ stats.damage.count }}</h3>
+              <div class="card-footer red">
+                <span class="status-pill red">
+                  {{ stats.damage.critical }}
+                </span>
               </div>
             </div>
-            <h3 class="card-value">{{ stats.damage.count }}</h3>
-            <div class="card-footer red">
-              <span class="status-pill red">
-                <i class="fa-solid fa-circle-exclamation"></i> {{ stats.damage.critical }}
-              </span>
-            </div>
-          </div>
 
-          <!-- Card 5: Inventory -->
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Inventory</span>
-              <div class="icon-badge purple">
-                <i class="fa-solid fa-boxes-stacked"></i>
+            <!-- Card 5: Inventory -->
+            <div class="metric-card">
+              <div class="card-header">
+                <span class="card-label">Inventory</span>
+                <div class="icon-badge purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8L12 3 3 8l9 5 9-5z" />
+                    <path d="M3 8v8l9 5 9-5V8" />
+                    <path d="M12 13v8" />
+                  </svg>
+                </div>
+              </div>
+              <h3 class="card-value">
+                {{ stats.inventory.items }} <span class="unit-text">Items</span>
+              </h3>
+              <div class="card-footer red">
+                <span class="status-pill red">
+                  {{ stats.inventory.lowStock }}
+                </span>
               </div>
             </div>
-            <h3 class="card-value">
-              {{ stats.inventory.items }} <span class="unit-text">Items</span>
-            </h3>
-            <div class="card-footer red">
-              <span class="status-pill red">
-                <i class="fa-solid fa-box-open"></i> {{ stats.inventory.lowStock }}
-              </span>
-            </div>
-          </div>
         </div>
-
         <!-- MAIN CHARTS ROW -->
         <div class="row-grid-3">
           <!-- Main Chart: Application Trend -->
@@ -129,7 +148,7 @@
             </div>
             <ApexChart type="bar" height="250" :options="chartConfigs.applicationTrend.options" :series="chartConfigs.applicationTrend.series" />
           </div>
-
+ 
           <!-- Pending Tasks Card -->
           <div class="panel flex-column-between">
             <div>
@@ -150,7 +169,7 @@
             <button class="btn-block">Manage Task Queue</button>
           </div>
         </div>
-
+ 
         <!-- ANALYTICS DUAL ROW -->
         <div class="row-grid-2">
           <div class="panel">
@@ -160,7 +179,7 @@
             </div>
             <ApexChart type="bar" height="210" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
           </div>
-
+ 
           <div class="panel">
             <div class="panel-header">
               <h2>Insurance Application Status</h2>
@@ -169,7 +188,7 @@
             <ApexChart type="donut" height="210" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
           </div>
         </div>
-
+ 
         <!-- INVENTORY & DISTRIBUTION ROW -->
         <div class="row-grid-2">
           <div class="panel">
@@ -179,7 +198,7 @@
             </div>
             <ApexChart type="bar" height="210" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
           </div>
-
+ 
           <div class="panel">
             <h2 class="panel-title-spaced">Distribution Summary</h2>
             <div class="summary-grid">
@@ -193,7 +212,7 @@
             </div>
           </div>
         </div>
-
+ 
         <!-- BARANGAY PERFORMANCE & WEATHER WIDGET -->
         <div class="row-grid-3">
           <!-- Table Container -->
@@ -227,22 +246,36 @@
               </table>
             </div>
           </div>
-
+ 
           <!-- Weather Card -->
-          <div class="weather-card">
-            <div class="weather-bg-icon">
-              <i class="fa-solid fa-cloud-sun"></i>
+          <div class="weather-card" :class="`is-${skyState}`">
+            <div class="weather-scene" aria-hidden="true">
+              <div class="sun-disc"></div>
+              <svg class="cloud cloud-back" viewBox="0 0 100 40">
+                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
+              </svg>
+              <svg class="cloud cloud-front" viewBox="0 0 100 40">
+                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
+              </svg>
+              <div class="fog-layer" v-if="skyState === 'fog'"></div>
+              <div class="rain" v-if="skyState === 'rain' || skyState === 'storm'">
+                <span v-for="n in 8" :key="n" class="rain-drop" :style="{ '--i': n }"></span>
+              </div>
+              <div class="lightning" v-if="skyState === 'storm'"></div>
             </div>
 
             <div class="weather-content">
               <div class="weather-top">
                 <div>
-                  <span class="weather-subtitle">San Guillermo Agro-Weather</span>
+                  <span class="weather-subtitle">San Agustin Agro-Weather</span>
                   <h3 class="weather-temp">
                     <template v-if="!loading && !error">{{ weather.temp }}</template>
                     <template v-else-if="loading">--&deg;C</template>
                     <template v-else>N/A</template>
                   </h3>
+                  <p class="weather-updated" v-if="!loading && !error">
+                    Updated {{ formatUpdatedAt(weather.updatedAt) }}
+                  </p>
                 </div>
                 <div class="weather-icon-box">
                   <i :class="weather.icon"></i>
@@ -253,27 +286,28 @@
               </p>
             </div>
 
-            <div class="weather-stats">
-              <div class="weather-stat-row">
-                <span><i class="fa-solid fa-droplet"></i> Humidity</span>
+            <div class="weather-stats-grid">
+              <div class="weather-stat-cell">
+                <i class="fa-solid fa-droplet"></i>
+                <span class="stat-label">Humidity</span>
                 <strong>{{ weather.humidity }}</strong>
               </div>
-              <div class="weather-stat-row">
-                <span><i class="fa-solid fa-cloud-showers-heavy"></i> Rain Probability</span>
+              <div class="weather-stat-cell">
+                <i class="fa-solid fa-cloud-showers-heavy"></i>
+                <span class="stat-label">Rain Chance</span>
                 <strong>{{ weather.rainChance }}</strong>
+              </div>
+              <div class="weather-stat-cell">
+                <i class="fa-solid fa-wind"></i>
+                <span class="stat-label">Wind</span>
+                <strong>{{ weather.wind ?? '--' }}</strong>
               </div>
             </div>
 
-            <button
-              v-if="error"
-              class="weather-retry-btn"
-              @click="fetchWeather"
-            >
-              Retry
-            </button>
+            <button v-if="error" class="weather-retry-btn" @click="fetchWeather">Retry</button>
           </div>
         </div>
-
+ 
         <!-- ACTIVITIES & QUICK ACTIONS -->
         <div class="row-grid-3">
           <!-- Activities Feed -->
@@ -287,7 +321,7 @@
               </li>
             </ul>
           </div>
-
+ 
           <!-- Quick Actions Grid -->
           <div class="panel">
             <h2 class="panel-title-spaced">Quick Action Shortcuts</h2>
@@ -304,7 +338,7 @@
             </div>
           </div>
         </div>
-
+ 
         <!-- MUNICIPAL FARM MAP PREVIEW -->
         <div class="panel">
           <div class="panel-header">
@@ -316,12 +350,12 @@
               GIS Module Connected
             </span>
           </div>
-
+ 
           <div class="map-placeholder">
             <div class="map-bg-icon">
               <i class="fa-solid fa-map-location-dot"></i>
             </div>
-
+ 
             <div class="map-grid">
               <button
                 v-for="bgy in barangayData"
@@ -337,19 +371,18 @@
             </div>
           </div>
         </div>
-
+ 
       </main>
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ApexChart from 'vue3-apexcharts'
 
-const LAT = 15.48
-const LON = 120.60
+const LAT = 16.722848
+const LON = 121.684663
 
 /* ---------------- AgriSure palette ---------------- */
 const palette = {
@@ -379,12 +412,27 @@ const weather = ref({
   condition: 'Loading...',
   humidity: '--%',
   rainChance: '--%',
+  rainChanceRaw: 0,
+  wind: null,
+  updatedAt: null,
   icon: 'fa-solid fa-cloud-sun'
 })
 
 const loading = ref(true)
 const error = ref(false)
 let refreshTimer = null
+
+/* sky animation state, derived from the current weather code + rain chance */
+const skyState = computed(() => {
+  const code = weather.value?.code
+  const rainChance = weather.value?.rainChanceRaw ?? 0
+  if (error.value || code == null) return 'clear'
+  if ([95, 96, 99].includes(code)) return 'storm'
+  if ([61, 63, 65, 51, 53, 55, 80, 81, 82].includes(code)) return 'rain'
+  if ([45, 48].includes(code)) return 'fog'
+  if ([3].includes(code)) return rainChance >= 70 ? 'rain' : 'overcast'
+  return 'clear' // 0, 1, 2
+})
 
 const distributionSummary = ref([])
 const recentActivities = ref([])
@@ -574,13 +622,19 @@ function mapWeatherCode(code) {
   return map[code] || { condition: 'Partly Cloudy', icon: 'fa-solid fa-cloud-sun' }
 }
 
+function formatUpdatedAt(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
+}
+
 async function fetchWeather() {
   loading.value = true
   error.value = false
 
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
-      `&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code` +
+      `&current=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,wind_speed_10m` +
       `&timezone=Asia%2FManila`
 
     const res = await fetch(url)
@@ -596,7 +650,11 @@ async function fetchWeather() {
       condition,
       humidity: `${Math.round(c.relative_humidity_2m)}%`,
       rainChance: `${Math.round(c.precipitation_probability ?? 0)}%`,
-      icon
+      rainChanceRaw: c.precipitation_probability ?? 0,
+      wind: c.wind_speed_10m != null ? `${Math.round(c.wind_speed_10m)} km/h` : null,
+      updatedAt: c.time,
+      icon,
+      code: c.weather_code
     }
   } catch (err) {
     console.error('Failed to fetch weather:', err)
@@ -620,18 +678,17 @@ onMounted(loadDashboard)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
+ 
 * { box-sizing: border-box; }
-
+ 
 .dashboard-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  font-family: 'DM Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: #F8FAF8;
 }
-
+ 
 .main-wrapper {
   flex: 1;
   min-width: 0;
@@ -639,7 +696,7 @@ onMounted(loadDashboard)
   display: flex;
   flex-direction: column;
 }
-
+ 
 /* TOP HEADER */
 .top-header {
   background-color: rgba(255, 255, 255, 0.85);
@@ -648,43 +705,44 @@ onMounted(loadDashboard)
   flex-shrink: 0;
   z-index: 20;
   padding: 0px 15px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-
+ 
 .header-title-group h1 {
-  font-family: 'DM Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: #0F212F;
   letter-spacing: -0.01em;
 }
-
+ 
 .header-title-group p {
   font-size: 12px;
   color: #5c6b64;
 }
-
+ 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-
+ 
 .v-divider {
   height: 24px;
   width: 1px;
   background-color: #E7F0EC;
 }
-
+ 
 .user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
 }
-
+ 
 .user-avatar {
   width: 36px;
   height: 36px;
@@ -698,14 +756,14 @@ onMounted(loadDashboard)
   font-size: 12px;
   box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
 }
-
+ 
 .user-name {
   font-size: 12px;
   font-weight: 700;
   color: #0F212F;
   line-height: 1.2;
 }
-
+ 
 .user-role {
   font-size: 10px;
   font-weight: 500;
@@ -713,7 +771,7 @@ onMounted(loadDashboard)
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
+ 
 /* BODY */
 .dashboard-body {
   flex: 1;
@@ -723,14 +781,14 @@ onMounted(loadDashboard)
   flex-direction: column;
   gap: 1.5rem;
 }
-
+ 
 /* METRICS GRID */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
 }
-
+ 
 .metric-card {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -738,20 +796,19 @@ onMounted(loadDashboard)
   padding: 1.2rem;
   box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
-
+ 
 .card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 0.9rem;
 }
-
+ 
 .card-label {
   font-size: 0.78rem;
   font-weight: 600;
   color: #5c6b64;
 }
-
 .icon-badge {
   width: 36px;
   height: 36px;
@@ -759,8 +816,13 @@ onMounted(loadDashboard)
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
   flex-shrink: 0;
+}
+
+.icon-badge svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .icon-badge.green  { background: rgba(17, 109, 62, 0.12); color: #116D3E; }
@@ -768,17 +830,16 @@ onMounted(loadDashboard)
 .icon-badge.amber  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
 .icon-badge.red    { background: rgba(193, 71, 61, 0.12); color: #C1473D; }
 .icon-badge.purple { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
-
+ 
 .card-value {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.7rem;
-  font-weight: 400;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: #0F212F;
   margin-bottom: 0.6rem;
 }
-
-.unit-text { font-size: 0.85rem; color: #5c6b64; font-family: 'DM Sans', sans-serif; }
-
+ 
+.unit-text { font-size: 0.85rem; color: #5c6b64; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+ 
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -788,26 +849,26 @@ onMounted(loadDashboard)
   font-size: 0.7rem;
   font-weight: 600;
 }
-
+ 
 .status-pill.green { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
 .status-pill.amber { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
 .status-pill.red   { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
-
+ 
 /* PANEL GRIDS */
 .row-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
-
+ 
 .row-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
-
+ 
 .col-span-2 { grid-column: span 2; }
-
+ 
 .panel {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -815,13 +876,13 @@ onMounted(loadDashboard)
   padding: 1.25rem 1.35rem;
   box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
-
+ 
 .flex-column-between {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
-
+ 
 .panel-header {
   display: flex;
   align-items: flex-start;
@@ -829,28 +890,26 @@ onMounted(loadDashboard)
   margin-bottom: 1rem;
   gap: 12px;
 }
-
+ 
 .panel-header h2 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.05rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 700;
   color: #0F212F;
 }
-
+ 
 .panel-header p, .subtext {
   font-size: 0.76rem;
   color: #5c6b64;
   margin-top: 2px;
 }
-
+ 
 .panel-title-spaced {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.05rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 700;
   color: #0F212F;
   margin-bottom: 1rem;
 }
-
+ 
 .count-pill {
   font-size: 0.7rem;
   font-weight: 700;
@@ -860,7 +919,7 @@ onMounted(loadDashboard)
   border-radius: 999px;
   white-space: nowrap;
 }
-
+ 
 /* BUTTONS */
 .btn-secondary {
   background: #F1F6F2;
@@ -875,7 +934,7 @@ onMounted(loadDashboard)
   transition: background 0.15s ease;
 }
 .btn-secondary:hover { background: #E7F0EC; }
-
+ 
 .btn-block {
   width: 100%;
   padding: 10px;
@@ -889,7 +948,7 @@ onMounted(loadDashboard)
   margin-top: 1rem;
   box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
-
+ 
 .btn-primary {
   display: flex;
   align-items: center;
@@ -905,7 +964,7 @@ onMounted(loadDashboard)
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
-
+ 
 .btn-outline {
   display: flex;
   align-items: center;
@@ -922,9 +981,9 @@ onMounted(loadDashboard)
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .btn-outline:hover { border-color: #116D3E; background: #F1F6F2; }
-
+ 
 .icon-green { color: #116D3E; }
-
+ 
 .link-btn {
   background: none;
   border: none;
@@ -934,7 +993,7 @@ onMounted(loadDashboard)
   cursor: pointer;
 }
 .link-btn:hover { text-decoration: underline; }
-
+ 
 .link-btn-muted {
   background: none;
   border: none;
@@ -944,10 +1003,10 @@ onMounted(loadDashboard)
   cursor: pointer;
 }
 .link-btn-muted:hover { color: #116D3E; }
-
+ 
 /* TASK LIST */
 .task-list { display: flex; flex-direction: column; gap: 10px; }
-
+ 
 .task-item {
   display: flex;
   align-items: center;
@@ -956,9 +1015,9 @@ onMounted(loadDashboard)
   padding: 8px 0;
   border-bottom: 1px solid #F1F6F2;
 }
-
+ 
 .task-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
-
+ 
 .task-title {
   font-size: 0.8rem;
   color: #0F212F;
@@ -966,14 +1025,14 @@ onMounted(loadDashboard)
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
+ 
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-green  { background: #116D3E; }
 .dot-amber  { background: #D29539; }
 .dot-red    { background: #C1473D; }
 .dot-blue   { background: #2E6F8E; }
 .dot-purple { background: #6B5B95; }
-
+ 
 .task-badge {
   font-size: 0.66rem;
   font-weight: 700;
@@ -982,42 +1041,42 @@ onMounted(loadDashboard)
   white-space: nowrap;
   flex-shrink: 0;
 }
-
+ 
 .badge-green  { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
 .badge-amber  { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
 .badge-red    { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
 .badge-blue   { background: rgba(46, 111, 142, 0.1); color: #2E6F8E; }
 .badge-purple { background: rgba(107, 91, 149, 0.1); color: #6B5B95; }
-
+ 
 /* SUMMARY GRID */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.9rem;
 }
-
+ 
 .summary-card {
   background: #F8FAF8;
   border: 1px solid #EAF1EC;
   border-radius: 12px;
   padding: 0.9rem;
 }
-
+ 
 .summary-label { font-size: 0.72rem; color: #5c6b64; margin-bottom: 4px; }
 .summary-value { font-size: 1.15rem; font-weight: 700; }
 .summary-unit { font-size: 0.72rem; font-weight: 500; color: #5c6b64; }
-
+ 
 .text-green  { color: #116D3E; }
 .text-amber  { color: #AC7A2F; }
 .text-blue   { color: #2E6F8E; }
 .text-purple { color: #6B5B95; }
 .text-dark   { color: #0F212F; }
-
+ 
 /* TABLE */
 .table-responsive { overflow-x: auto; }
-
+ 
 .data-table { width: 100%; border-collapse: collapse; }
-
+ 
 .data-table thead th {
   text-align: left;
   font-size: 0.72rem;
@@ -1028,29 +1087,32 @@ onMounted(loadDashboard)
   padding: 8px 10px;
   background: #F1F6F2;
 }
-
+ 
 .data-table tbody td {
   font-size: 0.82rem;
   color: #0F212F;
   padding: 10px;
   border-bottom: 1px solid #F1F6F2;
 }
-
+ 
 .font-bold { font-weight: 700; }
-
+ 
 .severity-badge {
   font-size: 0.7rem;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
 }
-
+ 
 .severity-badge.warning { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
 .severity-badge.success { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
-
+ 
 /* WEATHER CARD */
+/* ============ Weather Card ============ */
+
 .weather-card {
   position: relative;
+  isolation: isolate;
   background: linear-gradient(150deg, #116D3E 0%, #0A5232 55%, #0F212F 100%);
   border-radius: 16px;
   padding: 1.3rem;
@@ -1061,15 +1123,125 @@ onMounted(loadDashboard)
   justify-content: space-between;
 }
 
-.weather-bg-icon {
+/* ---------- animated sky scene ---------- */
+.weather-scene {
   position: absolute;
-  right: -18px;
-  bottom: -18px;
-  font-size: 6rem;
-  opacity: 0.1;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
 }
 
-.weather-content { position: relative; z-index: 1; }
+.sun-disc {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #D29539 0%, rgba(210, 149, 57, 0.3) 60%, transparent 72%);
+  animation: sun-pulse 4s ease-in-out infinite;
+  transition: opacity 0.4s ease;
+}
+
+.is-rain .sun-disc,
+.is-storm .sun-disc,
+.is-overcast .sun-disc,
+.is-fog .sun-disc {
+  opacity: 0.15;
+}
+
+.cloud {
+  position: absolute;
+  fill: rgba(255, 255, 255, 0.14);
+}
+
+.cloud-back {
+  top: 14px;
+  left: -40px;
+  width: 100px;
+  animation: drift 22s linear infinite;
+}
+
+.cloud-front {
+  top: 34px;
+  left: -60px;
+  width: 130px;
+  fill: rgba(255, 255, 255, 0.22);
+  animation: drift 15s linear infinite;
+}
+
+.is-overcast .cloud,
+.is-rain .cloud,
+.is-storm .cloud {
+  fill: rgba(255, 255, 255, 0.3);
+}
+
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(340px); }
+}
+
+@keyframes sun-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.fog-layer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 50%, transparent);
+  animation: fog-drift 8s ease-in-out infinite;
+}
+
+@keyframes fog-drift {
+  0%, 100% { opacity: 0.5; transform: translateX(0); }
+  50% { opacity: 0.9; transform: translateX(12px); }
+}
+
+.rain {
+  position: absolute;
+  inset: 0;
+}
+
+.rain-drop {
+  position: absolute;
+  top: -10%;
+  left: calc(var(--i) * 12.5%);
+  width: 2px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  animation: fall 1.1s linear infinite;
+  animation-delay: calc(var(--i) * 0.13s);
+}
+
+@keyframes fall {
+  from { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  to { transform: translateY(160px); opacity: 0; }
+}
+
+.lightning {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  animation: flash 5s ease-in-out infinite;
+}
+
+@keyframes flash {
+  0%, 92%, 100% { opacity: 0; }
+  93% { opacity: 0.7; }
+  94% { opacity: 0; }
+  95% { opacity: 0.4; }
+  96% { opacity: 0; }
+}
+
+/* ---------- content, sits above the scene ---------- */
+.weather-content {
+  position: relative;
+  z-index: 1;
+}
 
 .weather-top {
   display: flex;
@@ -1081,14 +1253,19 @@ onMounted(loadDashboard)
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: rgba(255,255,255,0.65);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .weather-temp {
-  font-family: 'DM Serif Display', serif;
-  font-size: 2rem;
-  font-weight: 400;
+  font-size: 1.9rem;
+  font-weight: 700;
   margin-top: 4px;
+}
+
+.weather-updated {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 2px 0 0;
 }
 
 .weather-icon-box {
@@ -1105,31 +1282,49 @@ onMounted(loadDashboard)
 
 .weather-condition {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
   margin-top: 6px;
 }
 
-.weather-stats {
+/* ---------- stats grid (replaces old .weather-stats / .weather-stat-row) ---------- */
+.weather-stats-grid {
   position: relative;
   z-index: 1;
   margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.weather-stat-cell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid rgba(255,255,255,0.14);
-  padding-top: 0.9rem;
-}
-
-.weather-stat-row {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.75);
+  text-align: center;
+  gap: 4px;
+  padding: 4px 2px;
 }
 
-.weather-stat-row strong { color: #FFFFFF; }
+.weather-stat-cell i {
+  color: #D29539;
+  font-size: 0.95rem;
+}
 
+.stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.weather-stat-cell strong {
+  font-size: 0.85rem;
+  color: #FFFFFF;
+}
+
+/* ---------- retry button ---------- */
 .weather-retry-btn {
   position: relative;
   z-index: 1;
@@ -1144,40 +1339,55 @@ onMounted(loadDashboard)
   cursor: pointer;
 }
 
+.weather-retry-btn:hover {
+  background: #AC7A2F;
+}
+
+/* ---------- accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .sun-disc,
+  .cloud,
+  .rain-drop,
+  .fog-layer,
+  .lightning {
+    animation: none;
+  }
+}
+ 
 /* ACTIVITY LIST */
 .activity-list { display: flex; flex-direction: column; gap: 12px; }
-
+ 
 .activity-item {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
+ 
 .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
+ 
 .activity-text {
   flex: 1;
   font-size: 0.8rem;
   color: #3f4a45;
   line-height: 1.4;
 }
-
+ 
 .activity-time {
   font-size: 0.72rem;
   color: #8a9791;
   white-space: nowrap;
   flex-shrink: 0;
 }
-
+ 
 /* ACTIONS GRID */
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.7rem;
 }
-
+ 
 .col-span-full { grid-column: span 2; }
-
+ 
 /* GIS / MAP */
 .gis-badge {
   font-size: 0.7rem;
@@ -1188,7 +1398,7 @@ onMounted(loadDashboard)
   border-radius: 999px;
   white-space: nowrap;
 }
-
+ 
 .map-placeholder {
   position: relative;
   background: #F8FAF8;
@@ -1197,7 +1407,7 @@ onMounted(loadDashboard)
   padding: 1.5rem;
   overflow: hidden;
 }
-
+ 
 .map-bg-icon {
   position: absolute;
   right: 1rem;
@@ -1206,7 +1416,7 @@ onMounted(loadDashboard)
   color: #116D3E;
   opacity: 0.06;
 }
-
+ 
 .map-grid {
   position: relative;
   z-index: 1;
@@ -1214,7 +1424,7 @@ onMounted(loadDashboard)
   grid-template-columns: repeat(3, 1fr);
   gap: 0.8rem;
 }
-
+ 
 .map-card {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -1224,25 +1434,25 @@ onMounted(loadDashboard)
   cursor: pointer;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
-
+ 
 .map-card:hover { border-color: #116D3E; transform: translateY(-2px); }
-
+ 
 .map-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 4px;
 }
-
+ 
 .map-card-title { font-size: 0.82rem; font-weight: 700; color: #0F212F; }
-
+ 
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .status-green { background: #116D3E; }
 .status-amber { background: #D29539; }
 .status-red   { background: #C1473D; }
-
+ 
 .map-card-desc { font-size: 0.72rem; color: #5c6b64; }
-
+ 
 /* RESPONSIVE */
 @media (max-width: 1200px) {
   .metrics-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1250,7 +1460,7 @@ onMounted(loadDashboard)
   .col-span-2 { grid-column: span 1; }
   .map-grid { grid-template-columns: repeat(2, 1fr); }
 }
-
+ 
 @media (max-width: 768px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .row-grid-2 { grid-template-columns: 1fr; }
