@@ -381,8 +381,8 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ApexChart from 'vue3-apexcharts'
 
-const LAT = 16.722848
-const LON = 121.684663
+const LAT = 15.48
+const LON = 120.60
 
 /* ---------------- AgriSure palette ---------------- */
 const palette = {

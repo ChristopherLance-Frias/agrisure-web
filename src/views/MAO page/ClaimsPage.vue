@@ -1,373 +1,429 @@
 <template>
   <div class="claims-page">
-    <div class="page-header">
-      <div class="header-inner">
-        <h2 class="page-title">Claims &amp; Indemnity</h2>
-        <p class="page-sub">Manage validated damage claims, PCIC results, and claiming schedules</p>
+    <header class="top-header no-print">
+      <div class="header-title-group">
+        <h1>Claims &amp; Indemnity</h1>
+        <p>Manage validated damage claims, PCIC results, and claiming schedules</p>
       </div>
-    </div>
 
-    <div class="season-card">
-      <div class="season-info">
-        <div class="season-icon" :class="currentSeason ? currentSeason.status : 'application_closed'">
-          {{ currentSeason && currentSeason.status === 'application_open' ? 'application open' : 'application closed' }}
+      <div class="header-actions">
+        <div class="v-divider"></div>
+
+        <!-- User Profile -->
+        <div class="user-profile">
+          <div class="user-avatar">
+            {{ currentUser?.initials || '?' }}
+          </div>
+          <div class="user-info">
+            <p class="user-name">{{ currentUser?.name || 'Loading...' }}</p>
+            <p class="user-role">{{ currentUser?.role || '' }}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="dashboard-body">
+      <div class="season-card">
+        <div class="season-info">
+          <div class="season-icon" :class="currentSeason ? currentSeason.status : 'application_closed'">
+            {{ currentSeason && currentSeason.status === 'application_open' ? 'application open' : 'application closed' }}
+          </div>
+        </div>
+
+        <div class="season-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: activeTab === 'current' }"
+            @click="setSeasonTab('current')"
+          >
+            Current Season
+          </button>
+
+          <select
+            class="toggle-select"
+            :class="{ active: activeTab === 'previous' }"
+            v-model="historySeasonId"
+            @change="selectPreviousSeason"
+          >
+            <option value="">Previous Seasons</option>
+            <option
+              v-for="season in previousSeasons"
+              :key="season.id"
+              :value="season.id"
+            >
+              {{ season.season_name || season.name }}
+            </option>
+          </select>
         </div>
       </div>
 
-      <div class="season-toggle">
+      <div class="status-tab-bar">
         <button
-          class="toggle-btn"
-          :class="{ active: activeTab === 'current' }"
-          @click="setSeasonTab('current')"
+          v-for="tab in statusTabs"
+          :key="tab.key"
+          class="status-tab"
+          :class="{ active: activeStatusTab === tab.key }"
+          @click="switchStatusTab(tab.key)"
         >
-          Current Season
+          <span class="tab-dot" :class="tab.dot"></span>
+          {{ tab.label }}
+          <span class="tab-count">{{ countByStatus(tab.key) }}</span>
         </button>
+      </div>
 
-        <select
-          class="toggle-select"
-          :class="{ active: activeTab === 'previous' }"
-          v-model="historySeasonId"
-          @change="selectPreviousSeason"
-        >
-          <option value="">Previous Seasons</option>
-          <option
-            v-for="season in previousSeasons"
-            :key="season.id"
-            :value="season.id"
-          >
-            {{ season.season_name || season.name }}
+      <div class="filters-row">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+
+          <input
+            v-model="search"
+            class="search-input"
+            type="text"
+            placeholder="Search farmer, farm, or crop..."
+          />
+        </div>
+
+        <select v-model="filterCrop" class="filter-select">
+          <option value="">All Crops</option>
+          <option v-for="c in cropOptions" :key="c" :value="c">
+            {{ c }}
           </option>
         </select>
-      </div>
-    </div>
 
-    <div class="status-tab-bar">
-      <button
-        v-for="tab in statusTabs"
-        :key="tab.key"
-        class="status-tab"
-        :class="{ active: activeStatusTab === tab.key }"
-        @click="switchStatusTab(tab.key)"
-      >
-        <span class="tab-dot" :class="tab.dot"></span>
-        {{ tab.label }}
-        <span class="tab-count">{{ countByStatus(tab.key) }}</span>
-      </button>
-    </div>
-
-    <div class="filters-row">
-      <div class="search-wrap">
-        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-
-        <input
-          v-model="search"
-          class="search-input"
-          type="text"
-          placeholder="Search farmer, farm, or crop..."
-        />
+        <button class="btn-outline btn-compact" @click="resetFilters">
+          Reset
+        </button>
       </div>
 
-      <select v-model="filterCrop" class="filter-select">
-        <option value="">All Crops</option>
-        <option v-for="c in cropOptions" :key="c" :value="c">
-          {{ c }}
-        </option>
-      </select>
+      <div class="metrics-grid claims-metrics">
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Total</span>
+          </div>
+          <div class="card-value">{{ activeClaims.length }}</div>
+        </div>
 
-      <button class="btn-reset" @click="resetFilters">
-        Reset
-      </button>
-    </div>
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Validated</span>
+            <span class="icon-badge blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </span>
+          </div>
+          <div class="card-value">{{ countByStatus('validated_by_mao') }}</div>
+        </div>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <span class="stat-label">Total</span>
-        <span class="stat-value">{{ activeClaims.length }}</span>
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Submitted to PCIC</span>
+            <span class="icon-badge amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9" />
+                <polyline points="12 7 12 12 16 14" />
+              </svg>
+            </span>
+          </div>
+          <div class="card-value">{{ countByStatus('submitted_to_pcic') }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Ready for Claiming</span>
+            <span class="icon-badge purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M2 12h20" />
+              </svg>
+            </span>
+          </div>
+          <div class="card-value">{{ countByStatus('ready_for_claiming') }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Claimed</span>
+            <span class="icon-badge green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </span>
+          </div>
+          <div class="card-value">{{ countByStatus('claimed') }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-label">Rejected</span>
+            <span class="icon-badge red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </span>
+          </div>
+          <div class="card-value">{{ countByStatus('rejected') }}</div>
+        </div>
       </div>
 
-      <div class="stat-card">
-        <span class="stat-label">Validated</span>
-        <span class="stat-value blue">{{ countByStatus('validated_by_mao') }}</span>
+      <div v-if="loading" class="state-box">
+        <div class="spinner"></div>
+        <span>Loading claims...</span>
       </div>
 
-      <div class="stat-card">
-        <span class="stat-label">Submitted to PCIC</span>
-        <span class="stat-value mao">{{ countByStatus('submitted_to_pcic') }}</span>
+      <div v-else-if="errorMessage" class="state-box error-box">
+        <span>{{ errorMessage }}</span>
       </div>
 
-      <div class="stat-card">
-        <span class="stat-label">Ready for Claiming</span>
-        <span class="stat-value teal">{{ countByStatus('ready_for_claiming') }}</span>
-      </div>
+      <div v-else class="panel table-wrap">
+        <div v-if="filtered.length === 0" class="empty-state">
+          No claims match your filters.
+        </div>
 
-      <div class="stat-card">
-        <span class="stat-label">Claimed</span>
-        <span class="stat-value purple">{{ countByStatus('claimed') }}</span>
-      </div>
-
-      <div class="stat-card">
-        <span class="stat-label">Rejected</span>
-        <span class="stat-value rejected">{{ countByStatus('rejected') }}</span>
-      </div>
-    </div>
-
-    <div v-if="loading" class="state-box">
-      <div class="spinner"></div>
-      <span>Loading claims...</span>
-    </div>
-
-    <div v-else-if="errorMessage" class="state-box error-box">
-      <span>{{ errorMessage }}</span>
-    </div>
-
-    <div v-else class="table-wrap">
-      <div v-if="filtered.length === 0" class="empty-state">
-        No claims match your filters.
-      </div>
-
-      <table v-else class="report-table">
-        <thead>
-          <tr>
-            <th v-if="canBulkAct">
-              <input
-                type="checkbox"
-                :checked="allFilteredSelected"
-                @change="toggleSelectAllFiltered"
-              />
-            </th>
-            <th></th>
-            <th>Farmer</th>
-            <th>Farm</th>
-            <th>Crop</th>
-            <th>Season</th>
-            <th>Amount</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <template v-for="claim in filtered" :key="claim.id">
-            <tr
-              class="main-row"
-              :class="{
-                expanded: expandedId === claim.id,
-                selected: isSelected(claim.id)
-              }"
-              @click="toggleExpand(claim.id)"
-            >
-              <td v-if="canBulkAct" @click.stop>
+        <table v-else class="data-table">
+          <thead>
+            <tr>
+              <th v-if="canBulkAct">
                 <input
                   type="checkbox"
-                  :checked="isSelected(claim.id)"
-                  @change="toggleSelection(claim.id)"
+                  :checked="allFilteredSelected"
+                  @change="toggleSelectAllFiltered"
                 />
-              </td>
-
-              <td class="expand-cell">
-                <span class="expand-icon" :class="{ open: expandedId === claim.id }">
-                  ▶
-                </span>
-              </td>
-
-              <td class="farmer-cell">
-                <div class="farmer-name">
-                  {{ farmerName(claim) }}
-                </div>
-
-                <div class="farmer-sub">
-                  {{ farmerContact(claim) }}
-                </div>
-              </td>
-              <td>{{ claim.damage_report?.insurance_application?.farm?.farm_name || '—' }}</td>
-              <td>{{ claim.damage_report?.insurance_application?.farm?.crop_type || '—' }}</td>
-              <td>
-                <span class="season-pill">
-                  {{ claim.damage_report?.insurance_application?.season?.name || 'Unknown' }}
-                </span>
-              </td>
-              <td>{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</td>
-
-              <td>
-                <span class="status-badge" :class="claim.status">
-                  {{ statusLabel(claim.status) }}
-                </span>
-              </td>
+              </th>
+              <th></th>
+              <th>Farmer</th>
+              <th>Farm</th>
+              <th>Crop</th>
+              <th>Season</th>
+              <th>Amount</th>
+              <th>Status</th>
             </tr>
+          </thead>
 
-            <tr v-if="expandedId === claim.id" class="detail-row">
-              <td colspan="8">
-                <div class="detail-box">
-                  <div class="detail-content">
-                    <div class="info-section">
-                      <div class="detail-section">
-                        <div class="section-title">Farmer Information</div>
+          <tbody>
+            <template v-for="claim in filtered" :key="claim.id">
+              <tr
+                class="main-row"
+                :class="{
+                  expanded: expandedId === claim.id,
+                  selected: isSelected(claim.id)
+                }"
+                @click="toggleExpand(claim.id)"
+              >
+                <td v-if="canBulkAct" @click.stop>
+                  <input
+                    type="checkbox"
+                    :checked="isSelected(claim.id)"
+                    @change="toggleSelection(claim.id)"
+                  />
+                </td>
 
-                        <div class="detail-grid">
-                          <div class="detail-item">
-                            <span class="detail-label">Full Name</span>
-                            <span class="detail-val">{{ farmerName(claim) }}</span>
-                          </div>
+                <td class="expand-cell">
+                  <span class="expand-icon" :class="{ open: expandedId === claim.id }">
+                    ▶
+                  </span>
+                </td>
 
-                          <div class="detail-item">
-                            <span class="detail-label">Contact</span>
-                            <span class="detail-val">{{ farmerContact(claim) }}</span>
-                          </div>
+                <td class="farmer-cell">
+                  <div class="farmer-name font-bold">
+                    {{ farmerName(claim) }}
+                  </div>
 
-                          <div class="detail-item">
-                            <span class="detail-label">Address</span>
-                            <span class="detail-val">{{ farmerAddress(claim) }}</span>
-                          </div>
-                        </div>
-                      </div>
+                  <div class="farmer-sub">
+                    {{ farmerContact(claim) }}
+                  </div>
+                </td>
+                <td>{{ claim.damage_report?.insurance_application?.farm?.farm_name || '—' }}</td>
+                <td>{{ claim.damage_report?.insurance_application?.farm?.crop_type || '—' }}</td>
+                <td>
+                  <span class="season-pill">
+                    {{ claim.damage_report?.insurance_application?.season?.name || 'Unknown' }}
+                  </span>
+                </td>
+                <td>{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</td>
 
-                      <div class="detail-section">
-                        <div class="section-title">Farm &amp; Damage Information</div>
+                <td>
+                  <span class="status-pill" :class="claim.status">
+                    {{ statusLabel(claim.status) }}
+                  </span>
+                </td>
+              </tr>
 
-                        <div class="detail-grid">
-                          <div class="detail-item">
-                            <span class="detail-label">Farm</span>
-                            <span class="detail-val">
-                              {{ claim.damage_report?.insurance_application?.farm?.farm_name || '—' }}
-                            </span>
-                          </div>
+              <tr v-if="expandedId === claim.id" class="detail-row">
+                <td colspan="8">
+                  <div class="detail-box">
+                    <div class="detail-content">
+                      <div class="info-section">
+                        <div class="detail-section">
+                          <div class="section-title">Farmer Information</div>
 
-                          <div class="detail-item">
-                            <span class="detail-label">Crop Type</span>
-                            <span class="detail-val">
-                              {{ claim.damage_report?.insurance_application?.farm?.crop_type || '—' }}
-                            </span>
-                          </div>
+                          <div class="summary-grid">
+                            <div class="summary-card">
+                              <div class="summary-label">Full Name</div>
+                              <div class="summary-value text-dark">{{ farmerName(claim) }}</div>
+                            </div>
 
-                          <div class="detail-item">
-                            <span class="detail-label">Farm Area</span>
-                            <span class="detail-val">
-                              {{ claim.damage_report?.insurance_application?.farm?.farm_area ? claim.damage_report.insurance_application.farm.farm_area + ' ha' : '—' }}
-                            </span>
-                          </div>
+                            <div class="summary-card">
+                              <div class="summary-label">Contact</div>
+                              <div class="summary-value text-dark">{{ farmerContact(claim) }}</div>
+                            </div>
 
-                          <div class="detail-item">
-                            <span class="detail-label">Season</span>
-                            <span class="detail-val">
-                              {{ claim.damage_report?.insurance_application?.season?.name || '—' }}
-                            </span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Damage Date</span>
-                            <span class="detail-val">{{ formatDate(claim.damage_report?.damage_date) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Damage Cause</span>
-                            <span class="detail-val">{{ claim.damage_report?.damage_cause || '—' }}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="detail-section">
-                        <div class="section-title">Claim / Indemnity Information</div>
-
-                        <div class="detail-grid">
-                          <div class="detail-item">
-                            <span class="detail-label">Amount</span>
-                            <span class="detail-val">{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Claiming Date</span>
-                            <span class="detail-val">{{ formatDate(claim.claim_schedule) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Claiming Venue</span>
-                            <span class="detail-val">{{ claim.claim_venue || '—' }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Remarks</span>
-                            <span class="detail-val">{{ claim.pcic_remarks || '—' }}</span>
+                            <div class="summary-card col-span-full">
+                              <div class="summary-label">Address</div>
+                              <div class="summary-value text-dark">{{ farmerAddress(claim) }}</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div class="detail-section">
-                        <div class="section-title">Claim Action</div>
+                        <div class="detail-section">
+                          <div class="section-title">Farm &amp; Damage Information</div>
 
-                        <div class="status-update-row" @click.stop>
-                          <span class="status-badge" :class="claim.status">
-                            {{ statusLabel(claim.status) }}
-                          </span>
+                          <div class="summary-grid">
+                            <div class="summary-card">
+                              <div class="summary-label">Farm</div>
+                              <div class="summary-value text-dark">
+                                {{ claim.damage_report?.insurance_application?.farm?.farm_name || '—' }}
+                              </div>
+                            </div>
 
-                          <template v-if="claim.status === 'validated_by_mao'">
-                            <button
-                              class="action-btn approved"
-                              @click="submitToPcic(claim)"
-                              :disabled="updatingId === claim.id"
-                            >
-                              Submit to PCIC
-                            </button>
-                          </template>
+                            <div class="summary-card">
+                              <div class="summary-label">Crop Type</div>
+                              <div class="summary-value text-dark">
+                                {{ claim.damage_report?.insurance_application?.farm?.crop_type || '—' }}
+                              </div>
+                            </div>
 
-                          <template v-else-if="claim.status === 'submitted_to_pcic'">
-                            <button
-                              class="action-btn approved"
-                              @click="openPcicModal(claim, 'approved')"
-                              :disabled="updatingId === claim.id"
-                            >
-                              PCIC Approved
-                            </button>
+                            <div class="summary-card">
+                              <div class="summary-label">Farm Area</div>
+                              <div class="summary-value text-dark">
+                                {{ claim.damage_report?.insurance_application?.farm?.farm_area ? claim.damage_report.insurance_application.farm.farm_area + ' ha' : '—' }}
+                              </div>
+                            </div>
 
-                            <button
-                              class="action-btn rejected"
-                              @click="openPcicModal(claim, 'rejected')"
-                              :disabled="updatingId === claim.id"
-                            >
-                              PCIC Rejected
-                            </button>
-                          </template>
+                            <div class="summary-card">
+                              <div class="summary-label">Season</div>
+                              <div class="summary-value text-dark">
+                                {{ claim.damage_report?.insurance_application?.season?.name || '—' }}
+                              </div>
+                            </div>
 
-                          <template v-else-if="claim.status === 'ready_for_claiming'">
-                            <button
-                              class="action-btn approved"
-                              @click="markClaimed(claim)"
-                              :disabled="updatingId === claim.id"
-                            >
-                              Mark as Claimed
-                            </button>
-                          </template>
+                            <div class="summary-card">
+                              <div class="summary-label">Damage Date</div>
+                              <div class="summary-value text-dark">{{ formatDate(claim.damage_report?.damage_date) }}</div>
+                            </div>
 
-                          <template v-else-if="claim.status === 'claimed'">
-                            <span class="locked-pill approved">
-                              🔒 Claimed — Locked.
+                            <div class="summary-card">
+                              <div class="summary-label">Damage Cause</div>
+                              <div class="summary-value text-dark">{{ claim.damage_report?.damage_cause || '—' }}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="detail-section">
+                          <div class="section-title">Claim / Indemnity Information</div>
+
+                          <div class="summary-grid">
+                            <div class="summary-card">
+                              <div class="summary-label">Amount</div>
+                              <div class="summary-value text-dark">{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</div>
+                            </div>
+
+                            <div class="summary-card">
+                              <div class="summary-label">Claiming Date</div>
+                              <div class="summary-value text-dark">{{ formatDate(claim.claim_schedule) }}</div>
+                            </div>
+
+                            <div class="summary-card">
+                              <div class="summary-label">Claiming Venue</div>
+                              <div class="summary-value text-dark">{{ claim.claim_venue || '—' }}</div>
+                            </div>
+
+                            <div class="summary-card">
+                              <div class="summary-label">Remarks</div>
+                              <div class="summary-value text-dark">{{ claim.pcic_remarks || '—' }}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="detail-section">
+                          <div class="section-title">Claim Action</div>
+
+                          <div class="status-update-row" @click.stop>
+                            <span class="status-pill" :class="claim.status">
+                              {{ statusLabel(claim.status) }}
                             </span>
-                          </template>
 
-                          <template v-else-if="claim.status === 'rejected'">
-                            <span class="locked-pill rejected">
-                              🔒 Rejected — Locked. This claim can no longer be changed.
+                            <template v-if="claim.status === 'validated_by_mao'">
+                              <button
+                                class="btn-primary btn-compact"
+                                @click="submitToPcic(claim)"
+                                :disabled="updatingId === claim.id"
+                              >
+                                Submit to PCIC
+                              </button>
+                            </template>
+
+                            <template v-else-if="claim.status === 'submitted_to_pcic'">
+                              <button
+                                class="btn-primary btn-compact"
+                                @click="openPcicModal(claim, 'approved')"
+                                :disabled="updatingId === claim.id"
+                              >
+                                PCIC Approved
+                              </button>
+
+                              <button
+                                class="btn-danger btn-compact"
+                                @click="openPcicModal(claim, 'rejected')"
+                                :disabled="updatingId === claim.id"
+                              >
+                                PCIC Rejected
+                              </button>
+                            </template>
+
+                            <template v-else-if="claim.status === 'ready_for_claiming'">
+                              <button
+                                class="btn-primary btn-compact"
+                                @click="markClaimed(claim)"
+                                :disabled="updatingId === claim.id"
+                              >
+                                Mark as Claimed
+                              </button>
+                            </template>
+
+                            <template v-else-if="claim.status === 'claimed'">
+                              <span class="locked-pill approved">
+                                🔒 Claimed — Locked.
+                              </span>
+                            </template>
+
+                            <template v-else-if="claim.status === 'rejected'">
+                              <span class="locked-pill rejected">
+                                🔒 Rejected — Locked. This claim can no longer be changed.
+                              </span>
+                            </template>
+
+                            <span v-if="updatingId === claim.id" class="updating-text">
+                              Updating...
                             </span>
-                          </template>
 
-                          <span v-if="updatingId === claim.id" class="updating-text">
-                            Updating...
-                          </span>
-
-                          <span v-if="updateSuccessId === claim.id" class="success-text">
-                            ✓ Updated
-                          </span>
+                            <span v-if="updateSuccessId === claim.id" class="success-text">
+                              ✓ Updated
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <transition name="float-bar">
@@ -380,7 +436,7 @@
         <div class="bulk-actions">
           <button
             v-if="activeStatusTab === 'validated_by_mao'"
-            class="action-btn approved"
+            class="btn-primary btn-compact"
             @click="bulkSubmitToPcic"
             :disabled="bulkUpdating"
           >
@@ -389,14 +445,14 @@
 
           <button
             v-else-if="activeStatusTab === 'ready_for_claiming'"
-            class="action-btn approved"
+            class="btn-primary btn-compact"
             @click="bulkMarkClaimed"
             :disabled="bulkUpdating"
           >
             {{ bulkUpdating ? 'Updating...' : 'Mark Selected as Claimed' }}
           </button>
 
-          <button class="btn-reset" @click="clearSelection">
+          <button class="link-btn-muted" @click="clearSelection">
             Clear
           </button>
         </div>
@@ -441,8 +497,8 @@
           ></textarea>
 
           <div class="modal-actions">
-            <button class="btn-reset" @click="showPcicModal = false">Cancel</button>
-            <button class="action-btn approved" @click="savePcicResult">
+            <button class="btn-outline btn-compact" @click="showPcicModal = false">Cancel</button>
+            <button class="btn-primary btn-compact" @click="savePcicResult">
               Save Result
             </button>
           </div>
@@ -508,6 +564,8 @@ export default {
       },
 
       statusTabs: STATUS_TABS,
+      currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
+
     }
   },
 
@@ -938,702 +996,671 @@ export default {
 </script>
 
 <style scoped>
+
+* { box-sizing: border-box; }
+
 .claims-page {
-  padding: 0 32px 100px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #F8FAF8;
   min-height: 100vh;
-  background: #F0F4F0;
+  display: flex;
+  flex-direction: column;
 }
 
-.page-header {
+/* TOP HEADER */
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
   padding: 0px 15px;
-  background: linear-gradient(120deg, #1A3320 0%, #1E3A8A 100%);
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.header-inner {
-  max-width: 100%;
-}
-
-.page-title {
-  font-size: 21px;
+.header-title-group h1 {
+  font-size: 18px;
   font-weight: 700;
-  color: #FFFFFF;
-  margin-bottom: 4px;
+  color: #0F212F;
   letter-spacing: -0.01em;
 }
 
-.page-sub {
-  font-size: 13px;
-  color: rgba(255,255,255,0.72);
+.header-title-group p {
+  font-size: 12px;
+  color: #5c6b64;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #E7F0EC;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F212F;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* BODY */
+.dashboard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* SEASON CARD */
 .season-card {
   background: #FFFFFF;
-  border-radius: 14px;
-  padding: 16px 20px;
-  margin-bottom: 18px;
-  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
+  border: 1px solid #EAF1EC;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 14px;
-}
-
-.season-info {
-  display: flex;
-  gap: 24px;
-  align-items: center;
 }
 
 .season-icon {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  background: #F0FDF4;
-  padding: 10px;
-  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
 }
 
-.season-icon.completed, .season-icon.closed {
-  background: #f1f5f9;
+.season-icon.application_open {
+  background: rgba(17, 109, 62, 0.1);
+  color: #116D3E;
+}
+
+.season-icon.application_closed {
+  background: rgba(193, 71, 61, 0.1);
+  color: #C1473D;
 }
 
 .season-toggle {
   display: flex;
-  background: #F0F4F0;
+  align-items: center;
+  gap: 6px;
+  background-color: #F1F6F3;
+  border: 1px solid #E7F0EC;
   border-radius: 10px;
   padding: 3px;
-  gap: 2px;
 }
 
 .toggle-btn {
-  border: none;
-  background: transparent;
-  padding: 7px 14px;
   font-size: 12px;
-  font-weight: 700;
-  color: #1E3A8A;
-  cursor: pointer;
+  font-weight: 600;
+  color: #5c6b64;
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  white-space: nowrap;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
+.toggle-btn:hover { color: #0F212F; }
+
 .toggle-btn.active {
-  background: #FFFFFF;
-  color: #1A3320;
-  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
+  background-color: #FFFFFF;
+  color: #116D3E;
+  box-shadow: 0 1px 3px rgba(15, 33, 47, 0.08);
 }
 
 .toggle-select {
-  border: none;
-  background: transparent;
-  padding: 7px 14px;
   font-size: 12px;
-  font-weight: 700;
-  color: #1E3A8A;
-  cursor: pointer;
+  font-weight: 600;
+  color: #5c6b64;
+  background-color: transparent;
+  border: none;
   border-radius: 8px;
-  white-space: nowrap;
+  padding: 6px 10px;
+  cursor: pointer;
   outline: none;
+  transition: all 0.15s ease;
 }
+
+.toggle-select:hover { color: #0F212F; }
 
 .toggle-select.active {
-  background: #FFFFFF;
-  color: #1A3320;
-  box-shadow: 0 1px 3px rgba(26,51,32,0.15);
+  background-color: #FFFFFF;
+  color: #116D3E;
+  box-shadow: 0 1px 3px rgba(15, 33, 47, 0.08);
 }
 
+/* STATUS TAB BAR */
 .status-tab-bar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
 
 .status-tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  border: 1.5px solid #e2e8f0;
-  background: #FFFFFF;
-  border-radius: 999px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1E3A8A;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5c6b64;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.status-tab:hover {
-  border-color: #34A853;
-}
+.status-tab:hover { background: #F1F6F2; color: #0F212F; }
 
 .status-tab.active {
-  background: linear-gradient(120deg, #1A3320, #34A853);
-  border-color: transparent;
-  color: #FFFFFF;
+  background: #F1F6F2;
+  color: #116D3E;
 }
 
-.tab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.tab-dot.amber { background: #D97706; }
-.tab-dot.green { background: #34A853; }
-.tab-dot.red { background: #DC2626; }
-.tab-dot.blue { background: #1E3A8A; }
-.tab-dot.teal { background: #0f766e; }
-.tab-dot.purple { background: #7C3AED; }
-
-.status-tab.active .tab-dot {
-  background: #FFFFFF;
-}
+.tab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.tab-dot.green  { background: #116D3E; }
+.tab-dot.amber  { background: #D29539; }
+.tab-dot.blue   { background: #2E6F8E; }
+.tab-dot.purple { background: #6B5B95; }
+.tab-dot.red    { background: #C1473D; }
 
 .tab-count {
-  background: rgba(26,51,32,0.08);
-  color: inherit;
-  font-size: 11px;
-  padding: 1px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
   border-radius: 999px;
+  background: rgba(15, 33, 47, 0.06);
+  color: #5c6b64;
 }
 
 .status-tab.active .tab-count {
-  background: rgba(255,255,255,0.25);
+  background: rgba(17, 109, 62, 0.14);
+  color: #116D3E;
 }
 
+/* FILTERS ROW */
 .filters-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .search-wrap {
   position: relative;
   flex: 1;
-  min-width: 200px;
+  min-width: 220px;
 }
 
 .search-icon {
   position: absolute;
-  left: 11px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: #94a3b8;
 }
 
 .search-input {
   width: 100%;
   padding: 9px 12px 9px 34px;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #E0EAE3;
   border-radius: 9px;
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  color: #0F212F;
   background: #FFFFFF;
   outline: none;
-  box-sizing: border-box;
+  transition: border-color 0.15s ease;
 }
 
-.search-input:focus {
-  border-color: #34A853;
-}
+.search-input:focus { border-color: #116D3E; }
 
 .filter-select {
   padding: 9px 12px;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #E0EAE3;
   border-radius: 9px;
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  color: #0F212F;
   background: #FFFFFF;
+  cursor: pointer;
   outline: none;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
-.filter-select:focus {
-  border-color: #34A853;
-}
+.btn-compact { padding: 8px 14px; font-size: 0.78rem; }
 
-.btn-reset {
-  padding: 9px 16px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9px;
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
-  background: #FFFFFF;
-  color: #6b7280;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.btn-reset:hover {
-  border-color: #34A853;
-  color: #1A3320;
-}
-
-.stats-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.stat-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 12px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 100px;
-  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
-}
-
-.stat-label {
-  font-size: 11px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1A3320;
-}
-
-.stat-value.mao { color: #D97706; }
-.stat-value.blue { color: #1E3A8A; }
-.stat-value.teal { color: #0f766e; }
-.stat-value.purple { color: #7C3AED; }
-.stat-value.rejected { color: #DC2626; }
-
-.state-box {
+.btn-outline {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 48px;
+  gap: 8px;
+  padding: 10px;
   background: #FFFFFF;
-  border-radius: 14px;
-  font-size: 14px;
-  color: #4a7c59;
+  color: #0F212F;
+  border: 1.5px solid #E0EAE3;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn-outline:hover { border-color: #116D3E; background: #F1F6F2; }
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
 
-.error-box {
-  color: #b91c1c;
+.btn-danger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #C1473D, #9c342c);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(193, 71, 61, 0.25);
 }
 
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(52,168,83,0.2);
-  border-top-color: #34A853;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+.link-btn-muted {
+  background: none;
+  border: none;
+  color: #5c6b64;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-btn-muted:hover { color: #116D3E; }
+
+/* METRICS GRID (claims: 6 cols) */
+.metrics-grid.claims-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+}
+
+.metric-card {
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 16px;
+  padding: 1.2rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5c6b64;
+}
+
+.icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.icon-badge svg { width: 18px; height: 18px; display: block; }
+
+.icon-badge.green  { background: rgba(17, 109, 62, 0.12); color: #116D3E; }
+.icon-badge.blue   { background: rgba(46, 111, 142, 0.12); color: #2E6F8E; }
+.icon-badge.amber  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
+.icon-badge.red    { background: rgba(193, 71, 61, 0.12); color: #C1473D; }
+.icon-badge.purple { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
+
+.card-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0F212F;
 }
 
-.table-wrap {
+/* PANEL / TABLE */
+.panel {
   background: #FFFFFF;
-  border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(26,51,32,0.08);
-  overflow: hidden;
+  border: 1px solid #EAF1EC;
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
 
-.empty-state {
-  padding: 48px;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 14px;
-}
+.table-wrap { overflow-x: auto; }
 
-.report-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
+.data-table { width: 100%; border-collapse: collapse; }
 
-.report-table thead tr {
-  background: #F0F4F0;
-  border-bottom: 1.5px solid #e5e7eb;
-}
-
-.report-table th {
-  padding: 12px 14px;
+.data-table thead th {
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
-}
-
-.main-row {
-  border-bottom: 1px solid #F0F4F0;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.main-row:hover {
-  background: #F0F4F0;
-}
-
-.main-row.expanded {
-  background: #F0FDF4;
-  border-bottom: none;
-}
-
-.main-row.selected {
-  background: #ecfdf5;
-}
-
-.report-table td {
-  padding: 13px 14px;
-  color: #1A3320;
-  vertical-align: middle;
-}
-
-.expand-cell {
-  width: 36px;
-  text-align: center;
-}
-
-.expand-icon {
-  display: inline-block;
-  font-size: 10px;
-  color: #9ca3af;
-  transition: transform 0.2s;
-}
-
-.expand-icon.open {
-  transform: rotate(90deg);
-  color: #34A853;
-}
-
-.farmer-name {
-  font-weight: 600;
-  color: #1A3320;
-}
-
-.farmer-sub {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
-}
-
-.season-pill {
-  background: #f1f5f9;
-  color: #475569;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.status-badge.validated_by_mao {
-  background: #dbeafe;
-  color: #1E3A8A;
-}
-
-.status-badge.submitted_to_pcic {
-  background: #fef3c7;
-  color: #D97706;
-}
-
-.status-badge.ready_for_claiming {
-  background: #ccfbf1;
-  color: #0f766e;
-}
-
-.status-badge.claimed {
-  background: #ede9fe;
-  color: #7C3AED;
-}
-
-.status-badge.rejected {
-  background: #fee2e2;
-  color: #DC2626;
-}
-
-.detail-row td {
-  padding: 0;
-  background: #F0FDF4;
-  border-bottom: 1.5px solid #d1fae5;
-}
-
-.detail-box {
-  padding: 20px 28px;
-}
-
-.detail-content {
-  display: flex;
-  gap: 28px;
-}
-
-.info-section {
-  flex: 1;
-  min-width: 0;
-}
-
-.detail-section {
-  margin-bottom: 20px;
-}
-
-.detail-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
-  font-size: 11px;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #34A853;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #d1fae5;
+  letter-spacing: 0.4px;
+  color: #5c6b64;
+  padding: 8px 10px;
+  background: #F1F6F2;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
+.data-table tbody td {
+  font-size: 0.82rem;
+  color: #0F212F;
+  padding: 10px;
+  border-bottom: 1px solid #F1F6F2;
 }
 
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
+.font-bold { font-weight: 700; }
 
-.detail-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9ca3af;
-}
+.main-row { cursor: pointer; transition: background 0.15s ease; }
+.main-row:hover { background: #F8FAF8; }
+.main-row.expanded { background: #F1F6F2; }
+.main-row.selected { background: rgba(17, 109, 62, 0.06); }
 
-.detail-val {
-  font-size: 13px;
+.expand-cell { width: 24px; }
+.expand-icon {
+  display: inline-block;
+  font-size: 0.65rem;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
+}
+.expand-icon.open { transform: rotate(90deg); color: #116D3E; }
+
+.farmer-name { font-size: 0.85rem; color: #0F212F; }
+.farmer-sub { font-size: 0.72rem; color: #5c6b64; margin-top: 2px; }
+
+.season-pill {
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #1A3320;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(46, 111, 142, 0.1);
+  color: #2E6F8E;
 }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill.validated_by_mao   { background: rgba(46, 111, 142, 0.1); color: #2E6F8E; }
+.status-pill.submitted_to_pcic  { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
+.status-pill.ready_for_claiming { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
+.status-pill.claimed            { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
+.status-pill.rejected           { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
+
+/* stat-value color helpers (used in stats-row if kept) */
+.stat-value.blue    { color: #2E6F8E; }
+.stat-value.mao     { color: #AC7A2F; }
+.stat-value.teal    { color: #6B5B95; }
+.stat-value.purple  { color: #6B5B95; }
+.stat-value.rejected{ color: #C1473D; }
+
+/* DETAIL ROW */
+.detail-row td { padding: 0; border-bottom: 1px solid #F1F6F2; }
+
+.detail-box {
+  background: #F8FAF8;
+  padding: 1.25rem 1.5rem;
+}
+
+.detail-content { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.detail-section { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0F212F;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem;
+}
+
+.summary-card {
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 12px;
+  padding: 0.9rem;
+}
+
+.summary-label { font-size: 0.72rem; color: #5c6b64; margin-bottom: 4px; }
+.summary-value { font-size: 0.95rem; font-weight: 700; }
+.text-dark { color: #0F212F; }
+.col-span-full { grid-column: span 3; }
 
 .status-update-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-}
-
-.updating-text {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.success-text {
-  font-size: 12px;
-  color: #16a34a;
-  font-weight: 600;
 }
 
 .locked-pill {
-  font-size: 12px;
+  font-size: 0.76rem;
   font-weight: 600;
-  padding: 7px 12px;
+  padding: 6px 12px;
   border-radius: 8px;
 }
+.locked-pill.approved { background: rgba(17, 109, 62, 0.08); color: #116D3E; }
+.locked-pill.rejected { background: rgba(193, 71, 61, 0.08); color: #C1473D; }
 
-.locked-pill.approved {
-  background: #F0FDF4;
-  color: #1A3320;
-  border: 1px solid #bbf7d0;
-}
+.updating-text { font-size: 0.76rem; color: #5c6b64; }
+.success-text { font-size: 0.76rem; color: #116D3E; font-weight: 600; }
 
-.locked-pill.rejected {
-  background: #fef2f2;
-  color: #7f1d1d;
-  border: 1px solid #fecaca;
-}
-
-.action-btn {
-  border: none;
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  color: #FFFFFF;
-}
-
-.action-btn.approved {
-  background: linear-gradient(120deg, #1A3320, #34A853);
-}
-
-.action-btn.rejected {
-  background: #DC2626;
-}
-
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.bulk-action-bar {
-  background: #F0FDF4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 18px;
+/* STATE BOX */
+.state-box {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 3rem;
+  color: #5c6b64;
+  font-size: 0.85rem;
+  background: #FFFFFF;
+  border: 1px solid #EAF1EC;
+  border-radius: 16px;
 }
 
+.error-box { color: #C1473D; }
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #E7F0EC;
+  border-top-color: #116D3E;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem;
+  color: #5c6b64;
+  font-size: 0.85rem;
+}
+
+/* BULK ACTION BAR */
 .bulk-action-bar.floating {
   position: fixed;
-  left: 50%;
   bottom: 24px;
+  left: 50%;
   transform: translateX(-50%);
-  z-index: 600;
-  margin-bottom: 0;
-  width: min(720px, calc(100% - 48px));
-  background: #FFFFFF;
-  border: 1px solid #d1fae5;
-  border-left: 4px solid #34A853;
-  box-shadow: 0 10px 30px rgba(26, 51, 32, 0.22), 0 2px 8px rgba(26, 51, 32, 0.12);
-}
-
-.float-bar-enter-active,
-.float-bar-leave-active {
-  transition: transform 0.22s ease, opacity 0.22s ease;
-}
-
-.float-bar-enter-from,
-.float-bar-leave-to {
-  transform: translateX(-50%) translateY(16px);
-  opacity: 0;
+  background: #0F212F;
+  color: #FFFFFF;
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 12px 30px rgba(15, 33, 47, 0.35);
+  z-index: 30;
 }
 
 .bulk-left {
   display: flex;
-  gap: 6px;
   align-items: center;
-  color: #1A3320;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 0.82rem;
 }
 
-.bulk-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.bulk-actions { display: flex; align-items: center; gap: 10px; }
 
+/* MODAL */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  z-index: 9999;
+  background: rgba(15, 33, 47, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  z-index: 50;
 }
 
 .small-modal {
-  width: min(460px, 100%);
   background: #FFFFFF;
   border-radius: 16px;
-  padding: 22px;
-  font-family: 'DM Sans', sans-serif;
+  padding: 1.5rem;
+  width: 380px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 20px 50px rgba(15, 33, 47, 0.25);
 }
 
 .small-modal h3 {
-  margin-top: 0;
-  color: #1A3320;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0F212F;
+  margin-bottom: 4px;
 }
 
 .small-modal label {
-  display: block;
-  margin-top: 14px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #1A3320;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #5c6b64;
+  margin-top: 4px;
 }
 
 .small-modal input,
-.small-modal select,
 .small-modal textarea {
-  width: 100%;
-  box-sizing: border-box;
   padding: 9px 12px;
+  border: 1px solid #E0EAE3;
   border-radius: 9px;
-  border: 1.5px solid #e2e8f0;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
+  font-size: 0.82rem;
+  color: #0F212F;
   outline: none;
+  font-family: inherit;
 }
 
 .small-modal input:focus,
-.small-modal textarea:focus {
-  border-color: #34A853;
-}
+.small-modal textarea:focus { border-color: #116D3E; }
 
-.small-modal textarea {
-  min-height: 90px;
-  resize: vertical;
-}
+.small-modal textarea { resize: vertical; min-height: 70px; }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 10px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+  .metrics-grid.claims-metrics { grid-template-columns: repeat(3, 1fr); }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .col-span-full { grid-column: span 2; }
 }
 
 @media (max-width: 768px) {
-  .claims-page {
-    padding: 0 16px 100px;
-  }
-
-  .page-header {
-    margin: 0 -16px 18px;
-    padding: 24px 16px;
-  }
-
-  .report-table {
-    font-size: 12px;
-  }
-
-  .detail-content {
-    flex-direction: column;
-  }
-
-  .bulk-action-bar.floating {
-    width: calc(100% - 24px);
-    bottom: 12px;
-  }
+  .metrics-grid.claims-metrics { grid-template-columns: repeat(2, 1fr); }
+  .summary-grid { grid-template-columns: 1fr; }
+  .col-span-full { grid-column: span 1; }
+  .filters-row { flex-direction: column; align-items: stretch; }
 }
 </style>
