@@ -467,11 +467,13 @@ export default {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
   padding: 0px 15px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.4rem;
 }
 
 .header-title-group h1 {

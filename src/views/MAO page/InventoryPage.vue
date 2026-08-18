@@ -1004,8 +1004,6 @@ export default {
 
 /* ================= HEADER (sticky / non-scrollable) ================= */
 .top-header {
-  position: sticky;
-  top: 0;
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid #E7F0EC;
