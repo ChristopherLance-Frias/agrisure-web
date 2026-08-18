@@ -89,13 +89,13 @@
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">Validated</span>
-        <span class="stat-value blue">{{ countByStatus('validated_by_mao') }}</span>
+        <span class="stat-label">MAO Review</span>
+        <span class="stat-value blue">{{ countByStatus('under_mao_review') }}</span>
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">Submitted to PCIC</span>
-        <span class="stat-value mao">{{ countByStatus('submitted_to_pcic') }}</span>
+        <span class="stat-label">PCIC Processing</span>
+        <span class="stat-value mao">{{ countByStatus('in_pcic_processing') }}</span>
       </div>
 
       <div class="stat-card">
@@ -110,7 +110,7 @@
 
       <div class="stat-card">
         <span class="stat-label">Rejected</span>
-        <span class="stat-value rejected">{{ countByStatus('rejected') }}</span>
+        <span class="stat-value rejected">{{ countByStatus('pcic_rejected') }}</span>
       </div>
     </div>
 
@@ -267,6 +267,76 @@
                         </div>
                       </div>
 
+                      <div class="detail-section" v-if="hasCas02Data(claim)">
+                        <div class="section-title">CAS-02 Filing Details</div>
+
+                        <div class="detail-grid">
+                          <div class="detail-item">
+                            <span class="detail-label">Crop Stage at Loss</span>
+                            <span class="detail-val">{{ casField(claim, 'crop_stage_at_loss') || '—' }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Area Damaged</span>
+                            <span class="detail-val">{{ casField(claim, 'area_damaged') ? casField(claim, 'area_damaged') + ' ha' : '—' }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Degree of Damage</span>
+                            <span class="detail-val">{{ casField(claim, 'degree_of_damage') ? casField(claim, 'degree_of_damage') + '%' : '—' }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Expected Harvest Date</span>
+                            <span class="detail-val">{{ formatDate(casField(claim, 'expected_harvest_date')) }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Claim Filed Date</span>
+                            <span class="detail-val">{{ formatDate(casField(claim, 'claim_filed_date')) }}</span>
+                          </div>
+                        </div>
+
+                        <div class="section-title cost-subtitle">Cost of Production Inputs at Time of Loss</div>
+
+                        <div class="detail-grid">
+                          <div class="detail-item">
+                            <span class="detail-label">Land Preparation</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_land_preparation') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Seedling / Transplanting</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_seedling_transplanting') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Seeds</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_seeds') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Fertilizer</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_fertilizer') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Chemicals</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_chemicals') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Others</span>
+                            <span class="detail-val">{{ casCost(claim, 'cost_others') }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Total Production Cost</span>
+                            <span class="detail-val total-cost">{{ casTotalCost(claim) }}</span>
+                          </div>
+                        </div>
+                      </div>
+
                       <div class="detail-section">
                         <div class="section-title">Claim / Indemnity Information</div>
 
@@ -301,17 +371,17 @@
                             {{ statusLabel(claim.status) }}
                           </span>
 
-                          <template v-if="claim.status === 'validated_by_mao'">
+                          <template v-if="claim.status === 'under_mao_review'">
                             <button
                               class="action-btn approved"
                               @click="submitToPcic(claim)"
                               :disabled="updatingId === claim.id"
                             >
-                              Submit to PCIC
+                              Submit to PCIC (Download CAS-02)
                             </button>
                           </template>
 
-                          <template v-else-if="claim.status === 'submitted_to_pcic'">
+                          <template v-else-if="claim.status === 'in_pcic_processing'">
                             <button
                               class="action-btn approved"
                               @click="openPcicModal(claim, 'approved')"
@@ -345,7 +415,7 @@
                             </span>
                           </template>
 
-                          <template v-else-if="claim.status === 'rejected'">
+                          <template v-else-if="claim.status === 'pcic_rejected'">
                             <span class="locked-pill rejected">
                               🔒 Rejected — Locked. This claim can no longer be changed.
                             </span>
@@ -379,7 +449,7 @@
 
         <div class="bulk-actions">
           <button
-            v-if="activeStatusTab === 'validated_by_mao'"
+            v-if="activeStatusTab === 'under_mao_review'"
             class="action-btn approved"
             @click="bulkSubmitToPcic"
             :disabled="bulkUpdating"
@@ -458,8 +528,8 @@ import axios from 'axios'
 const API_BASE = 'http://192.168.100.173:8000'
 
 const BATCHABLE_STATUSES = {
-  validated_by_mao: {
-    endpoint: 'submit-to-pcic',
+  under_mao_review: {
+    endpoint: 'downloadCas02Pdf',
   },
   ready_for_claiming: {
     endpoint: 'claimed',
@@ -467,11 +537,12 @@ const BATCHABLE_STATUSES = {
 }
 
 const STATUS_TABS = [
-  { key: 'validated_by_mao', label: 'Validated by MAO', dot: 'blue' },
-  { key: 'submitted_to_pcic', label: 'Submitted to PCIC', dot: 'amber' },
+  { key: 'pending_filing', label: 'Pending Filing', dot: 'amber' },
+  { key: 'under_mao_review', label: 'MAO Review', dot: 'blue' },
+  { key: 'in_pcic_processing', label: 'PCIC Processing', dot: 'amber' },
   { key: 'ready_for_claiming', label: 'Ready for Claiming', dot: 'teal' },
   { key: 'claimed', label: 'Claimed', dot: 'purple' },
-  { key: 'rejected', label: 'Rejected', dot: 'red' },
+  { key: 'pcic_rejected', label: 'Rejected', dot: 'red' },
 ]
 
 export default {
@@ -482,7 +553,7 @@ export default {
       claims: [],
       seasons: [],
       activeTab: 'current',
-      activeStatusTab: 'validated_by_mao',
+      activeStatusTab: 'under_mao_review',
       historySeasonId: '',
 
       search: '',
@@ -526,6 +597,7 @@ export default {
         return !isCurrentId && !isDefaultSeason;
       });
     },
+
     activeClaims() {
       var self = this
       var list = this.claims || []
@@ -718,24 +790,38 @@ export default {
     },
 
     async submitToPcic(claim) {
-      if (claim.status !== 'validated_by_mao') return
-      if (!confirm('Mark this claim as submitted to PCIC?')) return
+      if (claim.status !== 'under_mao_review') return
+      if (!confirm('Mark this claim as submitted to PCIC and download CAS-02?')) return
 
       this.updatingId = claim.id
       this.updateSuccessId = null
 
       try {
-        await axios.patch(
-          API_BASE + '/api/claims/' + claim.id + '/submit-to-pcic',
+        var headers = this.authHeaders()
+        headers.responseType = 'blob'
+
+        var response = await axios.patch(
+          API_BASE + '/api/claims/' + claim.id + '/downloadCas02Pdf',
           {},
-          this.authHeaders()
+          headers
         )
-        claim.status = 'submitted_to_pcic'
+
+        var blob = new Blob([response.data], { type: 'application/pdf' })
+        var url = window.URL.createObjectURL(blob)
+        var link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', 'CAS-02_Claim_' + claim.id + '.pdf')
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        claim.status = 'in_pcic_processing'
         this.updateSuccessId = claim.id
         this.flashSuccess(claim.id)
       } catch (err) {
         console.error(err)
-        alert(err.response?.data?.message || 'Failed to update claim.')
+        alert('Failed to update claim and download CAS-02 PDF.')
       } finally {
         this.updatingId = null
       }
@@ -792,7 +878,6 @@ export default {
       this.updatingId = this.pcicClaimId
 
       try {
-        // REMOVED 'var response =' from this line
         await axios.patch(
           API_BASE + '/api/claims/' + this.pcicClaimId + '/pcic-result',
           this.pcicForm,
@@ -804,7 +889,7 @@ export default {
         }, this)
 
         if (claim) {
-          claim.status = this.pcicForm.result === 'approved' ? 'ready_for_claiming' : 'rejected'
+          claim.status = this.pcicForm.result === 'approved' ? 'ready_for_claiming' : 'pcic_rejected'
           claim.claim_amount = this.pcicForm.claim_amount
           claim.claim_schedule = this.pcicForm.claim_schedule
           claim.claim_venue = this.pcicForm.claim_venue
@@ -822,30 +907,36 @@ export default {
         this.pcicClaimId = null
       }
     },
+
     async bulkSubmitToPcic() {
       if (this.selectedIds.length === 0) return
       if (!confirm('Mark ' + this.selectedIds.length + ' claim(s) as submitted to PCIC?')) return
-      await this.runBatchAction(BATCHABLE_STATUSES.validated_by_mao.endpoint, 'submitted_to_pcic')
+      await this.runBatchAction(BATCHABLE_STATUSES.under_mao_review.endpoint, 'in_pcic_processing', true)
     },
 
     async bulkMarkClaimed() {
       if (this.selectedIds.length === 0) return
       if (!confirm('Mark ' + this.selectedIds.length + ' claim(s) as claimed?')) return
-      await this.runBatchAction(BATCHABLE_STATUSES.ready_for_claiming.endpoint, 'claimed')
+      await this.runBatchAction(BATCHABLE_STATUSES.ready_for_claiming.endpoint, 'claimed', false)
     },
 
-    async runBatchAction(endpoint, newStatus) {
+    async runBatchAction(endpoint, newStatus, isFileResponse = false) {
       this.bulkUpdating = true
       var idsToProcess = this.selectedIds.slice()
       var failedIds = []
 
       try {
+        var headers = this.authHeaders()
+        if (isFileResponse) {
+          headers.responseType = 'blob'
+        }
+
         var results = await Promise.allSettled(
           idsToProcess.map((id) =>
             axios.patch(
               API_BASE + '/api/claims/' + id + '/' + endpoint,
               {},
-              this.authHeaders()
+              headers
             )
           )
         )
@@ -859,6 +950,18 @@ export default {
               return c.id === idsToProcess[i]
             })
             if (claim) claim.status = newStatus
+
+            if (isFileResponse && result.value?.data) {
+              var blob = new Blob([result.value.data], { type: 'application/pdf' })
+              var url = window.URL.createObjectURL(blob)
+              var link = document.createElement('a')
+              link.href = url
+              link.setAttribute('download', 'CAS-02_Claim_' + idsToProcess[i] + '.pdf')
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              window.URL.revokeObjectURL(url)
+            }
           }
         })
 
@@ -877,6 +980,62 @@ export default {
       } finally {
         this.bulkUpdating = false
       }
+    },
+
+    hasCas02Data(claim) {
+      if (!claim) return false
+      return !!(
+        claim.crop_stage_at_loss ||
+        claim.area_damaged ||
+        claim.degree_of_damage ||
+        claim.expected_harvest_date ||
+        claim.claim_filed_date ||
+        claim.damage_report?.crop_stage_at_loss ||
+        claim.damage_report?.area_damaged
+      )
+    },
+
+    casField(claim, fieldName) {
+      if (!claim) return null
+      if (claim[fieldName] !== undefined && claim[fieldName] !== null) {
+        return claim[fieldName]
+      }
+      return claim.damage_report?.[fieldName] ?? null
+    },
+
+    casCost(claim, fieldName) {
+      const val = this.casField(claim, fieldName)
+      if (val === null || val === undefined || val === '') return '—'
+      return this.peso(val)
+    },
+
+    casTotalCost(claim) {
+      const fields = [
+        'cost_land_preparation',
+        'cost_seedling_transplanting',
+        'cost_seeds',
+        'cost_fertilizer',
+        'cost_chemicals',
+        'cost_others',
+      ]
+
+      let total = 0
+      let hasValue = false
+
+      fields.forEach((field) => {
+        const val = Number(this.casField(claim, field))
+        if (!isNaN(val) && val > 0) {
+          total += val
+          hasValue = true
+        }
+      })
+
+      const explicitTotal = Number(this.casField(claim, 'total_production_cost'))
+      if (!hasValue && !isNaN(explicitTotal) && explicitTotal > 0) {
+        return this.peso(explicitTotal)
+      }
+
+      return hasValue ? this.peso(total) : '—'
     },
 
     farmerName(claim) {
@@ -903,11 +1062,12 @@ export default {
 
     statusLabel(status) {
       var map = {
-        validated_by_mao: 'Validated by MAO',
-        submitted_to_pcic: 'Submitted to PCIC',
+        pending_filing: 'Pending Filing',
+        under_mao_review: 'Under MAO Review',
+        in_pcic_processing: 'In PCIC Processing',
         ready_for_claiming: 'Ready for Claiming',
         claimed: 'Claimed',
-        rejected: 'Rejected',
+        pcic_rejected: 'PCIC Rejected',
       }
       return map[status] || status || '—'
     },
@@ -1349,12 +1509,17 @@ export default {
   white-space: nowrap;
 }
 
-.status-badge.validated_by_mao {
+.status-badge.pending_filing {
+  background: #fef3c7;
+  color: #D97706;
+}
+
+.status-badge.under_mao_review {
   background: #dbeafe;
   color: #1E3A8A;
 }
 
-.status-badge.submitted_to_pcic {
+.status-badge.in_pcic_processing {
   background: #fef3c7;
   color: #D97706;
 }
@@ -1369,7 +1534,7 @@ export default {
   color: #7C3AED;
 }
 
-.status-badge.rejected {
+.status-badge.pcic_rejected {
   background: #fee2e2;
   color: #DC2626;
 }
@@ -1636,4 +1801,357 @@ export default {
     bottom: 12px;
   }
 }
-</style>
+</style><template>
+  <div class="p-6 max-w-7xl mx-auto space-y-6">
+    <!-- Header & Filters -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Indemnity Claims Management</h1>
+        <p class="text-sm text-gray-500">Monitor, process, and track PCIC indemnity claims</p>
+      </div>
+
+      <!-- Season Filter Tabs -->
+      <div class="inline-flex rounded-lg bg-gray-100 p-1 border border-gray-200">
+        <button
+          @click="changeSeasonType('current')"
+          :class="[
+            'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+            seasonType === 'current'
+              ? 'bg-white text-emerald-700 shadow-sm font-semibold'
+              : 'text-gray-600 hover:text-gray-900'
+          ]"
+        >
+          Active Season
+        </button>
+        <button
+          @click="changeSeasonType('past')"
+          :class="[
+            'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+            seasonType === 'past'
+              ? 'bg-white text-emerald-700 shadow-sm font-semibold'
+              : 'text-gray-600 hover:text-gray-900'
+          ]"
+        >
+          Past Seasons
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert / Status Banner -->
+    <div v-if="successMessage" class="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 rounded-r shadow-sm">
+      {{ successMessage }}
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div v-if="loading" class="p-8 text-center text-gray-500">
+        Loading claims data...
+      </div>
+
+      <div v-else-if="claims.length === 0" class="p-8 text-center text-gray-500">
+        No claims found for this season selection.
+      </div>
+
+      <table v-else class="w-full text-left border-collapse">
+        <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold uppercase text-gray-600">
+          <tr>
+            <th class="py-3 px-4">Claim ID</th>
+            <th class="py-3 px-4">Farmer Name</th>
+            <th class="py-3 px-4">Season</th>
+            <th class="py-3 px-4">Filed Date</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+          <tr v-for="claim in claims" :key="claim.id" class="hover:bg-gray-50 transition-colors">
+            <td class="py-3 px-4 font-mono font-medium text-gray-900">
+              #{{ claim.id }}
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-medium text-gray-900">{{ formatFarmerName(claim) }}</div>
+              <div class="text-xs text-gray-500">{{ formatFarmerContact(claim) }}</div>
+            </td>
+            <td class="py-3 px-4">
+              {{ formatSeasonName(claim) }}
+            </td>
+            <td class="py-3 px-4">
+              {{ claim.claim_filed_date || 'Not filed yet' }}
+            </td>
+            <td class="py-3 px-4">
+              <span :class="getStatusBadgeClass(claim.status)">
+                {{ formatStatusLabel(claim.status) }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right space-x-2">
+              <!-- Generate / Download PDF & Submit to PCIC -->
+              <button
+                v-if="claim.status === 'under_mao_review'"
+                @click="downloadPdfAndSubmit(claim)"
+                :disabled="processingId === claim.id"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition disabled:opacity-50"
+              >
+                <span>{{ processingId === claim.id ? 'Processing...' : 'Download CAS-02 PDF' }}</span>
+              </button>
+
+              <!-- Open Evaluation Modal -->
+              <button
+                v-if="claim.status === 'in_pcic_processing'"
+                @click="openPcicModal(claim)"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition"
+              >
+                Enter PCIC Result
+              </button>
+
+              <!-- Mark Payout as Claimed -->
+              <button
+                v-if="claim.status === 'ready_for_claiming'"
+                @click="markAsClaimed(claim)"
+                :disabled="processingId === claim.id"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                <span>{{ processingId === claim.id ? 'Updating...' : 'Mark as Claimed' }}</span>
+              </button>
+
+              <!-- Completed Status -->
+              <span v-if="claim.status === 'claimed'" class="text-xs font-semibold text-emerald-600">
+                Released ({{ claim.claimed_at }})
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PCIC Evaluation Modal -->
+    <div v-if="selectedClaimForPcic" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <h3 class="text-lg font-bold text-gray-900">Record PCIC Evaluation Result</h3>
+        
+        <div class="space-y-3 text-sm">
+          <div>
+            <label class="block font-medium text-gray-700 mb-1">Decision</label>
+            <select v-model="pcicForm.result" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500">
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <template v-if="pcicForm.result === 'approved'">
+            <div>
+              <label class="block font-medium text-gray-700 mb-1">Approved Claim Amount (PHP)</label>
+              <input v-model.number="pcicForm.claim_amount" type="number" step="0.01" class="w-full border rounded-lg p-2.5" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="block font-medium text-gray-700 mb-1">Schedule Date</label>
+              <input v-model="pcicForm.claim_schedule" type="date" class="w-full border rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label class="block font-medium text-gray-700 mb-1">Payout Venue</label>
+              <input v-model="pcicForm.claim_venue" type="text" class="w-full border rounded-lg p-2.5" placeholder="e.g. MAO Office Hall" />
+            </div>
+          </template>
+
+          <div>
+            <label class="block font-medium text-gray-700 mb-1">Remarks / Notes</label>
+            <textarea v-model="pcicForm.pcic_remarks" rows="3" class="w-full border rounded-lg p-2.5" placeholder="Optional notes..."></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button @click="selectedClaimForPcic = null" class="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+            Cancel
+          </button>
+          <button @click="submitPcicResult" :disabled="processingId !== null" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
+            Save Evaluation
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import axios from 'axios'
+
+const API_BASE = 'http://localhost:8000' // Adjust to your backend API URL
+
+export default {
+  name: 'ClaimsManagement',
+  data() {
+    return {
+      claims: [],
+      loading: false,
+      seasonType: 'current',
+      processingId: null,
+      successMessage: '',
+      selectedClaimForPcic: null,
+      pcicForm: {
+        result: 'approved',
+        claim_amount: '',
+        claim_schedule: '',
+        claim_venue: '',
+        pcic_remarks: ''
+      }
+    }
+  },
+  mounted() {
+    this.fetchClaims()
+  },
+  methods: {
+    async fetchClaims() {
+      this.loading = true
+      try {
+        const response = await axios.get(`${API_BASE}/api/claims`, {
+          params: { season_type: this.seasonType }
+        })
+        this.claims = response.data
+      } catch (err) {
+        console.error('Failed to fetch claims:', err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    changeSeasonType(type) {
+      this.seasonType = type
+      this.fetchClaims()
+    },
+
+    // Handles downloading binary PDF stream correctly using Blob responseType
+    async downloadPdfAndSubmit(claim) {
+      this.processingId = claim.id
+      try {
+        const response = await axios.get(
+          `${API_BASE}/api/claims/${claim.id}/downloadCas02Pdf`,
+          { responseType: 'blob' }
+        )
+
+        // Create browser download link for binary Blob
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const link = document.createElement('a')
+        link.href = window.URL.createObjectURL(blob)
+        link.download = `CAS-02_Claim_${claim.id}.pdf`
+        link.click()
+
+        // Transition status on client UI
+        claim.status = 'in_pcic_processing'
+        this.showSuccess('CAS-02 PDF generated and claim status updated to In PCIC Processing.')
+      } catch (err) {
+        console.error('PDF Download error:', err)
+        alert('Failed to generate PDF document.')
+      } finally {
+        this.processingId = null
+      }
+    },
+
+    openPcicModal(claim) {
+      this.selectedClaimForPcic = claim
+      this.pcicForm = {
+        result: 'approved',
+        claim_amount: '',
+        claim_schedule: '',
+        claim_venue: '',
+        pcic_remarks: ''
+      }
+    },
+
+    async submitPcicResult() {
+      if (!this.selectedClaimForPcic) return
+
+      this.processingId = this.selectedClaimForPcic.id
+      try {
+        const response = await axios.patch(
+          `${API_BASE}/api/claims/${this.selectedClaimForPcic.id}/updatePcicResult`,
+          this.pcicForm
+        )
+
+        // Update record in list with response data
+        const idx = this.claims.findIndex(c => c.id === this.selectedClaimForPcic.id)
+        if (idx !== -1) {
+          this.claims[idx] = response.data.claim
+        }
+
+        this.selectedClaimForPcic = null
+        this.showSuccess('PCIC evaluation record saved successfully.')
+      } catch (err) {
+        console.error('Error submitting PCIC result:', err)
+        alert(err.response?.data?.message || 'Validation or server error updating result.')
+      } finally {
+        this.processingId = null
+      }
+    },
+
+    async markAsClaimed(claim) {
+      if (!confirm('Confirm payout release to farmer?')) return
+
+      this.processingId = claim.id
+      try {
+        const response = await axios.patch(`${API_BASE}/api/claims/${claim.id}/markClaimed`)
+        const idx = this.claims.findIndex(c => c.id === claim.id)
+        if (idx !== -1) {
+          this.claims[idx] = response.data.claim
+        }
+        this.showSuccess('Claim payout marked as completed.')
+      } catch (err) {
+        console.error('Error marking as claimed:', err)
+        alert('Failed to update claim payout status.')
+      } finally {
+        this.processingId = null
+      }
+    },
+
+    showSuccess(msg) {
+      this.successMessage = msg
+      setTimeout(() => {
+        this.successMessage = ''
+      }, 4000)
+    },
+
+    // Robust field accessors for nested relations
+    formatFarmerName(claim) {
+      const app = claim.damage_report?.insurance_application || claim.damageReport?.insuranceApplication
+      const user = app?.farm?.farmer_profile?.user || app?.farm?.farmerProfile?.user
+      if (!user) return 'N/A'
+      return [user.first_name, user.middle_name, user.last_name, user.extension_name]
+        .filter(Boolean)
+        .join(' ')
+    },
+
+    formatFarmerContact(claim) {
+      const app = claim.damage_report?.insurance_application || claim.damageReport?.insuranceApplication
+      const user = app?.farm?.farmer_profile?.user || app?.farm?.farmerProfile?.user
+      return user?.phone_number || 'No contact info'
+    },
+
+    formatSeasonName(claim) {
+      const app = claim.damage_report?.insurance_application || claim.damageReport?.insuranceApplication
+      return app?.season?.season_name || app?.season?.name || '—'
+    },
+
+    formatStatusLabel(status) {
+      const labels = {
+        pending_filing: 'Pending Filing',
+        under_mao_review: 'Under MAO Review',
+        in_pcic_processing: 'In PCIC Processing',
+        ready_for_claiming: 'Ready for Claiming',
+        claimed: 'Claimed',
+        pcic_rejected: 'PCIC Rejected'
+      }
+      return labels[status] || status
+    },
+
+    getStatusBadgeClass(status) {
+      const classes = {
+        pending_filing: 'bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full text-xs font-semibold',
+        under_mao_review: 'bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full text-xs font-semibold',
+        in_pcic_processing: 'bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full text-xs font-semibold',
+        ready_for_claiming: 'bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-semibold',
+        claimed: 'bg-gray-100 text-gray-800 px-2.5 py-1 rounded-full text-xs font-semibold',
+        pcic_rejected: 'bg-red-100 text-red-800 px-2.5 py-1 rounded-full text-xs font-semibold'
+      }
+      return classes[status] || 'bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-semibold'
+    }
+  }
+}
+</script>
