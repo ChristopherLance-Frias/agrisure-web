@@ -243,35 +243,12 @@
             </div>
           </div>
 
-          <div
-            class="detail-actions"
-            v-if="
-              selectedEvent.status === 'draft' ||
-              selectedEvent.status === 'published'
-            "
-          >
-            <button
-              v-if="selectedEvent.status === 'draft'"
-              class="btn btn-primary btn-block"
-              @click="publishDistributionEvent(selectedEvent)"
-            >
+          <div class="detail-actions" v-if="selectedEvent.status === 'draft' || selectedEvent.status === 'published'">
+            <button v-if="selectedEvent.status === 'draft'" class="btn btn-primary btn-block" @click="publishDistributionEvent(selectedEvent)">
               Publish to barangays
             </button>
-
-            <button
-              v-if="selectedEvent.status === 'published'"
-              class="btn btn-primary btn-block"
-              @click="completeDistributionEvent(selectedEvent)"
-            >
+            <button v-if="selectedEvent.status === 'published'" class="btn btn-primary btn-block" @click="completeDistributionEvent(selectedEvent)">
               Mark as completed
-            </button>
-
-            <button
-              v-if="selectedEvent.status === 'draft'"
-              class="btn btn-danger btn-block"
-              @click="deleteDistributionEvent(selectedEvent)"
-            >
-              Delete distribution
             </button>
           </div>
         </div>
@@ -525,7 +502,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'http://192.168.216.1:8000'
 
 export default {
   name: 'InventoryPage',
@@ -942,47 +919,7 @@ export default {
       }
       this.wizardStep = 1
       this.activeListIndex = 0
-    },
-    async deleteDistributionEvent(event) {
-      if (!event) return
-
-      const confirmed = confirm(
-        `Are you sure you want to delete "${event.title}"?\n\nThis action cannot be undone.`
-      )
-
-      if (!confirmed) return
-
-      try {
-        await axios.delete(
-          `${API_BASE}/api/distribution-events/${event.id}`
-        )
-
-        // Remove from list
-        this.distributionEvents = this.distributionEvents.filter(
-          e => e.id !== event.id
-        )
-
-        // Clear selected event
-        this.selectedEvent = null
-
-        // Close any opened barangay lists
-        this.openListIds = []
-
-        this.showToast(
-          'Distribution event deleted successfully.',
-          'success'
-        )
-
-      } catch (error) {
-        console.error(error.response?.data || error)
-
-        this.showToast(
-          error.response?.data?.message ||
-          'Failed to delete distribution event.',
-          'error'
-        )
-      }
-    },
+    }
   }
 }
 </script>
@@ -1014,23 +951,11 @@ export default {
   line-height: 1.4;
 }
 
-<<<<<<< HEAD
 .icon { width: 16px; height: 16px; display: block; }
 .icon-sm { width: 13px; height: 13px; display: block; }
 
 /* ===== Header ===== */
 .page-header {
-=======
-/* ================= HEADER (sticky / non-scrollable) ================= */
-.top-header {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #E7F0EC;
-  flex-shrink: 0;
-  z-index: 20;
-  padding: 0px 15px;
-  min-height: 56px;
->>>>>>> origin/design-features
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
