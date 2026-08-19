@@ -604,14 +604,16 @@ export default {
 
       if (this.activeTab === 'current') {
         return list.filter(function(claim) {
-          var status = claim.damage_report?.insurance_application?.season?.status
-          return status === 'application_open' || status === 'application_closed'
+          var season = claim.damage_report?.insurance_application?.season
+          if (!season) return false
+          return season.status === 'application_open' || season.status === 'application_closed'
         })
       }
 
       list = list.filter(function(claim) {
-        var status = claim.damage_report?.insurance_application?.season?.status
-        return status === 'completed'
+        var season = claim.damage_report?.insurance_application?.season
+        if (!season) return false
+        return season.status === 'completed'
       })
 
       if (this.historySeasonId) {
@@ -1100,7 +1102,6 @@ export default {
 <style scoped>
 .claims-page {
   padding: 0 32px 100px;
-
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   background: #F0F4F0;
@@ -1802,5 +1803,4 @@ export default {
     bottom: 12px;
   }
 }
-
 </style>
