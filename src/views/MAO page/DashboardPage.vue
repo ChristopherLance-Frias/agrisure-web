@@ -135,6 +135,238 @@
               </div>
             </div>
         </div>
+        <!-- FARMER & FARM ANALYTICS -->
+        <div class="row-grid-3">
+
+          <!-- Farmer Statistics -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Farmer Analytics</h2>
+                <p>Registered farmers by agricultural profile</p>
+              </div>
+            </div>
+
+            <div class="analytics-stat-grid">
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Registered Farmers
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmerAnalytics.totalFarmers }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Rice Farmers
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmerAnalytics.riceFarmers }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Corn Farmers
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmerAnalytics.cornFarmers }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Avg. Farm Size
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmerAnalytics.averageFarmSize.toFixed(2) }}
+                  <small>ha</small>
+                </strong>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Farm Statistics -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Farm Analytics</h2>
+                <p>Farm area and crop distribution</p>
+              </div>
+            </div>
+
+            <div class="analytics-stat-grid">
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Total Farms
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmAnalytics.totalFarms }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Rice Farms
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmAnalytics.riceFarms }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Corn Farms
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmAnalytics.cornFarms }}
+                </strong>
+              </div>
+
+              <div class="analytics-stat-card">
+                <span class="analytics-stat-label">
+                  Average Farm Area
+                </span>
+                <strong class="analytics-stat-value">
+                  {{ farmAnalytics.averageFarmArea.toFixed(2) }}
+                  <small>ha</small>
+                </strong>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Crop Distribution -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Crop Distribution</h2>
+                <p>Farms by crop type</p>
+              </div>
+            </div>
+
+            <ApexChart
+              type="donut"
+              height="250"
+              :options="chartConfigs.cropDistribution.options"
+              :series="chartConfigs.cropDistribution.series"
+            />
+          </div>
+
+        </div>
+
+        <!-- FARMERS BY BARANGAY -->
+        <div class="panel">
+
+          <div class="panel-header">
+            <div>
+              <h2>Farmers by Barangay</h2>
+              <p>Distribution of registered farmers across barangays</p>
+            </div>
+          </div>
+
+          <ApexChart
+            type="bar"
+            height="350"
+            :options="chartConfigs.farmerBarangay.options"
+            :series="chartConfigs.farmerBarangay.series"
+          />
+
+        </div>
+
+        <!-- FARM AREA SUMMARY -->
+        <div class="row-grid-2">
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Crop Area Distribution</h2>
+                <p>Total agricultural area by crop</p>
+              </div>
+            </div>
+
+            <div class="summary-grid">
+
+              <div class="summary-card">
+                <p class="summary-label">Rice Area</p>
+                <p class="summary-value text-green">
+                  {{ farmAnalytics.riceArea.toFixed(2) }}
+                  <span class="summary-unit">ha</span>
+                </p>
+              </div>
+
+              <div class="summary-card">
+                <p class="summary-label">Corn Area</p>
+                <p class="summary-value text-amber">
+                  {{ farmAnalytics.cornArea.toFixed(2) }}
+                  <span class="summary-unit">ha</span>
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Largest Agricultural Barangays</h2>
+                <p>Barangays with the largest registered farm area</p>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+
+              <table class="data-table">
+
+                <thead>
+                  <tr>
+                    <th>Barangay</th>
+                    <th>Farms</th>
+                    <th>Total Area</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  <tr
+                    v-for="barangay in farmReport.largest_agricultural_barangays"
+                    :key="barangay.id"
+                  >
+
+                    <td class="font-bold">
+                      {{ barangay.name }}
+                    </td>
+
+                    <td>
+                      {{ barangay.total_farms }}
+                    </td>
+
+                    <td>
+                      {{ Number(barangay.total_area).toFixed(2) }} ha
+                    </td>
+
+                  </tr>
+
+                  <tr
+                    v-if="!farmReport.largest_agricultural_barangays?.length"
+                  >
+                    <td colspan="3" class="text-center">
+                      No farm data available.
+                    </td>
+                  </tr>
+
+                </tbody>
+
+              </table>
+
+            </div>
+          </div>
+
+        </div>
         <!-- MAIN CHARTS ROW -->
         <div class="row-grid-3">
           <!-- Main Chart: Application Trend -->
@@ -492,13 +724,78 @@ const chartConfigs = reactive({
       },
       grid: { borderColor: '#EAF1EC' }
     }
-  }
+  },
+  farmerBarangay: {
+    series: [{
+      name: 'Farmers',
+      data: []
+    }],
+    options: {
+      chart: {
+        toolbar: { show: false },
+        fontFamily: 'DM Sans, sans-serif'
+      },
+      colors: [palette.green],
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          borderRadius: 6
+        }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      xaxis: {
+        categories: [],
+        labels: {
+          style: {
+            colors: '#5c6b64',
+            fontSize: '11px'
+          }
+        }
+      },
+      grid: {
+        borderColor: '#EAF1EC'
+      }
+    }
+  },
+  cropDistribution: {
+    series: [],
+    options: {
+      chart: {
+        fontFamily: 'DM Sans, sans-serif'
+      },
+      labels: [],
+      colors: [
+        palette.green,
+        palette.amber,
+        palette.blue,
+        palette.purple,
+        palette.red
+      ],
+      legend: {
+        position: 'bottom',
+        labels: {
+          colors: '#5c6b64'
+        },
+        fontSize: '12px'
+      },
+      dataLabels: {
+        enabled: false
+      },
+      stroke: {
+        width: 0
+      }
+    }
+  },
 })
 
 const loadDashboard = async () => {
   try {
     const [
       overview,
+      farmers,
+      farms,
       insurance,
       damage,
       distribution,
@@ -506,6 +803,8 @@ const loadDashboard = async () => {
       executive
     ] = await Promise.all([
       axios.get('/api/reports/overview'),
+      axios.get('/api/reports/farmers'),
+      axios.get('/api/reports/farms'),
       axios.get('/api/reports/insurance'),
       axios.get('/api/reports/damage-reports'),
       axios.get('/api/reports/distribution'),
@@ -514,11 +813,30 @@ const loadDashboard = async () => {
     ])
 
     const ov = overview.data.summary
+    const frm = farmers.data
     const ins = insurance.data
     const dmg = damage.data
     const dist = distribution.data
     const inv = inventory.data
     const exe = executive.data
+    farmReport.value = farms.data
+    const farm = farmReport.value 
+
+    farmerAnalytics.value = {
+    totalFarmers: Number(frm.summary.total_farmers || 0),
+    riceFarmers: Number(frm.summary.rice_farmers || 0),
+    cornFarmers: Number(frm.summary.corn_farmers || 0),
+    averageFarmSize: Number(frm.summary.average_farm_size || 0)
+  }
+
+  farmAnalytics.value = {
+    totalFarms: Number(farm.summary.total_farms || 0),
+    riceFarms: Number(farm.summary.rice_farms || 0),
+    cornFarms: Number(farm.summary.corn_farms || 0),
+    riceArea: Number(farm.summary.total_rice_area || 0),
+    cornArea: Number(farm.summary.total_corn_area || 0),
+    averageFarmArea: Number(farm.summary.average_farm_area || 0)
+  }
 
     stats.value = {
       farmers: {
@@ -597,6 +915,35 @@ const loadDashboard = async () => {
     console.error(e)
   }
 }
+const farmerAnalytics = ref({
+  totalFarmers: 0,
+  riceFarmers: 0,
+  cornFarmers: 0,
+  averageFarmSize: 0
+})
+
+const farmAnalytics = ref({
+  totalFarms: 0,
+  riceFarms: 0,
+  cornFarms: 0,
+  riceArea: 0,
+  cornArea: 0,
+  averageFarmArea: 0
+})
+const farmReport = ref({
+  summary: {
+    total_farms: 0,
+    rice_farms: 0,
+    corn_farms: 0,
+    total_rice_area: 0,
+    total_corn_area: 0,
+    average_farm_area: 0
+  },
+  crop_distribution: [],
+  crop_area_distribution: [],
+  farms_per_barangay: [],
+  largest_agricultural_barangays: []
+})
 
 function mapWeatherCode(code) {
   const map = {
@@ -1452,6 +1799,43 @@ onMounted(loadDashboard)
 .status-red   { background: #C1473D; }
  
 .map-card-desc { font-size: 0.72rem; color: #5c6b64; }
+
+.analytics-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.analytics-stat-card {
+  padding: 16px;
+  border: 1px solid #EAF1EC;
+  border-radius: 10px;
+  background: #FAFCFB;
+}
+
+.analytics-stat-label {
+  display: block;
+  font-size: 11px;
+  color: #6B7972;
+  margin-bottom: 6px;
+}
+
+.analytics-stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #116D3E;
+}
+
+.analytics-stat-value small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6B7972;
+}
+
+.text-center {
+  text-align: center;
+}
  
 /* RESPONSIVE */
 @media (max-width: 1200px) {

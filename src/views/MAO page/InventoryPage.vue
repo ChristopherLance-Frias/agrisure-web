@@ -1014,11 +1014,23 @@ export default {
   line-height: 1.4;
 }
 
+<<<<<<< HEAD
 .icon { width: 16px; height: 16px; display: block; }
 .icon-sm { width: 13px; height: 13px; display: block; }
 
 /* ===== Header ===== */
 .page-header {
+=======
+/* ================= HEADER (sticky / non-scrollable) ================= */
+.top-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
+  padding: 0px 15px;
+  min-height: 56px;
+>>>>>>> origin/design-features
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
