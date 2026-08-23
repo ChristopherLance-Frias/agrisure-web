@@ -245,17 +245,12 @@
             </button>
           </template>
 
-          <template v-if="selectedStatus === 'submitted_to_pcic'">
-            <button class="btn-action-finalize" @click="bulkUpdateStatus('insured')">
-              Mark {{ selectedIds.length }} as Insured
-            </button>
-
-            <button class="btn-action-reject" @click="bulkUpdateStatus('rejected')">
-              Reject {{ selectedIds.length }}
-            </button>
-          </template>
-
-          <template v-if="selectedStatus === 'insured' || selectedStatus === 'rejected'">
+          <!--
+            submitted_to_pcic is now a terminal status for MAO (see isTerminal()).
+            Once applications reach it they are no longer selectable, so this
+            branch is effectively unreachable — kept only as a defensive fallback.
+          -->
+          <template v-if="selectedStatus === 'submitted_to_pcic' || selectedStatus === 'insured' || selectedStatus === 'rejected'">
             <span class="bulk-terminal-note">No further action available for this status.</span>
           </template>
         </div>
@@ -281,7 +276,7 @@
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">At PCIC Evaluation</span>
+        <span class="stat-label">Forwarded to PCIC</span>
         <span class="stat-value review">{{ countByStatus('submitted_to_pcic') }}</span>
       </div>
 
@@ -408,20 +403,16 @@
                         </span>
                       </template>
 
+                      <!--
+                        submitted_to_pcic is MAO's final system action for this application.
+                        PCIC now notifies the farmer directly via SMS with the outcome, so no
+                        "Mark Insured" / "Reject" action is exposed to MAO officers anymore.
+                      -->
                       <template v-if="app.status === 'submitted_to_pcic'">
-                        <button
-                          class="btn-action-finalize"
-                          @click="updateAppStatus(app.id, 'insured')"
-                        >
-                          Mark Insured
-                        </button>
-
-                        <button
-                          class="btn-action-reject"
-                          @click="updateAppStatus(app.id, 'rejected')"
-                        >
-                          Reject
-                        </button>
+                        <span class="action-hint">
+                          ✅ Forwarded to PCIC. PCIC will contact the farmer directly via SMS with
+                          the outcome of their application — no further action is needed from MAO.
+                        </span>
                       </template>
 
                       <template v-if="app.status === 'insured' || app.status === 'rejected'">
@@ -903,7 +894,7 @@ export default {
         { label: 'All', value: '' },
         { label: 'Submitted to MAO', value: 'submitted_to_mao' },
         { label: 'To be Submitted to PCIC', value: 'approved_for_pcic' },
-        { label: 'Submitted to PCIC', value: 'submitted_to_pcic' },
+        { label: 'Forwarded to PCIC', value: 'submitted_to_pcic' },
         { label: 'Needs Revision', value: 'needs_revision' },
         { label: 'Insured', value: 'insured' },
         { label: 'Rejected', value: 'rejected' },
@@ -1149,8 +1140,11 @@ export default {
       })
     },
 
+    // submitted_to_pcic is now MAO's final system action: PCIC notifies the
+    // farmer directly via SMS with the outcome, so MAO no longer needs (or
+    // has) a manual "Insured" / "Rejected" step for these applications.
     isTerminal(status) {
-      return status === 'insured' || status === 'rejected'
+      return status === 'submitted_to_pcic' || status === 'insured' || status === 'rejected'
     },
 
     isCheckboxDisabled(app) {
@@ -1244,6 +1238,10 @@ export default {
       }
     },
 
+    // NOTE: 'insured' and 'rejected' routes are retained here only for legacy
+    // / historical data reference. They are no longer reachable from this UI
+    // since submitted_to_pcic is now terminal for MAO officers — PCIC updates
+    // the farmer directly and MAO's system record stops at submitted_to_pcic.
     routeForStatus(status) {
       var routeMap = {
         approved_for_pcic: 'approve-for-pcic',
@@ -1584,7 +1582,7 @@ export default {
       var map = {
         submitted_to_mao: 'Submitted to MAO',
         approved_for_pcic: 'To be submitted to PCIC',
-        submitted_to_pcic: 'Submitted to PCIC',
+        submitted_to_pcic: 'Forwarded to PCIC',
         needs_revision: 'Needs Revision',
         insured: 'Insured',
         rejected: 'Rejected',

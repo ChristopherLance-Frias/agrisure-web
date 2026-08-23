@@ -527,7 +527,7 @@
 import axios from 'axios'
 import VueApexCharts from 'vue3-apexcharts'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'https://sanagustinagrisure.com'
 
 export default {
   name: 'ReportsPage',

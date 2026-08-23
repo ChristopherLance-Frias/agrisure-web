@@ -213,7 +213,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'https://sanagustinagrisure.com'
 
 export default {
   name: 'BarangayFarmersPage',

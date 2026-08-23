@@ -97,7 +97,7 @@
 <script>
 import axios from 'axios'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'https://sanagustinagrisure.com'
 const RESEND_COOLDOWN_SECONDS = 180 // 3 minutes
 
 export default {

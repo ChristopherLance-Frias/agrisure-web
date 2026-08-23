@@ -248,7 +248,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'https://sanagustinagrisure.com'
 
 const GREEN_ICON = L.icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
