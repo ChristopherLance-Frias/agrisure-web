@@ -77,6 +77,13 @@
         </option>
       </select>
 
+      <select v-model="filterBarangay" class="filter-select">
+        <option value="">All Barangays</option>
+        <option v-for="b in barangayOptions" :key="b" :value="b">
+          {{ b }}
+        </option>
+      </select>
+
       <button class="btn-reset" @click="resetFilters">
         Reset
       </button>
@@ -142,8 +149,8 @@
             <th>Farmer</th>
             <th>Farm</th>
             <th>Crop</th>
+            <th>Barangay</th>
             <th>Season</th>
-            <th>Amount</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -183,12 +190,12 @@
               </td>
               <td>{{ claim.damage_report?.insurance_application?.farm?.farm_name || '—' }}</td>
               <td>{{ claim.damage_report?.insurance_application?.farm?.crop_type || '—' }}</td>
+              <td>{{ claimBarangay(claim) || '—' }}</td>
               <td>
                 <span class="season-pill">
-                  {{ claim.damage_report?.insurance_application?.season?.name || 'Unknown' }}
+                  {{ claim.damage_report?.insurance_application?.season?.name || claim.damage_report?.insurance_application?.season?.season_name || 'Unknown' }}
                 </span>
               </td>
-              <td>{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</td>
 
               <td>
                 <span class="status-badge" :class="claim.status">
@@ -219,6 +226,11 @@
                           <div class="detail-item">
                             <span class="detail-label">Address</span>
                             <span class="detail-val">{{ farmerAddress(claim) }}</span>
+                          </div>
+
+                          <div class="detail-item">
+                            <span class="detail-label">Barangay</span>
+                            <span class="detail-val">{{ claimBarangay(claim) || '—' }}</span>
                           </div>
                         </div>
                       </div>
@@ -251,7 +263,7 @@
                           <div class="detail-item">
                             <span class="detail-label">Season</span>
                             <span class="detail-val">
-                              {{ claim.damage_report?.insurance_application?.season?.name || '—' }}
+                              {{ claim.damage_report?.insurance_application?.season?.season_name || claim.damage_report?.insurance_application?.season?.name || '—' }}
                             </span>
                           </div>
 
@@ -338,32 +350,6 @@
                       </div>
 
                       <div class="detail-section">
-                        <div class="section-title">Claim / Indemnity Information</div>
-
-                        <div class="detail-grid">
-                          <div class="detail-item">
-                            <span class="detail-label">Amount</span>
-                            <span class="detail-val">{{ claim.claim_amount ? peso(claim.claim_amount) : '—' }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Claiming Date</span>
-                            <span class="detail-val">{{ formatDate(claim.claim_schedule) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Claiming Venue</span>
-                            <span class="detail-val">{{ claim.claim_venue || '—' }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Remarks</span>
-                            <span class="detail-val">{{ claim.pcic_remarks || '—' }}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="detail-section">
                         <div class="section-title">Claim Action</div>
 
                         <div class="status-update-row" @click.stop>
@@ -384,6 +370,14 @@
                           <template v-else-if="claim.status === 'in_pcic_processing'">
                             <button
                               class="action-btn approved"
+                              @click="openScheduleModal([claim.id])"
+                              :disabled="updatingId === claim.id"
+                            >
+                              {{ claim.claim_schedule ? 'Update Claiming Schedule' : 'Set Claiming Schedule' }}
+                            </button>
+
+                            <button
+                              class="action-btn approved"
                               @click="openPcicModal(claim, 'approved')"
                               :disabled="updatingId === claim.id"
                             >
@@ -400,6 +394,14 @@
                           </template>
 
                           <template v-else-if="claim.status === 'ready_for_claiming'">
+                            <button
+                              class="action-btn approved"
+                              @click="openScheduleModal([claim.id])"
+                              :disabled="updatingId === claim.id"
+                            >
+                              {{ claim.claim_schedule ? 'Update Claiming Schedule' : 'Set Claiming Schedule' }}
+                            </button>
+
                             <button
                               class="action-btn approved"
                               @click="markClaimed(claim)"
@@ -457,14 +459,33 @@
             {{ bulkUpdating ? 'Submitting...' : 'Submit Selected to PCIC' }}
           </button>
 
-          <button
-            v-else-if="activeStatusTab === 'ready_for_claiming'"
-            class="action-btn approved"
-            @click="bulkMarkClaimed"
-            :disabled="bulkUpdating"
-          >
-            {{ bulkUpdating ? 'Updating...' : 'Mark Selected as Claimed' }}
-          </button>
+          <template v-else-if="activeStatusTab === 'in_pcic_processing'">
+            <button
+              class="action-btn approved"
+              @click="openScheduleModal(selectedIds)"
+              :disabled="bulkUpdating"
+            >
+              Set Claiming Schedule
+            </button>
+          </template>
+
+          <template v-else-if="activeStatusTab === 'ready_for_claiming'">
+            <button
+              class="action-btn approved"
+              @click="openScheduleModal(selectedIds)"
+              :disabled="bulkUpdating"
+            >
+              Set Claiming Schedule
+            </button>
+
+            <button
+              class="action-btn approved"
+              @click="bulkMarkClaimed"
+              :disabled="bulkUpdating"
+            >
+              {{ bulkUpdating ? 'Updating...' : 'Mark Selected as Claimed' }}
+            </button>
+          </template>
 
           <button class="btn-reset" @click="clearSelection">
             Clear
@@ -484,26 +505,6 @@
             {{ pcicForm.result === 'approved' ? 'PCIC Approved' : 'PCIC Rejected' }}
           </h3>
 
-          <template v-if="pcicForm.result === 'approved'">
-            <label>Indemnity Amount</label>
-            <input
-              v-model.number="pcicForm.claim_amount"
-              type="number"
-              min="0"
-              placeholder="Enter amount"
-            />
-
-            <label>Claiming Date</label>
-            <input v-model="pcicForm.claim_schedule" type="date" />
-
-            <label>Claiming Venue</label>
-            <input
-              v-model="pcicForm.claim_venue"
-              type="text"
-              placeholder="e.g. MAO Office"
-            />
-          </template>
-
           <label>Remarks</label>
           <textarea
             v-model="pcicForm.pcic_remarks"
@@ -514,6 +515,42 @@
             <button class="btn-reset" @click="showPcicModal = false">Cancel</button>
             <button class="action-btn approved" @click="savePcicResult">
               Save Result
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showScheduleModal"
+        class="modal-backdrop"
+        @click.self="closeScheduleModal"
+      >
+        <div class="small-modal">
+          <h3>Set Claiming Schedule</h3>
+          <p class="modal-subtitle">
+            This will apply to {{ scheduleTargetIds.length }} selected claim(s).
+          </p>
+
+          <label>Claiming Date</label>
+          <input v-model="scheduleForm.claim_schedule" type="date" />
+
+          <label>Claiming Venue</label>
+          <input
+            v-model="scheduleForm.claim_venue"
+            type="text"
+            placeholder="e.g. Barangay Hall"
+          />
+
+          <div class="modal-actions">
+            <button class="btn-reset" @click="closeScheduleModal">Cancel</button>
+            <button
+              class="action-btn approved"
+              @click="saveClaimSchedule"
+              :disabled="bulkUpdating"
+            >
+              {{ bulkUpdating ? 'Saving...' : 'Confirm' }}
             </button>
           </div>
         </div>
@@ -531,13 +568,15 @@ const BATCHABLE_STATUSES = {
   under_mao_review: {
     endpoint: 'downloadCas02Pdf',
   },
+  in_pcic_processing: {
+    endpoint: 'bulk-schedule',
+  },
   ready_for_claiming: {
     endpoint: 'claimed',
   },
 }
 
 const STATUS_TABS = [
-  { key: 'pending_filing', label: 'Pending Filing', dot: 'amber' },
   { key: 'under_mao_review', label: 'MAO Review', dot: 'blue' },
   { key: 'in_pcic_processing', label: 'PCIC Processing', dot: 'amber' },
   { key: 'ready_for_claiming', label: 'Ready for Claiming', dot: 'teal' },
@@ -558,6 +597,7 @@ export default {
 
       search: '',
       filterCrop: '',
+      filterBarangay: '',
 
       selectedIds: [],
       loading: false,
@@ -572,10 +612,14 @@ export default {
       pcicClaimId: null,
       pcicForm: {
         result: 'approved',
-        claim_amount: null,
+        pcic_remarks: '',
+      },
+
+      showScheduleModal: false,
+      scheduleTargetIds: [],
+      scheduleForm: {
         claim_schedule: '',
         claim_venue: '',
-        pcic_remarks: '',
       },
 
       statusTabs: STATUS_TABS,
@@ -643,6 +687,18 @@ export default {
       return Array.from(set).sort()
     },
 
+    barangayOptions() {
+      var self = this
+      var set = new Set(
+        this.activeClaims
+          .map(function(c) {
+            return self.claimBarangay(c)
+          })
+          .filter(Boolean)
+      )
+      return Array.from(set).sort()
+    },
+
     filtered() {
       var self = this
       var q = this.search.toLowerCase().trim()
@@ -660,7 +716,11 @@ export default {
           !self.filterCrop ||
           claim.damage_report?.insurance_application?.farm?.crop_type === self.filterCrop
 
-        return matchStatus && matchSearch && matchCrop
+        var matchBarangay =
+          !self.filterBarangay ||
+          self.claimBarangay(claim) === self.filterBarangay
+
+        return matchStatus && matchSearch && matchCrop && matchBarangay
       })
     },
 
@@ -866,9 +926,6 @@ export default {
       this.pcicClaimId = claim.id
       this.pcicForm = {
         result: result,
-        claim_amount: null,
-        claim_schedule: '',
-        claim_venue: '',
         pcic_remarks: '',
       }
       this.showPcicModal = true
@@ -892,9 +949,6 @@ export default {
 
         if (claim) {
           claim.status = this.pcicForm.result === 'approved' ? 'ready_for_claiming' : 'pcic_rejected'
-          claim.claim_amount = this.pcicForm.claim_amount
-          claim.claim_schedule = this.pcicForm.claim_schedule
-          claim.claim_venue = this.pcicForm.claim_venue
           claim.pcic_remarks = this.pcicForm.pcic_remarks
         }
 
@@ -909,6 +963,71 @@ export default {
         this.pcicClaimId = null
       }
     },
+
+    openScheduleModal(claimIds) {
+      if (!claimIds || claimIds.length === 0) return
+      this.scheduleTargetIds = claimIds.slice()
+      this.scheduleForm = {
+        claim_schedule: '',
+        claim_venue: '',
+      }
+      this.showScheduleModal = true
+    },
+
+    closeScheduleModal() {
+      this.showScheduleModal = false
+      this.scheduleTargetIds = []
+    },
+
+    async saveClaimSchedule() {
+  if (!this.scheduleForm.claim_schedule || !this.scheduleForm.claim_venue) {
+    alert('Please provide both a claiming date and venue.')
+    return
+  }
+
+  this.bulkUpdating = true
+
+  try {
+    var response = await axios.post(
+      API_BASE + '/api/claims/bulk-schedule',
+      {
+        claim_ids: this.scheduleTargetIds,
+        claim_schedule: this.scheduleForm.claim_schedule,
+        claim_venue: this.scheduleForm.claim_venue,
+      },
+      this.authHeaders()
+    )
+
+    var updatedIds = response.data.updated_claim_ids || []
+    var self = this
+
+    updatedIds.forEach(function(id) {
+      var claim = self.claims.find(function(c) {
+        return c.id === id
+      })
+      if (claim) {
+        claim.claim_schedule = self.scheduleForm.claim_schedule
+        claim.claim_venue = self.scheduleForm.claim_venue
+        claim.status = 'ready_for_claiming' // <--- ADD THIS LINE TO UPDATE LOCAL VUE STATE
+      }
+    })
+
+    if (response.data.skipped_claim_ids && response.data.skipped_claim_ids.length > 0) {
+      alert(
+        response.data.skipped_claim_ids.length +
+        ' claim(s) were skipped (not eligible for scheduling).'
+      )
+    }
+
+    this.closeScheduleModal()
+    this.clearSelection()
+  } catch (err) {
+    console.error(err)
+    alert(err.response?.data?.message || 'Failed to set claiming schedule.')
+  } finally {
+    this.bulkUpdating = false
+  }
+},
 
     async bulkSubmitToPcic() {
       if (this.selectedIds.length === 0) return
@@ -1040,8 +1159,14 @@ export default {
       return hasValue ? this.peso(total) : '—'
     },
 
+    getProfile(claim) {
+      var farm = claim.damage_report?.insurance_application?.farm
+      return farm?.farmerProfile || farm?.farmer_profile || null
+    },
+
     farmerName(claim) {
-      var user = claim.damage_report?.insurance_application?.farm?.farmer_profile?.user
+      var profile = this.getProfile(claim)
+      var user = profile?.user
       if (!user) return '—'
       return [user.first_name, user.middle_name, user.last_name, user.extension_name]
         .filter(Boolean)
@@ -1049,11 +1174,28 @@ export default {
     },
 
     farmerContact(claim) {
-      return claim.damage_report?.insurance_application?.farm?.farmer_profile?.user?.phone_number || '—'
+      var profile = this.getProfile(claim)
+      return profile?.user?.phone_number || profile?.phone_number || '—'
     },
 
     farmerAddress(claim) {
-      return claim.damage_report?.insurance_application?.farm?.farmer_profile?.address || '—'
+      var profile = this.getProfile(claim)
+      return profile?.address || '—'
+    },
+
+    claimBarangay(claim) {
+      if (!claim) return null
+      var profile = this.getProfile(claim)
+      var user = profile?.user
+
+      var barangay = user?.barangay || profile?.barangay
+
+      if (typeof barangay === 'string') return barangay
+      if (typeof barangay === 'object' && barangay !== null) {
+        return barangay.barangay_name || barangay.name || barangay.barangay || null
+      }
+
+      return profile?.address || null
     },
 
     countByStatus(status) {
@@ -1064,7 +1206,6 @@ export default {
 
     statusLabel(status) {
       var map = {
-        pending_filing: 'Pending Filing',
         under_mao_review: 'Under MAO Review',
         in_pcic_processing: 'In PCIC Processing',
         ready_for_claiming: 'Ready for Claiming',
@@ -1093,6 +1234,7 @@ export default {
     resetFilters() {
       this.search = ''
       this.filterCrop = ''
+      this.filterBarangay = ''
       this.historySeasonId = ''
     },
   },
@@ -1511,11 +1653,6 @@ export default {
   white-space: nowrap;
 }
 
-.status-badge.pending_filing {
-  background: #fef3c7;
-  color: #D97706;
-}
-
 .status-badge.under_mao_review {
   background: #dbeafe;
   color: #1E3A8A;
@@ -1741,6 +1878,12 @@ export default {
   color: #1A3320;
 }
 
+.modal-subtitle {
+  margin-top: -6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .small-modal label {
   display: block;
   margin-top: 14px;
@@ -1756,7 +1899,7 @@ export default {
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border-radius: 9px;
+  border-radius: 99px;
   border: 1.5px solid #e2e8f0;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;

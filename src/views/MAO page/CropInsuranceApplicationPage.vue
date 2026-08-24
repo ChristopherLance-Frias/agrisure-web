@@ -184,15 +184,6 @@
       </select>
 
       <button class="btn-reset" @click="resetFilters">Reset Filters</button>
-
-      <button
-        v-if="hasPcicPreparations"
-        class="btn-print-pcic"
-        @click="downloadPcicBatchManifest"
-        :disabled="isGeneratingPdf"
-      >
-        📥 {{ isGeneratingPdf ? 'Generating PDF...' : 'Download PCIC Batch PDF (' + countByStatus('approved_for_pcic') + ')' }}
-      </button>
     </div>
 
     <div class="status-filter-row no-print">
@@ -232,7 +223,12 @@
           </template>
 
           <template v-if="selectedStatus === 'approved_for_pcic'">
-            <button class="btn-action-submit-pcic" @click="bulkUpdateStatus('submitted_to_pcic')">
+            <button
+              class="btn-action-submit-pcic"
+              @click="bulkUpdateStatus('submitted_to_pcic')"
+              :disabled="!hasDownloadedSelectedBatch"
+              :title="!hasDownloadedSelectedBatch ? 'Download the batch PDF for this selection first' : ''"
+            >
               Mark {{ selectedIds.length }} as Forwarded to PCIC
             </button>
 
@@ -243,6 +239,10 @@
             >
               📥 {{ isGeneratingPdf ? 'Generating...' : 'Download Selected Batch PDF (' + selectedIds.length + ')' }}
             </button>
+
+            <span v-if="!hasDownloadedSelectedBatch" class="bulk-terminal-note">
+              Download the batch PDF before forwarding to PCIC.
+            </span>
           </template>
 
           <!--
@@ -262,7 +262,7 @@
     <div class="stats-row no-print">
       <div class="stat-card">
         <span class="stat-label">Total</span>
-        <span class="stat-value">{{ activeApplications.length }}</span>
+        <span class="stat-value">{{ scopedApplications.length }}</span>
       </div>
 
       <div class="stat-card">
@@ -278,21 +278,6 @@
       <div class="stat-card">
         <span class="stat-label">Forwarded to PCIC</span>
         <span class="stat-value review">{{ countByStatus('submitted_to_pcic') }}</span>
-      </div>
-
-      <div class="stat-card">
-        <span class="stat-label">Needs Revision</span>
-        <span class="stat-value revision">{{ countByStatus('needs_revision') }}</span>
-      </div>
-
-      <div class="stat-card">
-        <span class="stat-label">Insured</span>
-        <span class="stat-value insured">{{ countByStatus('insured') }}</span>
-      </div>
-
-      <div class="stat-card">
-        <span class="stat-label">Rejected</span>
-        <span class="stat-value rejected">{{ countByStatus('rejected') }}</span>
       </div>
     </div>
 
@@ -348,6 +333,7 @@
                   v-if="isTerminal(app.status) === false"
                   :checked="isSelected(app.id)"
                   :disabled="isCheckboxDisabled(app)"
+                  :title="app.payment_status === 'pending_verification' ? 'Expand details to verify payment before selecting' : (app.payment_status === 'rejected' ? 'Payment was rejected — this application cannot be selected' : '')"
                   @change="toggleSelection(app.id)"
                 />
               </td>
@@ -389,11 +375,22 @@
 
                       <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
                         <button
+                          v-if="app.payment_status !== 'pending_verification' && app.payment_status !== 'rejected'"
                           class="btn-action-approve"
                           @click="updateAppStatus(app.id, 'approved_for_pcic')"
                         >
                           Mark as To be Submitted to PCIC
                         </button>
+
+                        <span v-else-if="app.payment_status === 'pending_verification'" class="action-hint">
+                          ⏳ Payment verification required before this can move to PCIC. Verify the
+                          payment below — it will automatically advance to "To be submitted to PCIC".
+                        </span>
+
+                        <span v-else-if="app.payment_status === 'rejected'" class="action-hint">
+                          ❌ Payment proof was rejected. This application cannot proceed to PCIC
+                          until the farmer resubmits valid payment proof.
+                        </span>
                       </template>
 
                       <template v-if="app.status === 'approved_for_pcic'">
@@ -604,6 +601,18 @@
                           <span class="detail-val">{{ paymentStatusLabel(app.payment_status) }}</span>
                         </div>
 
+                        <div class="detail-item full-width" v-if="app.payment_method && app.payment_status === 'pending_verification'">
+                          <span class="detail-label">Payment Validation</span>
+                          <div class="payment-validation-actions">
+                            <button class="btn-action-approve" @click="verifyPayment(app.id)">
+                              Confirm Paid
+                            </button>
+                            <button class="btn-action-reject" @click="rejectPayment(app.id)">
+                              Mark Failed
+                            </button>
+                          </div>
+                        </div>
+
                         <div class="detail-item">
                           <span class="detail-label">Payment Method</span>
                           <span class="detail-val">{{ app.payment_method || ' ' }}</span>
@@ -668,7 +677,7 @@
       <div id="pdf-download-area" class="pdf-export-container legal-size-print">
 
         <template v-for="(pageRows, setIdx) in pcicBatchPages" :key="'set-' + setIdx">
-          
+
           <!-- ================= PAGE 1: APPLICATION FORM ================= -->
           <div :class="{ 'pdf-page-break': setIdx > 0 }" class="pcic-page-container">
             <!-- Header Block -->
@@ -869,7 +878,7 @@
 import axios from 'axios'
 import html2pdf from 'html2pdf.js'
 
-const API_BASE = 'http://192.168.100.173:8000'
+const API_BASE = 'https://sanagustinagrisure.com'
 
 export default {
   name: 'CropInsuranceApplicationPage',
@@ -895,13 +904,11 @@ export default {
         { label: 'Submitted to MAO', value: 'submitted_to_mao' },
         { label: 'To be Submitted to PCIC', value: 'approved_for_pcic' },
         { label: 'Forwarded to PCIC', value: 'submitted_to_pcic' },
-        { label: 'Needs Revision', value: 'needs_revision' },
-        { label: 'Insured', value: 'insured' },
-        { label: 'Rejected', value: 'rejected' },
       ],
 
       selectedIds: [],
       batchProcessing: false,
+      hasDownloadedSelectedBatch: false,
 
       isPrintingPcicBatch: false,
       isGeneratingPdf: false,
@@ -939,20 +946,21 @@ export default {
       })
     },
 
-    hasPcicPreparations() {
-      return this.countByStatus('approved_for_pcic') > 0
-    },
-
     activeApplications() {
       return this.activeAppTab === 'current'
         ? this.applications
         : this.historyApplications
     },
 
-    filtered() {
+    // Everything EXCEPT the status filter: search + crop + season. Stat
+    // cards and the status-pill counts read from this (not from
+    // activeApplications) so the numbers stay in sync with whatever
+    // season/search/crop is currently narrowing the table — previously
+    // they always summed the whole tab's data regardless of the season
+    // dropdown, so counts looked "wrong" as soon as you picked a season.
+    scopedApplications() {
       var search = this.searchName.toLowerCase()
       var crop = this.filterCrop
-      var status = this.filterStatus
       var isCurrent = this.activeAppTab === 'current'
       var historyId = this.historySeasonId
       var self = this
@@ -961,17 +969,35 @@ export default {
         var name = self.farmerName(app).toLowerCase()
         var matchName = !search || name.indexOf(search) !== -1
         var matchCrop = !crop || (app.farm && app.farm.crop_type === crop)
-        var matchStatus = !status || app.status === status
-        var matchSeason = isCurrent || !historyId || app.insurance_season_id == historyId
+        var matchSeason = isCurrent || !historyId || self.matchesSeasonId(app, historyId)
 
-        return matchName && matchCrop && matchStatus && matchSeason
+        return matchName && matchCrop && matchSeason
       })
     },
 
+    filtered() {
+      var status = this.filterStatus
+      return this.scopedApplications.filter(function(app) {
+        return !status || app.status === status
+      })
+    },
+
+    // Rows that CAN be checked for bulk selection: not terminal, and not
+    // sitting on an unverified or rejected payment. A pending payment must
+    // be resolved (via verifyPayment/rejectPayment in the expanded row)
+    // before the application can join a batch, and a rejected payment
+    // blocks it permanently until the farmer resubmits proof — see
+    // isCheckboxDisabled below for the matching per-row lock.
+    //
+    // NOTE: the backend's actual payment_status enum is
+    // not_required | pending_verification | verified | rejected — there is
+    // no bare 'pending' value, so checks must use 'pending_verification'.
     selectableFiltered() {
       var self = this
       return this.filtered.filter(function(app) {
         return !self.isTerminal(app.status)
+          && app.payment_status !== 'pending_verification'
+          && app.payment_status !== 'rejected'
       })
     },
 
@@ -1055,6 +1081,13 @@ export default {
         return selectableIds.includes(id)
       })
     },
+
+    selectedIds: {
+      handler() {
+        this.hasDownloadedSelectedBatch = false
+      },
+      deep: true,
+    },
   },
 
   mounted() {
@@ -1075,6 +1108,19 @@ export default {
           Accept: 'application/json',
         },
       }
+    },
+
+    // Historical application records may carry their season reference either
+    // as a flat `insurance_season_id` field, a nested `season.id` relation,
+    // or (less commonly) `season_id`. This checks all three shapes and
+    // compares as strings so number/string API inconsistencies don't cause
+    // false negatives.
+    matchesSeasonId(app, seasonId) {
+      var appSeasonId = app.insurance_season_id ?? app.season?.id ?? app.season_id
+      if (appSeasonId === undefined || appSeasonId === null) {
+        return false
+      }
+      return String(appSeasonId) === String(seasonId)
     },
 
     startAutoRefresh() {
@@ -1147,7 +1193,19 @@ export default {
       return status === 'submitted_to_pcic' || status === 'insured' || status === 'rejected'
     },
 
+    // Locks the row checkbox while payment is unverified OR rejected. An
+    // officer must open the row and resolve it via verifyPayment (which
+    // moves payment_status to 'verified') before the application can be
+    // added to a batch. A 'rejected' payment blocks selection permanently
+    // until the farmer resubmits proof through a separate flow — this keeps
+    // "Select All" and manual selection from ever picking up unresolved
+    // rows in the first place, rather than only rejecting them once a bulk
+    // action is attempted.
     isCheckboxDisabled(app) {
+      if (app.payment_status === 'pending_verification' || app.payment_status === 'rejected') {
+        return true
+      }
+
       if (this.selectedIds.length === 0) {
         return false
       }
@@ -1253,6 +1311,72 @@ export default {
       return routeMap[status] || null
     },
 
+    // Matches InsuranceApplicationController@verifyPayment /
+    // InsuranceApplicationController@rejectPayment.
+    //
+    // verifyPayment only flips payment_status -> 'verified' on the backend;
+    // it does NOT advance the application's status. Since the whole point of
+    // this action (per the scenario) is "verify payment, then move the app
+    // to 'To be submitted to PCIC'", we chain a second call to approve-for-pcic
+    // right after a successful verification, but only when the application
+    // is still sitting in a status that action makes sense for.
+    async verifyPayment(appId) {
+      if (!confirm('Verify this payment and move it to "To be submitted to PCIC"?')) {
+        return
+      }
+      try {
+        await axios.put(
+          API_BASE + '/api/insurance-applications/' + appId + '/verify-payment',
+          {},
+          this.authHeaders()
+        )
+
+        var app = this.activeApplications.find(function(a) {
+          return a.id === appId
+        })
+        if (app && (app.status === 'submitted_to_mao' || app.status === 'needs_revision')) {
+          await axios.put(
+            API_BASE + '/api/insurance-applications/' + appId + '/approve-for-pcic',
+            {},
+            this.authHeaders()
+          )
+        }
+
+        await this.refreshCurrentTab()
+      } catch (error) {
+        console.error(error)
+        alert(error.response?.data?.message || 'Failed to verify payment.')
+      }
+    },
+
+    async rejectPayment(appId) {
+      var remarks = prompt('Reason for rejecting this payment proof:')
+      if (remarks === null) {
+        return
+      }
+      try {
+        await axios.put(
+          API_BASE + '/api/insurance-applications/' + appId + '/reject-payment',
+          { remarks: remarks },
+          this.authHeaders()
+        )
+        await this.refreshCurrentTab()
+      } catch (error) {
+        console.error(error)
+        alert(error.response?.data?.message || 'Failed to reject payment.')
+      }
+    },
+
+    // Gates the PCIC-submission action: if a payment was required, it must
+    // be verified first (per the backend's own verifyPayment message —
+    // "Application may now proceed to PCIC"). Records with no payment_status
+    // at all (legacy data) are allowed through.
+    canSubmitToPcic(app) {
+      return !app.payment_status
+        || app.payment_status === 'verified'
+        || app.payment_status === 'not_required'
+    },
+
     async updateAppStatus(appId, status) {
       var action = this.routeForStatus(status)
       if (!action) {
@@ -1332,13 +1456,6 @@ export default {
       }
     },
 
-    downloadPcicBatchManifest() {
-      this.pcicBatchList = this.activeApplications.filter(function(app) {
-        return app.status === 'approved_for_pcic'
-      })
-      this.generatePDF('PCIC_Transmittal_Batch.pdf')
-    },
-
     downloadSelectedPcicBatch() {
       if (this.selectedPcicReady.length === 0) {
         alert('Select applications with "To be submitted to PCIC" status only.')
@@ -1397,6 +1514,7 @@ export default {
 
         try {
           await html2pdf().set(opt).from(element).save()
+          this.hasDownloadedSelectedBatch = true
         } catch (err) {
           console.error('PDF Generation Failed:', err)
           alert('Failed to generate PDF document.')
@@ -1572,8 +1690,9 @@ export default {
     },
 
     currentSeasonName(app) {
+      var appSeasonId = app.insurance_season_id ?? app.season?.id
       var season = this.seasons.find(function(s) {
-        return s.id == app.insurance_season_id
+        return String(s.id) === String(appSeasonId)
       })
       return season ? season.season_name : '—'
     },
@@ -1623,12 +1742,14 @@ export default {
       return API_BASE + '/api/storage/' + path
     },
 
+    // NOTE: the backend's payment_status enum is
+    // not_required | pending_verification | verified | rejected.
     paymentStatusLabel(status) {
       var map = {
         not_required: 'Not Required',
-        pending: 'Pending',
-        paid: 'Paid',
-        failed: 'Failed',
+        pending_verification: 'Pending Verification',
+        verified: 'Verified',
+        rejected: 'Rejected',
       }
       return map[status] || status || '—'
     },
@@ -1641,7 +1762,7 @@ export default {
     },
 
     countByStatus(status) {
-      return this.activeApplications.filter(function(app) {
+      return this.scopedApplications.filter(function(app) {
         return app.status === status
       }).length
     },
@@ -2196,6 +2317,8 @@ export default {
 .detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
 .detail-link { font-size: 0.85rem; color: #2E7D32; font-weight: 600; text-decoration: none; }
 .detail-link:hover { text-decoration: underline; }
+
+.payment-validation-actions { display: flex; gap: 10px; margin-top: 4px; }
 
 .documents-row { display: flex; gap: 1.2rem; flex-wrap: wrap; }
 .document-tile { display: flex; flex-direction: column; gap: 6px; }
