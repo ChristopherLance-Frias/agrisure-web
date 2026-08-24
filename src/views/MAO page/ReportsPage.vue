@@ -48,7 +48,6 @@
           <!-- Header -->
           <header class="reports-header">
             <div class="header-title-group">
-              <span class="eyebrow">Agricultural Analytics</span>
               <h1 class="reports-title">Reports &amp; Records</h1>
               <p class="reports-subtitle">Monitor farmers, crop insurance, damage claims, distribution, and inventory</p>
             </div>

@@ -1,20 +1,20 @@
 <template>
   <div class="dashboard-layout">
- 
+
     <!-- MAIN CONTENT AREA -->
     <div class="main-wrapper">
- 
+
       <!-- TOP BAR / HEADER -->
       <header class="top-header">
         <div class="header-title-group">
           <h1>Dashboard Overview</h1>
           <p>San Agustin Municipal Agriculture Office &middot; AgriSure</p>
         </div>
- 
+
         <div class="header-actions">
- 
+
           <div class="v-divider"></div>
- 
+
           <!-- User Profile -->
           <div class="user-profile">
             <div class="user-avatar">
@@ -27,10 +27,10 @@
           </div>
         </div>
       </header>
- 
+
       <!-- DASHBOARD BODY CONTAINER -->
       <main class="dashboard-body">
- 
+
         <!-- METRICS ROW (5 Cards) -->
         <div class="metrics-grid">
             <!-- Card 1: Farmers -->
@@ -71,6 +71,13 @@
                 <span class="status-pill amber">
                   {{ stats.applications.pending }}
                 </span>
+                <span
+                  v-if="applicationTrendChange"
+                  :class="['trend-badge', applicationTrendChange.direction]"
+                >
+                  <i :class="['fa-solid', applicationTrendChange.direction === 'up' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down']"></i>
+                  {{ applicationTrendChange.pct }}% MoM
+                </span>
               </div>
             </div>
 
@@ -89,6 +96,12 @@
               <div class="card-footer amber">
                 <span class="status-pill amber">
                   {{ stats.claims.inspecting }}
+                </span>
+                <span v-if="claimsApprovalRate !== null" class="trend-badge neutral">
+                  {{ claimsApprovalRate }}% Claimed
+                </span>
+                <span v-if="averageClaimAmount" class="trend-badge neutral">
+                  Avg &#8369;{{ Math.round(averageClaimAmount).toLocaleString() }}
                 </span>
               </div>
             </div>
@@ -109,6 +122,9 @@
               <div class="card-footer red">
                 <span class="status-pill red">
                   {{ stats.damage.critical }}
+                </span>
+                <span v-if="damageRatePer100Farmers !== null" class="trend-badge neutral">
+                  {{ damageRatePer100Farmers }} / 100 farmers
                 </span>
               </div>
             </div>
@@ -164,6 +180,7 @@
                 </span>
                 <strong class="analytics-stat-value">
                   {{ farmerAnalytics.riceFarmers }}
+                  <span class="stat-percent text-green">{{ riceFarmerPct }}%</span>
                 </strong>
               </div>
 
@@ -173,6 +190,7 @@
                 </span>
                 <strong class="analytics-stat-value">
                   {{ farmerAnalytics.cornFarmers }}
+                  <span class="stat-percent text-amber">{{ cornFarmerPct }}%</span>
                 </strong>
               </div>
 
@@ -215,6 +233,7 @@
                 </span>
                 <strong class="analytics-stat-value">
                   {{ farmAnalytics.riceFarms }}
+                  <span class="stat-percent text-green">{{ riceFarmPct }}%</span>
                 </strong>
               </div>
 
@@ -224,6 +243,7 @@
                 </span>
                 <strong class="analytics-stat-value">
                   {{ farmAnalytics.cornFarms }}
+                  <span class="stat-percent text-amber">{{ cornFarmPct }}%</span>
                 </strong>
               </div>
 
@@ -297,6 +317,7 @@
                   {{ farmAnalytics.riceArea.toFixed(2) }}
                   <span class="summary-unit">ha</span>
                 </p>
+                <p class="summary-subtext">{{ riceAreaPct }}% of total area</p>
               </div>
 
               <div class="summary-card">
@@ -305,6 +326,7 @@
                   {{ farmAnalytics.cornArea.toFixed(2) }}
                   <span class="summary-unit">ha</span>
                 </p>
+                <p class="summary-subtext">{{ cornAreaPct }}% of total area</p>
               </div>
 
             </div>
@@ -327,6 +349,7 @@
                     <th>Barangay</th>
                     <th>Farms</th>
                     <th>Total Area</th>
+                    <th>Avg Farm Size</th>
                   </tr>
                 </thead>
 
@@ -349,12 +372,16 @@
                       {{ Number(barangay.total_area).toFixed(2) }} ha
                     </td>
 
+                    <td>
+                      {{ barangay.total_farms ? (Number(barangay.total_area) / barangay.total_farms).toFixed(2) : '0.00' }} ha
+                    </td>
+
                   </tr>
 
                   <tr
                     v-if="!farmReport.largest_agricultural_barangays?.length"
                   >
-                    <td colspan="3" class="text-center">
+                    <td colspan="4" class="text-center">
                       No farm data available.
                     </td>
                   </tr>
@@ -376,11 +403,20 @@
                 <h2>Application Volume Trend</h2>
                 <p>Monthly breakdown for calendar year 2026</p>
               </div>
-              <button class="btn-secondary">View Full Analytics</button>
+              <div class="panel-header-actions">
+                <span
+                  v-if="applicationTrendChange"
+                  :class="['trend-badge', applicationTrendChange.direction]"
+                >
+                  <i :class="['fa-solid', applicationTrendChange.direction === 'up' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down']"></i>
+                  {{ applicationTrendChange.pct }}% vs last month
+                </span>
+                <button class="btn-secondary">View Full Analytics</button>
+              </div>
             </div>
             <ApexChart type="bar" height="250" :options="chartConfigs.applicationTrend.options" :series="chartConfigs.applicationTrend.series" />
           </div>
- 
+
           <!-- Pending Tasks Card -->
           <div class="panel flex-column-between">
             <div>
@@ -401,7 +437,7 @@
             <button class="btn-block">Manage Task Queue</button>
           </div>
         </div>
- 
+
         <!-- ANALYTICS DUAL ROW -->
         <div class="row-grid-2">
           <div class="panel">
@@ -411,7 +447,7 @@
             </div>
             <ApexChart type="bar" height="210" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
           </div>
- 
+
           <div class="panel">
             <div class="panel-header">
               <h2>Insurance Application Status</h2>
@@ -420,7 +456,7 @@
             <ApexChart type="donut" height="210" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
           </div>
         </div>
- 
+
         <!-- INVENTORY & DISTRIBUTION ROW -->
         <div class="row-grid-2">
           <div class="panel">
@@ -430,7 +466,7 @@
             </div>
             <ApexChart type="bar" height="210" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
           </div>
- 
+
           <div class="panel">
             <h2 class="panel-title-spaced">Distribution Summary</h2>
             <div class="summary-grid">
@@ -444,7 +480,7 @@
             </div>
           </div>
         </div>
- 
+
         <!-- BARANGAY PERFORMANCE & WEATHER WIDGET -->
         <div class="row-grid-3">
           <!-- Table Container -->
@@ -459,26 +495,34 @@
                   <tr>
                     <th>Barangay</th>
                     <th>Active Farmers</th>
-                    <th>Claims Filed</th>
-                    <th>Damage Severity</th>
+                    <th>Total Farms</th>
+                    <th>Damage Reports</th>
+                    <th>Claims Value</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="bg in barangayData" :key="bg.name">
-                    <td class="font-bold">{{ bg.name }}</td>
+                  <tr v-for="(bg, idx) in barangayData" :key="bg.name">
+                    <td class="font-bold">
+                      {{ bg.name }}
+                      <span v-if="idx === 0" class="rank-badge">Top</span>
+                    </td>
                     <td>{{ bg.farmers }}</td>
-                    <td>{{ bg.claims }}</td>
+                    <td>{{ bg.totalFarms }}</td>
                     <td>
-                      <span :class="['severity-badge', bg.damage > 5 ? 'warning' : 'success']">
-                        {{ bg.damage }} Incidents
+                      <span :class="['severity-badge', bg.damageReports > 5 ? 'warning' : 'success']">
+                        {{ bg.damageReports }} Incidents
                       </span>
                     </td>
+                    <td>&#8369;{{ Math.round(bg.claimAmount).toLocaleString() }}</td>
+                  </tr>
+                  <tr v-if="!barangayData.length">
+                    <td colspan="5" class="text-center">No barangay data available.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
- 
+
           <!-- Weather Card -->
           <div class="weather-card" :class="`is-${skyState}`">
             <div class="weather-scene" aria-hidden="true">
@@ -539,7 +583,7 @@
             <button v-if="error" class="weather-retry-btn" @click="fetchWeather">Retry</button>
           </div>
         </div>
- 
+
         <!-- ACTIVITIES & QUICK ACTIONS -->
         <div class="row-grid-3">
           <!-- Activities Feed -->
@@ -553,7 +597,7 @@
               </li>
             </ul>
           </div>
- 
+
           <!-- Quick Actions Grid -->
           <div class="panel">
             <h2 class="panel-title-spaced">Quick Action Shortcuts</h2>
@@ -570,7 +614,7 @@
             </div>
           </div>
         </div>
- 
+
         <!-- MUNICIPAL FARM MAP PREVIEW -->
         <div class="panel">
           <div class="panel-header">
@@ -582,12 +626,12 @@
               GIS Module Connected
             </span>
           </div>
- 
+
           <div class="map-placeholder">
             <div class="map-bg-icon">
               <i class="fa-solid fa-map-location-dot"></i>
             </div>
- 
+
             <div class="map-grid">
               <button
                 v-for="bgy in barangayData"
@@ -598,12 +642,12 @@
                   <span class="map-card-title">{{ bgy.name }}</span>
                   <span :class="['status-dot', bgy.statusBg]"></span>
                 </div>
-                <p class="map-card-desc">{{ bgy.farmers }} Active Farmers</p>
+                <p class="map-card-desc">{{ bgy.farmers }} Active Farmers &middot; {{ bgy.totalArea.toFixed(1) }} ha</p>
               </button>
             </div>
           </div>
         </div>
- 
+
       </main>
     </div>
   </div>
@@ -669,6 +713,74 @@ const skyState = computed(() => {
 const distributionSummary = ref([])
 const recentActivities = ref([])
 
+/* ---------------- Derived analytics state ---------------- */
+const applicationTrendChange = ref(null) // { direction: 'up' | 'down', pct: number }
+const insuranceApprovalRate = ref(null)
+const claimsApprovalRate = ref(null)
+const averageClaimAmount = ref(null)
+const damageRatePer100Farmers = ref(null)
+
+const farmerAnalytics = ref({
+  totalFarmers: 0,
+  riceFarmers: 0,
+  cornFarmers: 0,
+  averageFarmSize: 0
+})
+
+const farmAnalytics = ref({
+  totalFarms: 0,
+  riceFarms: 0,
+  cornFarms: 0,
+  riceArea: 0,
+  cornArea: 0,
+  averageFarmArea: 0
+})
+
+const farmReport = ref({
+  summary: {
+    total_farms: 0,
+    rice_farms: 0,
+    corn_farms: 0,
+    total_rice_area: 0,
+    total_corn_area: 0,
+    average_farm_area: 0
+  },
+  crop_distribution: [],
+  crop_area_distribution: [],
+  farms_per_barangay: [],
+  largest_agricultural_barangays: []
+})
+
+// Farmer crop-mix percentages
+const riceFarmerPct = computed(() => {
+  const total = farmerAnalytics.value.totalFarmers
+  return total ? Math.round((farmerAnalytics.value.riceFarmers / total) * 100) : 0
+})
+const cornFarmerPct = computed(() => {
+  const total = farmerAnalytics.value.totalFarmers
+  return total ? Math.round((farmerAnalytics.value.cornFarmers / total) * 100) : 0
+})
+
+// Farm crop-mix percentages
+const riceFarmPct = computed(() => {
+  const total = farmAnalytics.value.totalFarms
+  return total ? Math.round((farmAnalytics.value.riceFarms / total) * 100) : 0
+})
+const cornFarmPct = computed(() => {
+  const total = farmAnalytics.value.totalFarms
+  return total ? Math.round((farmAnalytics.value.cornFarms / total) * 100) : 0
+})
+
+// Area-mix percentages
+const riceAreaPct = computed(() => {
+  const total = farmAnalytics.value.riceArea + farmAnalytics.value.cornArea
+  return total ? Math.round((farmAnalytics.value.riceArea / total) * 100) : 0
+})
+const cornAreaPct = computed(() => {
+  const total = farmAnalytics.value.riceArea + farmAnalytics.value.cornArea
+  return total ? Math.round((farmAnalytics.value.cornArea / total) * 100) : 0
+})
+
 const chartConfigs = reactive({
   applicationTrend: {
     series: [{ name: 'Applications', data: [] }],
@@ -691,7 +803,15 @@ const chartConfigs = reactive({
       chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
       colors: [palette.red],
       plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
-      dataLabels: { enabled: false },
+      dataLabels: {
+        enabled: true,
+        style: { colors: ['#3a3a3a'], fontSize: '11px', fontWeight: 600 },
+        formatter: (val, opts) => {
+          const total = opts.w.globals.series[opts.seriesIndex].reduce((a, b) => a + b, 0)
+          const pct = total ? Math.round((val / total) * 100) : 0
+          return `${val} (${pct}%)`
+        }
+      },
       xaxis: {
         categories: [],
         labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
@@ -706,8 +826,25 @@ const chartConfigs = reactive({
       labels: [],
       colors: [palette.green, palette.amber, palette.blue, palette.purple, palette.red],
       legend: { position: 'bottom', labels: { colors: '#5c6b64' }, fontSize: '12px' },
-      dataLabels: { enabled: false },
-      stroke: { width: 0 }
+      dataLabels: {
+        enabled: true,
+        formatter: (val) => `${Math.round(val)}%`
+      },
+      stroke: { width: 0 },
+      plotOptions: {
+        pie: {
+          donut: {
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Total',
+                formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+              }
+            }
+          }
+        }
+      }
     }
   },
   inventoryStatus: {
@@ -781,10 +918,25 @@ const chartConfigs = reactive({
         fontSize: '12px'
       },
       dataLabels: {
-        enabled: false
+        enabled: true,
+        formatter: (val) => `${Math.round(val)}%`
       },
       stroke: {
         width: 0
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Total Farms',
+                formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -798,6 +950,7 @@ const loadDashboard = async () => {
       farms,
       insurance,
       damage,
+      claims,
       distribution,
       inventory,
       executive
@@ -807,6 +960,7 @@ const loadDashboard = async () => {
       axios.get('/api/reports/farms'),
       axios.get('/api/reports/insurance'),
       axios.get('/api/reports/damage-reports'),
+      axios.get('/api/reports/claims'),
       axios.get('/api/reports/distribution'),
       axios.get('/api/reports/inventory'),
       axios.get('/api/reports/executive')
@@ -816,27 +970,28 @@ const loadDashboard = async () => {
     const frm = farmers.data
     const ins = insurance.data
     const dmg = damage.data
+    const clm = claims.data
     const dist = distribution.data
     const inv = inventory.data
     const exe = executive.data
     farmReport.value = farms.data
-    const farm = farmReport.value 
+    const farm = farmReport.value
 
     farmerAnalytics.value = {
-    totalFarmers: Number(frm.summary.total_farmers || 0),
-    riceFarmers: Number(frm.summary.rice_farmers || 0),
-    cornFarmers: Number(frm.summary.corn_farmers || 0),
-    averageFarmSize: Number(frm.summary.average_farm_size || 0)
-  }
+      totalFarmers: Number(frm.summary.total_farmers || 0),
+      riceFarmers: Number(frm.summary.rice_farmers || 0),
+      cornFarmers: Number(frm.summary.corn_farmers || 0),
+      averageFarmSize: Number(frm.summary.average_farm_size || 0)
+    }
 
-  farmAnalytics.value = {
-    totalFarms: Number(farm.summary.total_farms || 0),
-    riceFarms: Number(farm.summary.rice_farms || 0),
-    cornFarms: Number(farm.summary.corn_farms || 0),
-    riceArea: Number(farm.summary.total_rice_area || 0),
-    cornArea: Number(farm.summary.total_corn_area || 0),
-    averageFarmArea: Number(farm.summary.average_farm_area || 0)
-  }
+    farmAnalytics.value = {
+      totalFarms: Number(farm.summary.total_farms || 0),
+      riceFarms: Number(farm.summary.rice_farms || 0),
+      cornFarms: Number(farm.summary.corn_farms || 0),
+      riceArea: Number(farm.summary.total_rice_area || 0),
+      cornArea: Number(farm.summary.total_corn_area || 0),
+      averageFarmArea: Number(farm.summary.average_farm_area || 0)
+    }
 
     stats.value = {
       farmers: {
@@ -849,7 +1004,7 @@ const loadDashboard = async () => {
       },
       claims: {
         count: ov.claims,
-        inspecting: `\u20b1${Number(exe.kpis.claims_released_amount).toLocaleString()}`
+        inspecting: `\u20b1${Number(clm.summary.total_claim_amount || 0).toLocaleString()}`
       },
       damage: {
         count: ov.damage_reports,
@@ -861,20 +1016,57 @@ const loadDashboard = async () => {
       }
     }
 
+    /* ---- Application trend + month-over-month change ---- */
+    const monthlyTotals = ins.monthly_applications.map(i => i.total)
     chartConfigs.applicationTrend.series = [{
       name: 'Applications',
-      data: ins.monthly_applications.map(i => i.total)
+      data: monthlyTotals
     }]
     chartConfigs.applicationTrend.options.xaxis.categories = ins.monthly_applications.map(i => `Month ${i.month}`)
 
+    if (monthlyTotals.length >= 2) {
+      const last = monthlyTotals[monthlyTotals.length - 1]
+      const prev = monthlyTotals[monthlyTotals.length - 2]
+      if (prev > 0) {
+        const pct = Math.round(((last - prev) / prev) * 100)
+        applicationTrendChange.value = { direction: pct >= 0 ? 'up' : 'down', pct: Math.abs(pct) }
+      } else if (last > 0) {
+        applicationTrendChange.value = { direction: 'up', pct: 100 }
+      } else {
+        applicationTrendChange.value = null
+      }
+    } else {
+      applicationTrendChange.value = null
+    }
+
+    /* ---- Damage causes, with % of total baked into the chart labels ---- */
     chartConfigs.damageAnalytics.series = [{
       name: 'Incidents',
       data: dmg.damage_causes.map(i => i.total)
     }]
     chartConfigs.damageAnalytics.options.xaxis.categories = dmg.damage_causes.map(i => i.damage_cause)
 
+    /* ---- Insurance status + approval rate ---- */
     chartConfigs.insuranceStatus.series = ins.status_distribution.map(i => i.total)
     chartConfigs.insuranceStatus.options.labels = ins.status_distribution.map(i => i.status)
+
+    // The controller's insurance status values are:
+    // submitted_to_mao, approved_for_pcic, submitted_to_pcic, insured, rejected.
+    // "insured" is the true terminal-approved state, not a status literally named "approved".
+    insuranceApprovalRate.value = ins.summary.total_applications
+      ? Math.round((Number(ins.summary.insured || 0) / ins.summary.total_applications) * 100)
+      : null
+
+    /* ---- Claims approval rate + average payout, from the claims report's own summary ---- */
+    claimsApprovalRate.value = clm.summary.total_claims
+      ? Math.round((Number(clm.summary.claimed || 0) / clm.summary.total_claims) * 100)
+      : null
+    averageClaimAmount.value = Number(clm.summary.average_claim_amount || 0)
+
+    /* ---- Damage rate normalized per 100 farmers, for cross-barangay comparability ---- */
+    damageRatePer100Farmers.value = ov.total_farmers
+      ? Math.round((ov.damage_reports / ov.total_farmers) * 100 * 10) / 10
+      : null
 
     chartConfigs.inventoryStatus.series = [{
       name: 'Quantity',
@@ -882,13 +1074,42 @@ const loadDashboard = async () => {
     }]
     chartConfigs.inventoryStatus.options.xaxis.categories = inv.current_inventory.map(i => i.supply_name)
 
-    barangayData.value = exe.top_barangays_by_farmers.map(i => ({
-      name: i.name,
-      farmers: i.total,
-      claims: 0,
-      damage: 0,
-      statusBg: 'status-green'
-    }))
+    /* ---- Barangay table: merge farmer counts, farm/area data, and the executive
+       report's own top_damage_barangays / top_claim_barangays — these are real
+       per-barangay damage counts and claim amounts, not estimates. ---- */
+    const farmsByBarangay = new Map(
+      (farm.farms_per_barangay || []).map(b => [b.name, b])
+    )
+    const damageByBarangay = new Map(
+      (exe.top_damage_barangays || []).map(b => [b.name, Number(b.total || 0)])
+    )
+    const claimsByBarangay = new Map(
+      (exe.top_claim_barangays || []).map(b => [b.name, Number(b.amount || 0)])
+    )
+
+    barangayData.value = exe.top_barangays_by_farmers
+      .map(i => {
+        const farmInfo = farmsByBarangay.get(i.name) || {}
+        const totalFarms = Number(farmInfo.total_farms || 0)
+        const totalArea = Number(farmInfo.total_area || 0)
+        return {
+          name: i.name,
+          farmers: i.total,
+          totalFarms,
+          totalArea,
+          avgFarmSize: totalFarms ? totalArea / totalFarms : 0,
+          damageReports: damageByBarangay.get(i.name) ?? 0,
+          claimAmount: claimsByBarangay.get(i.name) ?? 0,
+          statusBg: 'status-green'
+        }
+      })
+      .sort((a, b) => b.farmers - a.farmers)
+
+    /* ---- Crop distribution donut ---- */
+    if (farm.crop_distribution?.length) {
+      chartConfigs.cropDistribution.series = farm.crop_distribution.map(i => Number(i.total))
+      chartConfigs.cropDistribution.options.labels = farm.crop_distribution.map(i => i.crop_type)
+    }
 
     distributionSummary.value = [
       { label: 'Distribution Events', value: dist.summary.distribution_events, colorClass: 'text-green' },
@@ -915,35 +1136,6 @@ const loadDashboard = async () => {
     console.error(e)
   }
 }
-const farmerAnalytics = ref({
-  totalFarmers: 0,
-  riceFarmers: 0,
-  cornFarmers: 0,
-  averageFarmSize: 0
-})
-
-const farmAnalytics = ref({
-  totalFarms: 0,
-  riceFarms: 0,
-  cornFarms: 0,
-  riceArea: 0,
-  cornArea: 0,
-  averageFarmArea: 0
-})
-const farmReport = ref({
-  summary: {
-    total_farms: 0,
-    rice_farms: 0,
-    corn_farms: 0,
-    total_rice_area: 0,
-    total_corn_area: 0,
-    average_farm_area: 0
-  },
-  crop_distribution: [],
-  crop_area_distribution: [],
-  farms_per_barangay: [],
-  largest_agricultural_barangays: []
-})
 
 function mapWeatherCode(code) {
   const map = {
@@ -1023,7 +1215,6 @@ onUnmounted(() => {
 
 onMounted(loadDashboard)
 </script>
-
 <style scoped>
  
 * { box-sizing: border-box; }

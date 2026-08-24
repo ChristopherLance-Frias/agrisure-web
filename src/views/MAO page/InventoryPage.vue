@@ -1,704 +1,704 @@
 <template>
-  <div class="inv-page">
- 
-    <!-- TOP BAR / HEADER -->
-    <header class="top-header inv-top-header">
-      <div class="header-title-group">
-        <p class="eyebrow">Municipal Agriculture Office</p>
-        <h1>Farming Supply Inventory</h1>
-        <p>Track stock levels and dispatch supplies to selected barangays.</p>
-      </div>
- 
-      <div class="header-actions">
-        <div class="v-divider"></div>
- 
-        <!-- User Profile -->
-        <div class="user-profile">
-          <div class="user-avatar">
-            {{ currentUser.initials }}
+  <div class="inv-layout">
+    <div class="inv-page">
+  
+      <!-- TOP BAR / HEADER -->
+      <header class="top-header inv-top-header">
+        <div class="header-title-group">
+          <h1>Farming Supply Inventory</h1>
+          <p>Track stock levels and dispatch supplies to selected barangays.</p>
+        </div>
+  
+        <div class="header-actions">
+          <div class="v-divider"></div>
+  
+          <!-- User Profile -->
+          <div class="user-profile">
+            <div class="user-avatar">
+              {{ currentUser.initials }}
+            </div>
+            <div class="user-info">
+              <p class="user-name">{{ currentUser.name }}</p>
+              <p class="user-role">{{ currentUser.role }}</p>
+            </div>
           </div>
-          <div class="user-info">
-            <p class="user-name">{{ currentUser.name }}</p>
-            <p class="user-role">{{ currentUser.role }}</p>
-          </div>
+        </div>
+      </header>
+  
+      <!-- PAGE ACTIONS -->
+      <div class="page-actions">
+        <button class="btn btn-ghost" @click="activeTab = 'inventory'; showAddSupply = true">
+          <svg viewBox="0 0 20 20" class="icon"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+          Add supply
+        </button>
+        <button class="btn btn-primary" @click="openCreateEvent">
+          <svg viewBox="0 0 20 20" class="icon"><path d="M4 6h9M4 10h12M4 14h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+          Create distribution event
+        </button>
+      </div>
+  
+      <!-- LEDGER -->
+      <div class="ledger-strip">
+        <div class="ledger-item">
+          <span class="ledger-value">{{ supplies.length }}</span>
+          <span class="ledger-label">Supply types</span>
+        </div>
+        <div class="ledger-divider"></div>
+        <div class="ledger-item">
+          <span class="ledger-value tone-green">{{ supplies.filter(s => s.status === 'in-stock').length }}</span>
+          <span class="ledger-label">In stock</span>
+        </div>
+        <div class="ledger-divider"></div>
+        <div class="ledger-item">
+          <span class="ledger-value tone-gold">{{ supplies.filter(s => s.status === 'low').length }}</span>
+          <span class="ledger-label">Low stock</span>
+        </div>
+        <div class="ledger-divider"></div>
+        <div class="ledger-item">
+          <span class="ledger-value tone-blue">{{ distributionEvents.length }}</span>
+          <span class="ledger-label">Distribution events</span>
+        </div>
+        <div class="ledger-divider"></div>
+        <div class="ledger-item">
+          <span class="ledger-value tone-plum">{{ distributionEvents.filter(e => e.status === 'completed').length }}</span>
+          <span class="ledger-label">Completed</span>
         </div>
       </div>
-    </header>
- 
-    <!-- PAGE ACTIONS -->
-    <div class="page-actions">
-      <button class="btn btn-ghost" @click="activeTab = 'inventory'; showAddSupply = true">
-        <svg viewBox="0 0 20 20" class="icon"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
-        Add supply
-      </button>
-      <button class="btn btn-primary" @click="openCreateEvent">
-        <svg viewBox="0 0 20 20" class="icon"><path d="M4 6h9M4 10h12M4 14h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
-        Create distribution event
-      </button>
-    </div>
- 
-    <!-- LEDGER -->
-    <div class="ledger-strip">
-      <div class="ledger-item">
-        <span class="ledger-value">{{ supplies.length }}</span>
-        <span class="ledger-label">Supply types</span>
+  
+      <!-- TABS -->
+      <div class="tab-bar" role="tablist">
+        <button class="tab-btn" :class="{ active: activeTab === 'inventory' }" @click="activeTab = 'inventory'">Supply stocks</button>
+        <button class="tab-btn" :class="{ active: activeTab === 'lists' }" @click="activeTab = 'lists'">Distribution events</button>
       </div>
-      <div class="ledger-divider"></div>
-      <div class="ledger-item">
-        <span class="ledger-value tone-green">{{ supplies.filter(s => s.status === 'in-stock').length }}</span>
-        <span class="ledger-label">In stock</span>
-      </div>
-      <div class="ledger-divider"></div>
-      <div class="ledger-item">
-        <span class="ledger-value tone-gold">{{ supplies.filter(s => s.status === 'low').length }}</span>
-        <span class="ledger-label">Low stock</span>
-      </div>
-      <div class="ledger-divider"></div>
-      <div class="ledger-item">
-        <span class="ledger-value tone-blue">{{ distributionEvents.length }}</span>
-        <span class="ledger-label">Distribution events</span>
-      </div>
-      <div class="ledger-divider"></div>
-      <div class="ledger-item">
-        <span class="ledger-value tone-plum">{{ distributionEvents.filter(e => e.status === 'completed').length }}</span>
-        <span class="ledger-label">Completed</span>
-      </div>
-    </div>
- 
-    <!-- TABS -->
-    <div class="tab-bar" role="tablist">
-      <button class="tab-btn" :class="{ active: activeTab === 'inventory' }" @click="activeTab = 'inventory'">Supply stocks</button>
-      <button class="tab-btn" :class="{ active: activeTab === 'lists' }" @click="activeTab = 'lists'">Distribution events</button>
-    </div>
- 
-    <!-- INVENTORY -->
-    <div v-if="activeTab === 'inventory'">
-      <div class="toolbar">
-        <div class="search-wrap">
-          <svg viewBox="0 0 20 20" class="icon search-icon">
-            <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6" fill="none" />
-            <path d="M14 14l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-          </svg>
-          <input v-model="supplySearch" type="text" placeholder="Search supply name or category…" class="search-input" />
-        </div>
-        <div class="filter-group">
-          <button v-for="f in stockFilters" :key="f.value" class="filter-tag" :class="{ active: supplyFilter === f.value }" @click="supplyFilter = f.value">
-            {{ f.label }}
-          </button>
-        </div>
-      </div>
- 
-      <div class="table-card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Supply name</th>
-              <th>Category</th>
-              <th>Unit</th>
-              <th class="num">Available</th>
-              <th class="num">Distributed</th>
-              <th>Status</th>
-              <th class="col-actions"></th>
-            </tr>
-          </thead>
- 
-          <tbody v-if="!loadingSupplies">
-            <tr v-for="s in filteredSupplies" :key="s.id" :class="{ 'row-low': s.status === 'low', 'row-out': s.status === 'out' }">
-              <td class="td-name">{{ s.name }}</td>
-              <td><span class="cat-tag">{{ s.category }}</span></td>
-              <td class="td-muted">{{ s.unit }}</td>
-              <td class="td-qty num">{{ Number(s.qty_available || 0).toLocaleString() }}</td>
-              <td class="td-muted num">{{ Number(s.qty_distributed || 0).toLocaleString() }}</td>
-              <td>
-                <span class="status-pill" :class="'sp-' + s.status">
-                  <i class="dot"></i>{{ stockLabel(s.status) }}
-                </span>
-              </td>
-              <td>
-                <div class="row-actions">
-                  <button class="icon-btn" title="Edit" @click="editSupply(s)">
-                    <svg viewBox="0 0 20 20" class="icon"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round" /></svg>
-                  </button>
-                  <button class="icon-btn icon-btn-danger" title="Delete" @click="deleteSupply(s.id)">
-                    <svg viewBox="0 0 20 20" class="icon"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
- 
-            <tr v-if="!filteredSupplies.length">
-              <td colspan="7">
-                <div class="empty-block">
-                  <p class="empty-title">No supplies found</p>
-                  <p class="empty-copy">Try a different search term or filter, or add a new supply.</p>
-                </div>
-              </td>
-            </tr>
-          </tbody>
- 
-          <tbody v-else>
-            <tr><td colspan="7" class="td-loading">Loading inventory…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
- 
-    <!-- DISTRIBUTION EVENTS -->
-    <div v-if="activeTab === 'lists'" class="lists-area">
-      <div class="list-col">
-        <div class="toolbar toolbar-stack">
+  
+      <!-- INVENTORY -->
+      <div v-if="activeTab === 'inventory'">
+        <div class="toolbar">
           <div class="search-wrap">
             <svg viewBox="0 0 20 20" class="icon search-icon">
               <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6" fill="none" />
               <path d="M14 14l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
             </svg>
-            <input v-model="listSearch" type="text" placeholder="Search event title or reference…" class="search-input" />
+            <input v-model="supplySearch" type="text" placeholder="Search supply name or category…" class="search-input" />
           </div>
           <div class="filter-group">
-            <button v-for="f in listFilters" :key="f.value" class="filter-tag" :class="{ active: listFilter === f.value }" @click="listFilter = f.value">
+            <button v-for="f in stockFilters" :key="f.value" class="filter-tag" :class="{ active: supplyFilter === f.value }" @click="supplyFilter = f.value">
               {{ f.label }}
             </button>
           </div>
         </div>
- 
-        <div class="dist-cards" v-if="!loadingLists">
-          <button
-            v-for="event in filteredLists" :key="event.id" class="dist-card"
-            :class="{ selected: selectedEvent && selectedEvent.id === event.id }"
-            @click="selectEvent(event)"
-          >
-            <div class="dc-top">
-              <p class="dc-id">{{ event.reference_no || ('EVENT-' + event.id) }}</p>
-              <span class="status-pill" :class="'sp-' + event.status"><i class="dot"></i>{{ listLabel(event.status) }}</span>
-            </div>
- 
-            <p class="dc-title">{{ event.title }}</p>
- 
-            <div class="dc-meta">
-              <span class="dc-meta-item">
-                <svg viewBox="0 0 20 20" class="icon-sm">
-                  <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4" fill="none" />
-                  <path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                </svg>
-                {{ event.distribution_date }}
-              </span>
-              <span class="dc-meta-item">
-                <svg viewBox="0 0 20 20" class="icon-sm">
-                  <path d="M10 2a5 5 0 100 10 5 5 0 000-10zM3 18c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" />
-                </svg>
-                {{ event.lists?.length || 0 }} barangay/s
-              </span>
-            </div>
-          </button>
- 
-          <div v-if="!filteredLists.length" class="empty-state">
-            <p class="empty-title">No distribution events found</p>
-            <p class="empty-copy">Create one to start dispatching supplies.</p>
-          </div>
+  
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Supply name</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th class="num">Available</th>
+                <th class="num">Distributed</th>
+                <th>Status</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+  
+            <tbody v-if="!loadingSupplies">
+              <tr v-for="s in filteredSupplies" :key="s.id" :class="{ 'row-low': s.status === 'low', 'row-out': s.status === 'out' }">
+                <td class="td-name">{{ s.name }}</td>
+                <td><span class="cat-tag">{{ s.category }}</span></td>
+                <td class="td-muted">{{ s.unit }}</td>
+                <td class="td-qty num">{{ Number(s.qty_available || 0).toLocaleString() }}</td>
+                <td class="td-muted num">{{ Number(s.qty_distributed || 0).toLocaleString() }}</td>
+                <td>
+                  <span class="status-pill" :class="'sp-' + s.status">
+                    <i class="dot"></i>{{ stockLabel(s.status) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button class="icon-btn" title="Edit" @click="editSupply(s)">
+                      <svg viewBox="0 0 20 20" class="icon"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round" /></svg>
+                    </button>
+                    <button class="icon-btn icon-btn-danger" title="Delete" @click="deleteSupply(s.id)">
+                      <svg viewBox="0 0 20 20" class="icon"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+  
+              <tr v-if="!filteredSupplies.length">
+                <td colspan="7">
+                  <div class="empty-block">
+                    <p class="empty-title">No supplies found</p>
+                    <p class="empty-copy">Try a different search term or filter, or add a new supply.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+  
+            <tbody v-else>
+              <tr><td colspan="7" class="td-loading">Loading inventory…</td></tr>
+            </tbody>
+          </table>
         </div>
- 
-        <div class="empty-state" v-else><p>Loading distribution events…</p></div>
       </div>
- 
-      <!-- EVENT DETAIL -->
-      <div class="detail-col" v-if="selectedEvent">
-        <div class="manifest-card">
-          <div class="manifest-header">
-            <div>
-              <p class="detail-id">{{ selectedEvent.reference_no || ('EVENT-' + selectedEvent.id) }}</p>
-              <h3 class="detail-title">{{ selectedEvent.title }}</h3>
+  
+      <!-- DISTRIBUTION EVENTS -->
+      <div v-if="activeTab === 'lists'" class="lists-area">
+        <div class="list-col">
+          <div class="toolbar toolbar-stack">
+            <div class="search-wrap">
+              <svg viewBox="0 0 20 20" class="icon search-icon">
+                <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6" fill="none" />
+                <path d="M14 14l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+              <input v-model="listSearch" type="text" placeholder="Search event title or reference…" class="search-input" />
             </div>
-            <span class="status-pill status-pill-lg" :class="'sp-' + selectedEvent.status"><i class="dot"></i>{{ listLabel(selectedEvent.status) }}</span>
-          </div>
- 
-          <!-- Letter -->
-          <div v-if="selectedEvent.letter_image" class="event-letter-preview">
-            <p class="section-label">Authorization letter</p>
-            <div class="letter-preview-card">
-              <img :src="letterUrl(selectedEvent.letter_image)" alt="Distribution authorization letter" class="letter-image" />
-              <a :href="letterUrl(selectedEvent.letter_image)" target="_blank" class="btn btn-ghost btn-sm">View letter</a>
+            <div class="filter-group">
+              <button v-for="f in listFilters" :key="f.value" class="filter-tag" :class="{ active: listFilter === f.value }" @click="listFilter = f.value">
+                {{ f.label }}
+              </button>
             </div>
           </div>
- 
-          <div class="detail-meta-row">
-            <div class="dm-item"><span class="dm-label">Date</span><span class="dm-val">{{ selectedEvent.distribution_date }}</span></div>
-            <div class="dm-item"><span class="dm-label">Time</span><span class="dm-val">{{ selectedEvent.distribution_time || '—' }}</span></div>
-            <div class="dm-item"><span class="dm-label">Venue</span><span class="dm-val">{{ selectedEvent.venue }}</span></div>
-            <div class="dm-item"><span class="dm-label">Barangays</span><span class="dm-val">{{ selectedEvent.lists?.length || 0 }}</span></div>
-          </div>
- 
-          <div class="perforation"><span v-for="n in 40" :key="n"></span></div>
- 
-          <!-- Barangay Lists -->
-          <p class="section-label">Selected barangays</p>
- 
-          <div v-for="list in selectedEvent.lists || []" :key="list.id" class="barangay-block">
-            <button class="barangay-block-head" @click="toggleListOpen(list.id)">
-              <div class="bb-left">
-                <svg class="chevron icon-sm" :class="{ open: isListOpen(list.id) }" viewBox="0 0 20 20">
-                  <path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <span class="bb-name">Brgy. {{ list.barangay?.name || 'Unknown Barangay' }}</span>
+  
+          <div class="dist-cards" v-if="!loadingLists">
+            <button
+              v-for="event in filteredLists" :key="event.id" class="dist-card"
+              :class="{ selected: selectedEvent && selectedEvent.id === event.id }"
+              @click="selectEvent(event)"
+            >
+              <div class="dc-top">
+                <p class="dc-id">{{ event.reference_no || ('EVENT-' + event.id) }}</p>
+                <span class="status-pill" :class="'sp-' + event.status"><i class="dot"></i>{{ listLabel(event.status) }}</span>
               </div>
-              <div class="bb-right">
-                <span class="bb-stat">{{ list.farmers?.length || 0 }} farmers</span>
-                <span class="status-pill" :class="'sp-' + (list.status || 'draft')"><i class="dot"></i>{{ listLabel(list.status || 'draft') }}</span>
-              </div>
-            </button>
- 
-            <div class="barangay-block-body" v-show="isListOpen(list.id)">
-              <table class="inner-table">
-                <thead><tr><th>Supply</th><th class="num">Total qty</th></tr></thead>
-                <tbody>
-                  <tr v-for="item in list.items || []" :key="item.id">
-                    <td>{{ item.supply?.name }}</td>
-                    <td class="num">{{ item.quantity }} {{ item.supply?.unit }}</td>
-                  </tr>
-                </tbody>
-              </table>
- 
-              <p class="mini-label">Recipients</p>
-              <div class="farmer-chips">
-                <span class="farmer-chip" v-for="f in list.farmers || []" :key="f.id">
-                  {{ f.farmer?.last_name }}, {{ f.farmer?.first_name }} {{ f.farmer?.middle_name || '' }}
+  
+              <p class="dc-title">{{ event.title }}</p>
+  
+              <div class="dc-meta">
+                <span class="dc-meta-item">
+                  <svg viewBox="0 0 20 20" class="icon-sm">
+                    <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4" fill="none" />
+                    <path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                  {{ event.distribution_date }}
+                </span>
+                <span class="dc-meta-item">
+                  <svg viewBox="0 0 20 20" class="icon-sm">
+                    <path d="M10 2a5 5 0 100 10 5 5 0 000-10zM3 18c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" />
+                  </svg>
+                  {{ event.lists?.length || 0 }} barangay/s
                 </span>
               </div>
+            </button>
+  
+            <div v-if="!filteredLists.length" class="empty-state">
+              <p class="empty-title">No distribution events found</p>
+              <p class="empty-copy">Create one to start dispatching supplies.</p>
             </div>
           </div>
- 
-          <!-- Actions -->
-          <div class="detail-actions" v-if="selectedEvent.status === 'draft' || selectedEvent.status === 'published'">
-            <button v-if="selectedEvent.status === 'draft'" class="btn btn-primary btn-block" @click="publishDistributionEvent(selectedEvent)">
-              Publish to barangays
-            </button>
-            <button v-if="selectedEvent.status === 'published'" class="btn btn-primary btn-block" @click="completeDistributionEvent(selectedEvent)">
-              Mark as completed
-            </button>
-          </div>
+  
+          <div class="empty-state" v-else><p>Loading distribution events…</p></div>
         </div>
-      </div>
- 
-      <!-- Empty detail -->
-      <div class="detail-empty" v-else>
-        <svg viewBox="0 0 48 48" class="empty-icon">
-          <rect x="8" y="10" width="32" height="30" rx="3" stroke="currentColor" stroke-width="2" fill="none" />
-          <path d="M8 18h32M16 6v8M32 6v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-        <p class="empty-title">Select an event to view its manifest</p>
-        <p class="empty-copy">Details, authorization letter, barangays, farmers, and allocations will appear here.</p>
-      </div>
-    </div>
- 
-    <!-- ADD / EDIT SUPPLY MODAL -->
-    <transition name="fade">
-      <div class="modal-backdrop" v-if="showAddSupply" @click.self="closeAddSupply">
-        <div class="modal">
-          <div class="modal-head">
-            <h4>{{ editingSupply ? 'Edit supply' : 'Add supply' }}</h4>
-            <button class="modal-close" @click="closeAddSupply">×</button>
-          </div>
- 
-          <div class="form-grid">
-            <div class="form-field span-2">
-              <label>Supply name</label>
-              <input v-model="supplyForm.name" type="text" placeholder="e.g. Urea Fertilizer 50kg" />
-            </div>
-            <div class="form-field">
-              <label>Category</label>
-              <select v-model="supplyForm.category">
-                <option value="">Select category</option>
-                <option>Fertilizer</option>
-                <option>Pesticide</option>
-                <option>Seeds</option>
-                <option>Tools</option>
-                <option>Equipment</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>Unit</label>
-              <input v-model="supplyForm.unit" type="text" placeholder="e.g. sack, liter, piece" />
-            </div>
-            <div class="form-field">
-              <label>Qty available</label>
-              <input v-model.number="supplyForm.qty_available" type="number" min="0" />
-            </div>
-            <div class="form-field">
-              <label>Low stock threshold</label>
-              <input v-model.number="supplyForm.low_threshold" type="number" min="0" />
-            </div>
-          </div>
- 
-          <div class="modal-actions">
-            <button class="btn btn-ghost" @click="closeAddSupply">Cancel</button>
-            <button class="btn btn-primary" @click="saveSupply">{{ editingSupply ? 'Save changes' : 'Add supply' }}</button>
-          </div>
-        </div>
-      </div>
-    </transition>
- 
-    <!-- CREATE DISTRIBUTION EVENT -->
-    <transition name="fade">
-      <div class="modal-backdrop" v-if="showCreateEvent" @click.self="closeCreateEvent">
-        <div class="modal modal-wide">
-          <div class="modal-head">
-            <div>
-              <p class="eyebrow">New distribution</p>
-              <h4>Create distribution event</h4>
-            </div>
-            <button class="modal-close" @click="closeCreateEvent">×</button>
-          </div>
- 
-          <!-- WIZARD STEPS -->
-          <div class="wizard-steps">
-            <button class="wizard-step" :class="{ active: wizardStep === 1, done: wizardStep > 1 }" @click="wizardStep = 1">
-              <span class="wizard-step-num">
-                <svg v-if="wizardStep > 1" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                <template v-else>1</template>
-              </span>
-              Letter
-            </button>
-            <span class="wizard-line"></span>
- 
-            <button class="wizard-step" :class="{ active: wizardStep === 2, done: wizardStep > 2 }" :disabled="!letterStepValid" @click="letterStepValid && (wizardStep = 2)">
-              <span class="wizard-step-num">
-                <svg v-if="wizardStep > 2" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                <template v-else>2</template>
-              </span>
-              Event details
-            </button>
-            <span class="wizard-line"></span>
- 
-            <button class="wizard-step" :class="{ active: wizardStep === 3, done: wizardStep > 3 }" :disabled="!step1Valid" @click="step1Valid && (wizardStep = 3)">
-              <span class="wizard-step-num">
-                <svg v-if="wizardStep > 3" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                <template v-else>3</template>
-              </span>
-              Barangays
-            </button>
-            <span class="wizard-line"></span>
- 
-            <button class="wizard-step" :class="{ active: wizardStep === 4, done: wizardStep > 4 }" :disabled="!barangaysSelected" @click="barangaysSelected && (wizardStep = 4)">
-              <span class="wizard-step-num">4</span>
-              Farmers & allocation
-            </button>
-            <span class="wizard-line"></span>
- 
-            <button class="wizard-step" :class="{ active: wizardStep === 5 }" :disabled="!canReviewEvent" @click="canReviewEvent && (wizardStep = 5)">
-              <span class="wizard-step-num">5</span>
-              Review
-            </button>
-          </div>
- 
-          <!-- STEP 1 — LETTER -->
-          <div v-if="wizardStep === 1" class="wizard-panel">
-            <div class="wizard-intro">
-              <p class="config-step-title">Authorization letter</p>
-              <p class="empty-copy">Upload the manually prepared and signed letter authorizing the distribution event.</p>
-            </div>
- 
-            <div class="letter-upload-area">
-              <div v-if="!eventForm.letter_preview" class="letter-upload-box" @click="$refs.letterInput.click()">
-                <svg viewBox="0 0 48 48" class="upload-icon">
-                  <path d="M24 31V8M24 8l-8 8M24 8l8 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M10 29v8a3 3 0 003 3h22a3 3 0 003-3v-8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
-                </svg>
-                <p class="upload-title">Upload signed letter</p>
-                <p class="upload-copy">Click to select a JPG, PNG, or PDF file</p>
-                <p class="upload-hint">This is the physical letter signed by the mayor.</p>
+  
+        <!-- EVENT DETAIL -->
+        <div class="detail-col" v-if="selectedEvent">
+          <div class="manifest-card">
+            <div class="manifest-header">
+              <div>
+                <p class="detail-id">{{ selectedEvent.reference_no || ('EVENT-' + selectedEvent.id) }}</p>
+                <h3 class="detail-title">{{ selectedEvent.title }}</h3>
               </div>
- 
-              <input ref="letterInput" type="file" accept="image/jpeg,image/png,application/pdf" class="hidden-file-input" @change="handleLetterUpload" />
- 
-              <div v-if="eventForm.letter_preview && eventForm.letter_type !== 'application/pdf'" class="letter-preview">
-                <img :src="eventForm.letter_preview" alt="Letter preview" />
-                <div class="letter-preview-actions">
-                  <div>
+              <span class="status-pill status-pill-lg" :class="'sp-' + selectedEvent.status"><i class="dot"></i>{{ listLabel(selectedEvent.status) }}</span>
+            </div>
+  
+            <!-- Letter -->
+            <div v-if="selectedEvent.letter_image" class="event-letter-preview">
+              <p class="section-label">Authorization letter</p>
+              <div class="letter-preview-card">
+                <img :src="letterUrl(selectedEvent.letter_image)" alt="Distribution authorization letter" class="letter-image" />
+                <a :href="letterUrl(selectedEvent.letter_image)" target="_blank" class="btn btn-ghost btn-sm">View letter</a>
+              </div>
+            </div>
+  
+            <div class="detail-meta-row">
+              <div class="dm-item"><span class="dm-label">Date</span><span class="dm-val">{{ selectedEvent.distribution_date }}</span></div>
+              <div class="dm-item"><span class="dm-label">Time</span><span class="dm-val">{{ selectedEvent.distribution_time || '—' }}</span></div>
+              <div class="dm-item"><span class="dm-label">Venue</span><span class="dm-val">{{ selectedEvent.venue }}</span></div>
+              <div class="dm-item"><span class="dm-label">Barangays</span><span class="dm-val">{{ selectedEvent.lists?.length || 0 }}</span></div>
+            </div>
+  
+            <div class="perforation"><span v-for="n in 40" :key="n"></span></div>
+  
+            <!-- Barangay Lists -->
+            <p class="section-label">Selected barangays</p>
+  
+            <div v-for="list in selectedEvent.lists || []" :key="list.id" class="barangay-block">
+              <button class="barangay-block-head" @click="toggleListOpen(list.id)">
+                <div class="bb-left">
+                  <svg class="chevron icon-sm" :class="{ open: isListOpen(list.id) }" viewBox="0 0 20 20">
+                    <path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span class="bb-name">Brgy. {{ list.barangay?.name || 'Unknown Barangay' }}</span>
+                </div>
+                <div class="bb-right">
+                  <span class="bb-stat">{{ list.farmers?.length || 0 }} farmers</span>
+                  <span class="status-pill" :class="'sp-' + (list.status || 'draft')"><i class="dot"></i>{{ listLabel(list.status || 'draft') }}</span>
+                </div>
+              </button>
+  
+              <div class="barangay-block-body" v-show="isListOpen(list.id)">
+                <table class="inner-table">
+                  <thead><tr><th>Supply</th><th class="num">Total qty</th></tr></thead>
+                  <tbody>
+                    <tr v-for="item in list.items || []" :key="item.id">
+                      <td>{{ item.supply?.name }}</td>
+                      <td class="num">{{ item.quantity }} {{ item.supply?.unit }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+  
+                <p class="mini-label">Recipients</p>
+                <div class="farmer-chips">
+                  <span class="farmer-chip" v-for="f in list.farmers || []" :key="f.id">
+                    {{ f.farmer?.last_name }}, {{ f.farmer?.first_name }} {{ f.farmer?.middle_name || '' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+  
+            <!-- Actions -->
+            <div class="detail-actions" v-if="selectedEvent.status === 'draft' || selectedEvent.status === 'published'">
+              <button v-if="selectedEvent.status === 'draft'" class="btn btn-primary btn-block" @click="publishDistributionEvent(selectedEvent)">
+                Publish to barangays
+              </button>
+              <button v-if="selectedEvent.status === 'published'" class="btn btn-primary btn-block" @click="completeDistributionEvent(selectedEvent)">
+                Mark as completed
+              </button>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Empty detail -->
+        <div class="detail-empty" v-else>
+          <svg viewBox="0 0 48 48" class="empty-icon">
+            <rect x="8" y="10" width="32" height="30" rx="3" stroke="currentColor" stroke-width="2" fill="none" />
+            <path d="M8 18h32M16 6v8M32 6v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <p class="empty-title">Select an event to view its manifest</p>
+          <p class="empty-copy">Details, authorization letter, barangays, farmers, and allocations will appear here.</p>
+        </div>
+      </div>
+  
+      <!-- ADD / EDIT SUPPLY MODAL -->
+      <transition name="fade">
+        <div class="modal-backdrop" v-if="showAddSupply" @click.self="closeAddSupply">
+          <div class="modal">
+            <div class="modal-head">
+              <h4>{{ editingSupply ? 'Edit supply' : 'Add supply' }}</h4>
+              <button class="modal-close" @click="closeAddSupply">×</button>
+            </div>
+  
+            <div class="form-grid">
+              <div class="form-field span-2">
+                <label>Supply name</label>
+                <input v-model="supplyForm.name" type="text" placeholder="e.g. Urea Fertilizer 50kg" />
+              </div>
+              <div class="form-field">
+                <label>Category</label>
+                <select v-model="supplyForm.category">
+                  <option value="">Select category</option>
+                  <option>Fertilizer</option>
+                  <option>Pesticide</option>
+                  <option>Seeds</option>
+                  <option>Tools</option>
+                  <option>Equipment</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Unit</label>
+                <input v-model="supplyForm.unit" type="text" placeholder="e.g. sack, liter, piece" />
+              </div>
+              <div class="form-field">
+                <label>Qty available</label>
+                <input v-model.number="supplyForm.qty_available" type="number" min="0" />
+              </div>
+              <div class="form-field">
+                <label>Low stock threshold</label>
+                <input v-model.number="supplyForm.low_threshold" type="number" min="0" />
+              </div>
+            </div>
+  
+            <div class="modal-actions">
+              <button class="btn btn-ghost" @click="closeAddSupply">Cancel</button>
+              <button class="btn btn-primary" @click="saveSupply">{{ editingSupply ? 'Save changes' : 'Add supply' }}</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+  
+      <!-- CREATE DISTRIBUTION EVENT -->
+      <transition name="fade">
+        <div class="modal-backdrop" v-if="showCreateEvent" @click.self="closeCreateEvent">
+          <div class="modal modal-wide">
+            <div class="modal-head">
+              <div>
+                <p class="eyebrow">New distribution</p>
+                <h4>Create distribution event</h4>
+              </div>
+              <button class="modal-close" @click="closeCreateEvent">×</button>
+            </div>
+  
+            <!-- WIZARD STEPS -->
+            <div class="wizard-steps">
+              <button class="wizard-step" :class="{ active: wizardStep === 1, done: wizardStep > 1 }" @click="wizardStep = 1">
+                <span class="wizard-step-num">
+                  <svg v-if="wizardStep > 1" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <template v-else>1</template>
+                </span>
+                Letter
+              </button>
+              <span class="wizard-line"></span>
+  
+              <button class="wizard-step" :class="{ active: wizardStep === 2, done: wizardStep > 2 }" :disabled="!letterStepValid" @click="letterStepValid && (wizardStep = 2)">
+                <span class="wizard-step-num">
+                  <svg v-if="wizardStep > 2" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <template v-else>2</template>
+                </span>
+                Event details
+              </button>
+              <span class="wizard-line"></span>
+  
+              <button class="wizard-step" :class="{ active: wizardStep === 3, done: wizardStep > 3 }" :disabled="!step1Valid" @click="step1Valid && (wizardStep = 3)">
+                <span class="wizard-step-num">
+                  <svg v-if="wizardStep > 3" viewBox="0 0 16 16" class="icon-sm"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <template v-else>3</template>
+                </span>
+                Barangays
+              </button>
+              <span class="wizard-line"></span>
+  
+              <button class="wizard-step" :class="{ active: wizardStep === 4, done: wizardStep > 4 }" :disabled="!barangaysSelected" @click="barangaysSelected && (wizardStep = 4)">
+                <span class="wizard-step-num">4</span>
+                Farmers & allocation
+              </button>
+              <span class="wizard-line"></span>
+  
+              <button class="wizard-step" :class="{ active: wizardStep === 5 }" :disabled="!canReviewEvent" @click="canReviewEvent && (wizardStep = 5)">
+                <span class="wizard-step-num">5</span>
+                Review
+              </button>
+            </div>
+  
+            <!-- STEP 1 — LETTER -->
+            <div v-if="wizardStep === 1" class="wizard-panel">
+              <div class="wizard-intro">
+                <p class="config-step-title">Authorization letter</p>
+                <p class="empty-copy">Upload the manually prepared and signed letter authorizing the distribution event.</p>
+              </div>
+  
+              <div class="letter-upload-area">
+                <div v-if="!eventForm.letter_preview" class="letter-upload-box" @click="$refs.letterInput.click()">
+                  <svg viewBox="0 0 48 48" class="upload-icon">
+                    <path d="M24 31V8M24 8l-8 8M24 8l8 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10 29v8a3 3 0 003 3h22a3 3 0 003-3v-8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
+                  </svg>
+                  <p class="upload-title">Upload signed letter</p>
+                  <p class="upload-copy">Click to select a JPG, PNG, or PDF file</p>
+                  <p class="upload-hint">This is the physical letter signed by the mayor.</p>
+                </div>
+  
+                <input ref="letterInput" type="file" accept="image/jpeg,image/png,application/pdf" class="hidden-file-input" @change="handleLetterUpload" />
+  
+                <div v-if="eventForm.letter_preview && eventForm.letter_type !== 'application/pdf'" class="letter-preview">
+                  <img :src="eventForm.letter_preview" alt="Letter preview" />
+                  <div class="letter-preview-actions">
+                    <div>
+                      <p class="td-name">{{ eventForm.letter_name }}</p>
+                      <p class="td-muted">Authorization letter</p>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" @click="removeLetter">Remove</button>
+                  </div>
+                </div>
+  
+                <div v-if="eventForm.letter_preview && eventForm.letter_type === 'application/pdf'" class="letter-pdf-preview">
+                  <div class="pdf-icon">PDF</div>
+                  <div class="pdf-info">
                     <p class="td-name">{{ eventForm.letter_name }}</p>
                     <p class="td-muted">Authorization letter</p>
                   </div>
                   <button type="button" class="btn btn-ghost btn-sm" @click="removeLetter">Remove</button>
                 </div>
               </div>
- 
-              <div v-if="eventForm.letter_preview && eventForm.letter_type === 'application/pdf'" class="letter-pdf-preview">
-                <div class="pdf-icon">PDF</div>
-                <div class="pdf-info">
-                  <p class="td-name">{{ eventForm.letter_name }}</p>
-                  <p class="td-muted">Authorization letter</p>
+  
+              <div class="modal-actions">
+                <button class="btn btn-ghost" @click="closeCreateEvent">Cancel</button>
+                <button class="btn btn-primary" :disabled="!letterStepValid" @click="wizardStep = 2">Continue to event details</button>
+              </div>
+            </div>
+  
+            <!-- STEP 2 — EVENT DETAILS -->
+            <div v-else-if="wizardStep === 2" class="wizard-panel">
+              <div class="form-grid">
+                <div class="form-field span-2">
+                  <label>Event title</label>
+                  <input v-model="eventForm.title" type="text" placeholder="e.g. Fertilizer Distribution — 3rd Quarter" />
                 </div>
-                <button type="button" class="btn btn-ghost btn-sm" @click="removeLetter">Remove</button>
-              </div>
-            </div>
- 
-            <div class="modal-actions">
-              <button class="btn btn-ghost" @click="closeCreateEvent">Cancel</button>
-              <button class="btn btn-primary" :disabled="!letterStepValid" @click="wizardStep = 2">Continue to event details</button>
-            </div>
-          </div>
- 
-          <!-- STEP 2 — EVENT DETAILS -->
-          <div v-else-if="wizardStep === 2" class="wizard-panel">
-            <div class="form-grid">
-              <div class="form-field span-2">
-                <label>Event title</label>
-                <input v-model="eventForm.title" type="text" placeholder="e.g. Fertilizer Distribution — 3rd Quarter" />
-              </div>
-              <div class="form-field">
-                <label>Distribution date</label>
-                <input v-model="eventForm.distribution_date" type="date" />
-              </div>
-              <div class="form-field">
-                <label>Distribution time</label>
-                <input v-model="eventForm.distribution_time" type="time" />
-              </div>
-              <div class="form-field span-2">
-                <label>Venue</label>
-                <input v-model="eventForm.venue" type="text" placeholder="e.g. Municipal Agriculture Office" />
-              </div>
-              <div class="form-field span-2">
-                <label>Description <span class="optional">(optional)</span></label>
-                <textarea v-model="eventForm.description" placeholder="Additional information for the distribution event"></textarea>
-              </div>
-            </div>
- 
-            <div class="modal-actions">
-              <button class="btn btn-ghost" @click="wizardStep = 1">Back</button>
-              <button class="btn btn-primary" :disabled="!step1Valid" @click="wizardStep = 3">Continue to barangays</button>
-            </div>
-          </div>
- 
-          <!-- STEP 3 — SELECT BARANGAYS -->
-          <div v-else-if="wizardStep === 3" class="wizard-panel">
-            <div class="wizard-intro">
-              <p class="config-step-title">Select barangays</p>
-              <p class="empty-copy">Select all barangays that will receive supplies from this distribution event.</p>
-            </div>
- 
-            <div class="barangay-selection-toolbar">
-              <button type="button" class="filter-tag" @click="selectAllBarangays">Select all</button>
-              <button type="button" class="filter-tag" @click="clearBarangays">Clear</button>
-              <span class="count-badge">{{ eventForm.barangay_lists.length }} selected</span>
-            </div>
- 
-            <div class="barangay-selection-list">
-              <label v-for="account in barangayAccounts" :key="account.id" class="barangay-selection-option">
-                <input type="checkbox" :checked="isBarangaySelected(account.barangay_id)" @change="toggleBarangay(account)" />
-                <div class="barangay-option-copy">
-                  <span class="barangay-option-name">{{ account.barangay?.name || 'Unknown Barangay' }}</span>
-                  <span class="barangay-option-official">{{ account.first_name }} {{ account.last_name }}</span>
+                <div class="form-field">
+                  <label>Distribution date</label>
+                  <input v-model="eventForm.distribution_date" type="date" />
                 </div>
-              </label>
-              <p v-if="!barangayAccounts.length" class="empty-copy">No barangay accounts found.</p>
-            </div>
- 
-            <div v-if="eventForm.barangay_lists.length" class="selected-barangays">
-              <p class="mini-label">Selected barangays</p>
-              <div class="selected-barangay-chips">
-                <span v-for="list in eventForm.barangay_lists" :key="list.barangay_id" class="selected-barangay-chip">
-                  {{ list.barangay_name }}
-                  <button type="button" @click="removeBarangayById(list.barangay_id)">×</button>
-                </span>
+                <div class="form-field">
+                  <label>Distribution time</label>
+                  <input v-model="eventForm.distribution_time" type="time" />
+                </div>
+                <div class="form-field span-2">
+                  <label>Venue</label>
+                  <input v-model="eventForm.venue" type="text" placeholder="e.g. Municipal Agriculture Office" />
+                </div>
+                <div class="form-field span-2">
+                  <label>Description <span class="optional">(optional)</span></label>
+                  <textarea v-model="eventForm.description" placeholder="Additional information for the distribution event"></textarea>
+                </div>
+              </div>
+  
+              <div class="modal-actions">
+                <button class="btn btn-ghost" @click="wizardStep = 1">Back</button>
+                <button class="btn btn-primary" :disabled="!step1Valid" @click="wizardStep = 3">Continue to barangays</button>
               </div>
             </div>
- 
-            <div class="modal-actions">
-              <button class="btn btn-ghost" @click="wizardStep = 2">Back</button>
-              <button class="btn btn-primary" :disabled="!barangaysSelected" @click="prepareFarmerStep">Continue to farmers</button>
+  
+            <!-- STEP 3 — SELECT BARANGAYS -->
+            <div v-else-if="wizardStep === 3" class="wizard-panel">
+              <div class="wizard-intro">
+                <p class="config-step-title">Select barangays</p>
+                <p class="empty-copy">Select all barangays that will receive supplies from this distribution event.</p>
+              </div>
+  
+              <div class="barangay-selection-toolbar">
+                <button type="button" class="filter-tag" @click="selectAllBarangays">Select all</button>
+                <button type="button" class="filter-tag" @click="clearBarangays">Clear</button>
+                <span class="count-badge">{{ eventForm.barangay_lists.length }} selected</span>
+              </div>
+  
+              <div class="barangay-selection-list">
+                <label v-for="account in barangayAccounts" :key="account.id" class="barangay-selection-option">
+                  <input type="checkbox" :checked="isBarangaySelected(account.barangay_id)" @change="toggleBarangay(account)" />
+                  <div class="barangay-option-copy">
+                    <span class="barangay-option-name">{{ account.barangay?.name || 'Unknown Barangay' }}</span>
+                    <span class="barangay-option-official">{{ account.first_name }} {{ account.last_name }}</span>
+                  </div>
+                </label>
+                <p v-if="!barangayAccounts.length" class="empty-copy">No barangay accounts found.</p>
+              </div>
+  
+              <div v-if="eventForm.barangay_lists.length" class="selected-barangays">
+                <p class="mini-label">Selected barangays</p>
+                <div class="selected-barangay-chips">
+                  <span v-for="list in eventForm.barangay_lists" :key="list.barangay_id" class="selected-barangay-chip">
+                    {{ list.barangay_name }}
+                    <button type="button" @click="removeBarangayById(list.barangay_id)">×</button>
+                  </span>
+                </div>
+              </div>
+  
+              <div class="modal-actions">
+                <button class="btn btn-ghost" @click="wizardStep = 2">Back</button>
+                <button class="btn btn-primary" :disabled="!barangaysSelected" @click="prepareFarmerStep">Continue to farmers</button>
+              </div>
             </div>
-          </div>
- 
-          <!-- STEP 4 — FARMERS & ALLOCATION -->
-          <div v-else-if="wizardStep === 4" class="wizard-panel">
-            <div class="barangay-tabs">
-              <button
-                v-for="(brgyList, index) in eventForm.barangay_lists" :key="brgyList.barangay_id" class="barangay-tab"
-                :class="{ active: activeListIndex === index, incomplete: !isListComplete(brgyList) }"
-                @click="activeListIndex = index"
-              >
-                <svg v-if="isListComplete(brgyList)" viewBox="0 0 16 16" class="icon-sm tab-check">
-                  <path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                {{ brgyList.barangay_name }}
-              </button>
-            </div>
- 
-            <div v-if="currentList" class="barangay-config">
-              <!-- FARMERS -->
-              <div class="config-step">
-                <div class="config-step-header">
-                  <p class="config-step-title">
-                    <span class="step-badge">1</span> Farmer recipients
-                    <span class="count-badge">{{ currentList.farmer_ids.length }} / {{ currentList.farmers.length }} selected</span>
-                  </p>
-                  <div class="recipient-actions">
-                    <button type="button" class="filter-tag" @click="selectAllFarmers(currentList)">Select all</button>
-                    <button type="button" class="filter-tag" @click="clearFarmers(currentList)">Clear</button>
+  
+            <!-- STEP 4 — FARMERS & ALLOCATION -->
+            <div v-else-if="wizardStep === 4" class="wizard-panel">
+              <div class="barangay-tabs">
+                <button
+                  v-for="(brgyList, index) in eventForm.barangay_lists" :key="brgyList.barangay_id" class="barangay-tab"
+                  :class="{ active: activeListIndex === index, incomplete: !isListComplete(brgyList) }"
+                  @click="activeListIndex = index"
+                >
+                  <svg v-if="isListComplete(brgyList)" viewBox="0 0 16 16" class="icon-sm tab-check">
+                    <path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  {{ brgyList.barangay_name }}
+                </button>
+              </div>
+  
+              <div v-if="currentList" class="barangay-config">
+                <!-- FARMERS -->
+                <div class="config-step">
+                  <div class="config-step-header">
+                    <p class="config-step-title">
+                      <span class="step-badge">1</span> Farmer recipients
+                      <span class="count-badge">{{ currentList.farmer_ids.length }} / {{ currentList.farmers.length }} selected</span>
+                    </p>
+                    <div class="recipient-actions">
+                      <button type="button" class="filter-tag" @click="selectAllFarmers(currentList)">Select all</button>
+                      <button type="button" class="filter-tag" @click="clearFarmers(currentList)">Clear</button>
+                    </div>
+                  </div>
+  
+                  <div class="farmers-list">
+                    <label v-for="farmer in currentList.farmers" :key="farmer.id" class="farmer-option">
+                      <input type="checkbox" :value="farmer.id" v-model="currentList.farmer_ids" />
+                      {{ farmer.last_name }}, {{ farmer.first_name }} {{ farmer.middle_name || '' }}
+                    </label>
+                    <p v-if="!currentList.farmers.length" class="empty-copy small">Loading or no registered farmers found for this barangay.</p>
                   </div>
                 </div>
- 
-                <div class="farmers-list">
-                  <label v-for="farmer in currentList.farmers" :key="farmer.id" class="farmer-option">
-                    <input type="checkbox" :value="farmer.id" v-model="currentList.farmer_ids" />
-                    {{ farmer.last_name }}, {{ farmer.first_name }} {{ farmer.middle_name || '' }}
-                  </label>
-                  <p v-if="!currentList.farmers.length" class="empty-copy small">Loading or no registered farmers found for this barangay.</p>
-                </div>
-              </div>
- 
-              <!-- SUPPLIES -->
-              <div class="config-step">
-                <p class="config-step-title"><span class="step-badge">2</span> Supply items</p>
-                <div class="item-chip-row">
-                  <div v-for="(item, idx) in currentList.items" :key="idx" class="item-chip">
-                    <select v-model="item.supply_id">
-                      <option value="">Select supply</option>
-                      <option v-for="s in supplies" :key="s.id" :value="s.id">{{ s.name }} — {{ s.qty_available }} {{ s.unit }} available</option>
-                    </select>
-                    <button type="button" class="chip-remove" @click="removeSupplyItem(currentList, idx)">×</button>
+  
+                <!-- SUPPLIES -->
+                <div class="config-step">
+                  <p class="config-step-title"><span class="step-badge">2</span> Supply items</p>
+                  <div class="item-chip-row">
+                    <div v-for="(item, idx) in currentList.items" :key="idx" class="item-chip">
+                      <select v-model="item.supply_id">
+                        <option value="">Select supply</option>
+                        <option v-for="s in supplies" :key="s.id" :value="s.id">{{ s.name }} — {{ s.qty_available }} {{ s.unit }} available</option>
+                      </select>
+                      <button type="button" class="chip-remove" @click="removeSupplyItem(currentList, idx)">×</button>
+                    </div>
+                    <button type="button" class="btn-ghost btn-sm" @click="addSupplyItem(currentList)">+ Add supply</button>
                   </div>
-                  <button type="button" class="btn-ghost btn-sm" @click="addSupplyItem(currentList)">+ Add supply</button>
+                </div>
+  
+                <!-- ALLOCATION -->
+                <div class="config-step" v-if="currentList.farmer_ids.length && selectedSupplyItems(currentList).length">
+                  <div class="config-step-header">
+                    <p class="config-step-title"><span class="step-badge">3</span> Allocation per farmer</p>
+                  </div>
+  
+                  <div class="allocation-wrap">
+                    <table class="inner-table allocation-table">
+                      <thead>
+                        <tr>
+                          <th class="sticky-col">Farmer</th>
+                          <th v-for="item in selectedSupplyItems(currentList)" :key="item.supply_id">
+                            {{ supplyName(item.supply_id) }}
+                            <span class="alloc-total">
+                              Total: {{ totalAllocatedForSupply(currentList, item.supply_id) }} / {{ availableQuantity(item.supply_id) }}
+                            </span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="farmerId in currentList.farmer_ids" :key="farmerId">
+                          <td class="td-name sticky-col">{{ farmerName(currentList, farmerId) }}</td>
+                          <td v-for="item in selectedSupplyItems(currentList)" :key="item.supply_id">
+                            <input
+                              type="number" min="0" class="alloc-input"
+                              :value="getAllAllocation(currentList, farmerId, item.supply_id)"
+                              @input="setAllocation(currentList, farmerId, item.supply_id, $event.target.value)"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+  
+                <!-- VALIDATION SUMMARY -->
+                <div class="allocation-summary">
+                  <div><span class="dm-label">Farmers</span><strong>{{ currentList.farmer_ids.length }}</strong></div>
+                  <div><span class="dm-label">Supplies</span><strong>{{ selectedSupplyItems(currentList).length }}</strong></div>
+                  <div v-for="item in selectedSupplyItems(currentList)" :key="'summary-' + item.supply_id">
+                    <span class="dm-label">{{ supplyName(item.supply_id) }}</span>
+                    <strong>{{ totalAllocatedForSupply(currentList, item.supply_id) }} {{ supplyUnit(item.supply_id) }}</strong>
+                  </div>
                 </div>
               </div>
- 
-              <!-- ALLOCATION -->
-              <div class="config-step" v-if="currentList.farmer_ids.length && selectedSupplyItems(currentList).length">
-                <div class="config-step-header">
-                  <p class="config-step-title"><span class="step-badge">3</span> Allocation per farmer</p>
+  
+              <div v-else class="empty-state"><p class="empty-title">No barangay selected</p></div>
+  
+              <div class="modal-actions">
+                <button class="btn btn-ghost" @click="wizardStep = 3">Back</button>
+                <button class="btn btn-primary" :disabled="!canReviewEvent" @click="wizardStep = 5">Review event</button>
+              </div>
+            </div>
+  
+            <!-- STEP 5 — REVIEW -->
+            <div v-else-if="wizardStep === 5" class="wizard-panel review-panel">
+              <div class="review-header">
+                <div>
+                  <p class="eyebrow">Final review</p>
+                  <h3 class="detail-title">{{ eventForm.title }}</h3>
                 </div>
- 
-                <div class="allocation-wrap">
-                  <table class="inner-table allocation-table">
-                    <thead>
-                      <tr>
-                        <th class="sticky-col">Farmer</th>
-                        <th v-for="item in selectedSupplyItems(currentList)" :key="item.supply_id">
-                          {{ supplyName(item.supply_id) }}
-                          <span class="alloc-total">
-                            Total: {{ totalAllocatedForSupply(currentList, item.supply_id) }} / {{ availableQuantity(item.supply_id) }}
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
+                <span class="status-pill sp-draft"><i class="dot"></i>Draft</span>
+              </div>
+  
+              <div class="review-section">
+                <p class="section-label">Authorization letter</p>
+                <div class="review-letter">
+                  <span class="review-check">✓</span>
+                  <div>
+                    <strong>{{ eventForm.letter_name }}</strong>
+                    <p class="td-muted">Signed authorization letter attached</p>
+                  </div>
+                </div>
+              </div>
+  
+              <div class="review-section">
+                <p class="section-label">Event details</p>
+                <div class="detail-meta-row">
+                  <div class="dm-item"><span class="dm-label">Date</span><span class="dm-val">{{ eventForm.distribution_date }}</span></div>
+                  <div class="dm-item"><span class="dm-label">Time</span><span class="dm-val">{{ eventForm.distribution_time || '—' }}</span></div>
+                  <div class="dm-item"><span class="dm-label">Venue</span><span class="dm-val">{{ eventForm.venue }}</span></div>
+                </div>
+              </div>
+  
+              <div class="review-section">
+                <p class="section-label">Selected barangays</p>
+                <div v-for="list in eventForm.barangay_lists" :key="list.barangay_id" class="review-barangay">
+                  <div class="review-barangay-header">
+                    <strong>{{ list.barangay_name }}</strong>
+                    <span class="count-badge">{{ list.farmer_ids.length }} farmers</span>
+                  </div>
+                  <table class="inner-table">
+                    <thead><tr><th>Supply</th><th class="num">Quantity</th></tr></thead>
                     <tbody>
-                      <tr v-for="farmerId in currentList.farmer_ids" :key="farmerId">
-                        <td class="td-name sticky-col">{{ farmerName(currentList, farmerId) }}</td>
-                        <td v-for="item in selectedSupplyItems(currentList)" :key="item.supply_id">
-                          <input
-                            type="number" min="0" class="alloc-input"
-                            :value="getAllAllocation(currentList, farmerId, item.supply_id)"
-                            @input="setAllocation(currentList, farmerId, item.supply_id, $event.target.value)"
-                          />
-                        </td>
+                      <tr v-for="item in selectedSupplyItems(list)" :key="item.supply_id">
+                        <td>{{ supplyName(item.supply_id) }}</td>
+                        <td class="num">{{ totalAllocatedForSupply(list, item.supply_id) }} {{ supplyUnit(item.supply_id) }}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </div>
- 
-              <!-- VALIDATION SUMMARY -->
-              <div class="allocation-summary">
-                <div><span class="dm-label">Farmers</span><strong>{{ currentList.farmer_ids.length }}</strong></div>
-                <div><span class="dm-label">Supplies</span><strong>{{ selectedSupplyItems(currentList).length }}</strong></div>
-                <div v-for="item in selectedSupplyItems(currentList)" :key="'summary-' + item.supply_id">
-                  <span class="dm-label">{{ supplyName(item.supply_id) }}</span>
-                  <strong>{{ totalAllocatedForSupply(currentList, item.supply_id) }} {{ supplyUnit(item.supply_id) }}</strong>
+  
+              <div class="review-section">
+                <p class="section-label">Total inventory allocation</p>
+                <div class="inventory-review-list">
+                  <div v-for="total in totalEventAllocations" :key="total.supply_id" class="inventory-review-item">
+                    <span>{{ total.name }}</span>
+                    <strong>{{ total.quantity }} {{ total.unit }}</strong>
+                  </div>
                 </div>
               </div>
-            </div>
- 
-            <div v-else class="empty-state"><p class="empty-title">No barangay selected</p></div>
- 
-            <div class="modal-actions">
-              <button class="btn btn-ghost" @click="wizardStep = 3">Back</button>
-              <button class="btn btn-primary" :disabled="!canReviewEvent" @click="wizardStep = 5">Review event</button>
-            </div>
-          </div>
- 
-          <!-- STEP 5 — REVIEW -->
-          <div v-else-if="wizardStep === 5" class="wizard-panel review-panel">
-            <div class="review-header">
-              <div>
-                <p class="eyebrow">Final review</p>
-                <h3 class="detail-title">{{ eventForm.title }}</h3>
+  
+              <div class="review-notice">
+                <strong>Ready to save?</strong>
+                <p>Saving will create this distribution event as a <strong>Draft</strong>. Inventory will only be deducted when the event is published.</p>
               </div>
-              <span class="status-pill sp-draft"><i class="dot"></i>Draft</span>
-            </div>
- 
-            <div class="review-section">
-              <p class="section-label">Authorization letter</p>
-              <div class="review-letter">
-                <span class="review-check">✓</span>
-                <div>
-                  <strong>{{ eventForm.letter_name }}</strong>
-                  <p class="td-muted">Signed authorization letter attached</p>
-                </div>
+  
+              <div class="modal-actions">
+                <button class="btn btn-ghost" @click="wizardStep = 4">Back</button>
+                <button class="btn btn-primary" :disabled="savingEvent" @click="saveDistributionEvent">
+                  <span v-if="savingEvent">Saving…</span>
+                  <span v-else>Save as draft</span>
+                </button>
               </div>
-            </div>
- 
-            <div class="review-section">
-              <p class="section-label">Event details</p>
-              <div class="detail-meta-row">
-                <div class="dm-item"><span class="dm-label">Date</span><span class="dm-val">{{ eventForm.distribution_date }}</span></div>
-                <div class="dm-item"><span class="dm-label">Time</span><span class="dm-val">{{ eventForm.distribution_time || '—' }}</span></div>
-                <div class="dm-item"><span class="dm-label">Venue</span><span class="dm-val">{{ eventForm.venue }}</span></div>
-              </div>
-            </div>
- 
-            <div class="review-section">
-              <p class="section-label">Selected barangays</p>
-              <div v-for="list in eventForm.barangay_lists" :key="list.barangay_id" class="review-barangay">
-                <div class="review-barangay-header">
-                  <strong>{{ list.barangay_name }}</strong>
-                  <span class="count-badge">{{ list.farmer_ids.length }} farmers</span>
-                </div>
-                <table class="inner-table">
-                  <thead><tr><th>Supply</th><th class="num">Quantity</th></tr></thead>
-                  <tbody>
-                    <tr v-for="item in selectedSupplyItems(list)" :key="item.supply_id">
-                      <td>{{ supplyName(item.supply_id) }}</td>
-                      <td class="num">{{ totalAllocatedForSupply(list, item.supply_id) }} {{ supplyUnit(item.supply_id) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
- 
-            <div class="review-section">
-              <p class="section-label">Total inventory allocation</p>
-              <div class="inventory-review-list">
-                <div v-for="total in totalEventAllocations" :key="total.supply_id" class="inventory-review-item">
-                  <span>{{ total.name }}</span>
-                  <strong>{{ total.quantity }} {{ total.unit }}</strong>
-                </div>
-              </div>
-            </div>
- 
-            <div class="review-notice">
-              <strong>Ready to save?</strong>
-              <p>Saving will create this distribution event as a <strong>Draft</strong>. Inventory will only be deducted when the event is published.</p>
-            </div>
- 
-            <div class="modal-actions">
-              <button class="btn btn-ghost" @click="wizardStep = 4">Back</button>
-              <button class="btn btn-primary" :disabled="savingEvent" @click="saveDistributionEvent">
-                <span v-if="savingEvent">Saving…</span>
-                <span v-else>Save as draft</span>
-              </button>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
- 
-    <!-- TOAST -->
-    <transition name="slide-toast">
-      <div class="toast" :class="'toast-' + toast.type" v-if="toast.visible">{{ toast.message }}</div>
-    </transition>
- 
+      </transition>
+  
+      <!-- TOAST -->
+      <transition name="slide-toast">
+        <div class="toast" :class="'toast-' + toast.type" v-if="toast.visible">{{ toast.message }}</div>
+      </transition>
+  
+    </div>
   </div>
 </template>
-
 <script>
 import axios from 'axios'
 
@@ -1317,31 +1317,36 @@ export default {
   }
 }
 </script>
-
 <style scoped>
 * { box-sizing: border-box; }
- 
-.inv-page {
+.inv-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: #F8FAF8;
-  padding: 1.75rem;
+}
+ 
+.inv-page {
+ flex: 1;
+  min-width: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
 }
  
 /* ===================== HEADER ===================== */
 .top-header {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
-  border: 1px solid #E7F0EC;
-  border-radius: 16px;
-  padding: 14px 18px;
+  border-bottom: 1px solid #E7F0EC;
+  flex-shrink: 0;
+  z-index: 20;
+  padding: 0px 15px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
 }
  
 .header-title-group .eyebrow {
@@ -1413,7 +1418,23 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
- 
+
+/* ===================== SCROLLABLE BODY =====================
+   Wraps everything below </header> inside .inv-page:
+   <div class="inv-body"> ...page actions, ledger, tabs, table,
+   distribution events... </div>
+   This is what supplies the left/right (and top/bottom) page
+   padding — without it .inv-page has none, which is why the
+   content was sitting flush against the viewport edges. */
+.inv-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 /* ===================== PAGE ACTIONS ===================== */
 .page-actions {
   display: flex;
@@ -1423,15 +1444,17 @@ export default {
   flex-wrap: wrap;
 }
  
-/* ===================== BUTTONS ===================== */
+/* ===================== BUTTONS =====================
+   Matches base.css's button system exactly: each variant is fully
+   defined (no shared cascade), same padding/font-size/font-weight
+   as .btn-primary / .btn-outline there. .btn-ghost here IS base's
+   .btn-outline — same look, kept under the name the template uses. */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
   border-radius: 9px;
-  font-size: 0.82rem;
-  font-weight: 700;
   cursor: pointer;
   border: none;
   white-space: nowrap;
@@ -1441,22 +1464,28 @@ export default {
 .btn .icon { width: 16px; height: 16px; }
  
 .btn-primary {
+  padding: 11px;
   background: linear-gradient(135deg, #116D3E, #0A5232);
   color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 700;
   box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
 }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
  
 .btn-ghost {
+  padding: 10px;
   background: #FFFFFF;
   color: #0F212F;
   border: 1.5px solid #E0EAE3;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 .btn-ghost:hover { border-color: #116D3E; background: #F1F6F2; }
  
 .btn-sm { padding: 7px 12px; font-size: 0.74rem; }
  
-.btn-block { width: 100%; justify-content: center; margin-top: 0.4rem; }
+.btn-block { width: 100%; margin-top: 0.4rem; }
  
 /* ===================== LEDGER STRIP ===================== */
 .ledger-strip {
@@ -1665,21 +1694,24 @@ export default {
 .empty-copy { font-size: 0.78rem; color: #5c6b64; }
 .empty-copy.small { font-size: 0.74rem; }
  
-/* ===================== STATUS PILLS ===================== */
+/* ===================== STATUS PILLS =====================
+   Same padding/font-weight as base.css's .status-pill; the .dot
+   indicator and sp-* tone classes are inventory-specific additions
+   on top of that same base shape. */
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
  
 .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
  
-.status-pill-lg { padding: 6px 14px; font-size: 0.76rem; }
+.status-pill-lg { padding: 5px 13px; font-size: 0.76rem; }
  
 .status-pill.sp-in-stock  { background: rgba(17, 109, 62, 0.1);  color: #116D3E; }
 .status-pill.sp-low       { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
@@ -2369,6 +2401,7 @@ export default {
 }
  
 @media (max-width: 768px) {
+  .inv-body { padding: 1rem; }
   .ledger-strip { flex-wrap: wrap; gap: 1rem; }
   .ledger-divider { display: none; }
   .form-grid { grid-template-columns: 1fr; }
