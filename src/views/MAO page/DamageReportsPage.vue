@@ -1,508 +1,514 @@
 <template>
-  <div class="damage-page">
-    <!-- Page header -->
-    <header class="top-header">
-      <div class="header-title-group">
-        <h1 class="page-title">Damage Reports</h1>
-        <p class="page-sub">Review and validate crop damage reports submitted by farmers</p>
-      </div>
+  <div class =layout>
+    <div class="main-wrapper">
+      <!-- Page header -->
+      <header class="top-header">
+        <div class="header-title-group">
+          <h1 class="page-title">Damage Reports</h1>
+          <p class="page-sub">Review and validate crop damage reports submitted by farmers</p>
+        </div>
 
-      <div class="header-actions">
-        <div v-if="hasConfiguredSeason" class="season-tabs-container">
-          <button
-            class="season-tab-btn"
-            :class="{ active: activeSeasonView === 'current' }"
-            @click="switchSeasonView('current')"
-          >
-            Current Season
-          </button>
-
-          <select
-            class="season-tab-select"
-            :class="{ active: activeSeasonView === 'history' }"
-            v-model="historySeasonId"
-            @change="selectPreviousSeason"
-          >
-            <option value="">Previous Seasons</option>
-            <option
-              v-for="season in previousSeasons"
-              :key="season.id"
-              :value="season.id"
+        <div class="header-actions">
+          <div v-if="hasConfiguredSeason" class="season-tabs-container">
+            <button
+              class="season-tab-btn"
+              :class="{ active: activeSeasonView === 'current' }"
+              @click="switchSeasonView('current')"
             >
-              {{ season.season_name || season.name }}
-            </option>
-          </select>
-        </div>
+              Current Season
+            </button>
 
-        <div class="v-divider"></div>
-
-        <!-- User Profile -->
-        <div class="user-profile">
-          <div class="user-avatar">
-            {{ currentUser.initials }}
-          </div>
-          <div class="user-info">
-            <p class="user-name">{{ currentUser.name }}</p>
-            <p class="user-role">{{ currentUser.role }}</p>
-          </div>
-        </div>
-      </div>
-    </header>
- 
-    <!-- Metrics -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="card-header">
-          <span class="card-label">Total Reports</span>
-          <span class="icon-badge blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="4" y="4" width="16" height="16" rx="2" />
-              <line x1="8" y1="9" x2="16" y2="9" />
-              <line x1="8" y1="13" x2="16" y2="13" />
-              <line x1="8" y1="17" x2="12" y2="17" />
-            </svg>
-          </span>
-        </div>
-        <div class="card-value">{{ activeReports.length }}</div>
-      </div>
- 
-      <div class="metric-card">
-        <div class="card-header">
-          <span class="card-label">Submitted</span>
-          <span class="icon-badge amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="9" />
-              <polyline points="12 7 12 12 16 14" />
-            </svg>
-          </span>
-        </div>
-        <div class="card-value">{{ countByStatus('submitted_to_mao') }}</div>
-      </div>
- 
-      <div class="metric-card">
-        <div class="card-header">
-          <span class="card-label">Validated</span>
-          <span class="icon-badge green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </span>
-        </div>
-        <div class="card-value">{{ countByStatus('validated_by_mao') }}</div>
-      </div>
- 
-      <div class="metric-card">
-        <div class="card-header">
-          <span class="card-label">Rejected</span>
-          <span class="icon-badge red">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </span>
-        </div>
-        <div class="card-value">{{ countByStatus('rejected') }}</div>
-      </div>
- 
-      <div class="metric-card">
-        <div class="card-header">
-          <span class="card-label">Suspicious</span>
-          <span class="icon-badge purple">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-            </svg>
-          </span>
-        </div>
-        <div class="card-value">{{ suspiciousCount }}</div>
-      </div>
-    </div>
- 
-    <!-- Main panel -->
-    <div class="panel">
-      <div class="status-tab-bar">
-        <button
-          class="status-tab"
-          :class="{ active: activeStatusTab === 'submitted_to_mao' }"
-          @click="switchStatusTab('submitted_to_mao')"
-        >
-          <span class="dot dot-amber"></span>
-          Submitted to MAO
-          <span class="task-badge badge-amber">{{ countByStatus('submitted_to_mao') }}</span>
-        </button>
- 
-        <button
-          class="status-tab"
-          :class="{ active: activeStatusTab === 'validated_by_mao' }"
-          @click="switchStatusTab('validated_by_mao')"
-        >
-          <span class="dot dot-green"></span>
-          Validated by MAO
-          <span class="task-badge badge-green">{{ countByStatus('validated_by_mao') }}</span>
-        </button>
- 
-        <button
-          class="status-tab"
-          :class="{ active: activeStatusTab === 'rejected' }"
-          @click="switchStatusTab('rejected')"
-        >
-          <span class="dot dot-red"></span>
-          Rejected
-          <span class="task-badge badge-red">{{ countByStatus('rejected') }}</span>
-        </button>
-      </div>
- 
-      <div class="filters-row">
-        <div class="search-wrap">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
- 
-          <input
-            v-model="searchName"
-            class="search-input"
-            type="text"
-            placeholder="Search farmer name..."
-          />
-        </div>
- 
-        <select v-model="filterCause" class="filter-select">
-          <option value="">All Causes</option>
-          <option v-for="c in causeOptions" :key="c" :value="c">
-            {{ c }}
-          </option>
-        </select>
- 
-        <label class="suspicious-toggle">
-          <input type="checkbox" v-model="suspiciousOnly" />
-          <span>Suspicious only</span>
-        </label>
- 
-        <button class="btn-outline btn-compact" @click="resetFilters">
-          Reset
-        </button>
-      </div>
- 
-      <div v-if="isLoading" class="state-box">
-        <div class="spinner"></div>
-        <span>Loading damage reports...</span>
-      </div>
- 
-      <div v-else-if="errorMessage" class="state-box error-box">
-        <span>{{ errorMessage }}</span>
-      </div>
- 
-      <div v-else class="table-responsive">
-        <div v-if="filtered.length === 0" class="empty-state">
-          No damage reports match your filters.
-        </div>
- 
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th v-if="canBulkAct">
-                <input
-                  type="checkbox"
-                  :checked="allFilteredSelected"
-                  @change="toggleSelectAllFiltered"
-                />
-              </th>
-              <th></th>
-              <th>Farmer</th>
-              <th>Farm</th>
-              <th>Cause</th>
-              <th>Damage Date</th>
-              <th>Distance (m)</th>
-              <th>Flag</th>
-              <th>Status</th>
-            </tr>
-          </thead>
- 
-          <tbody>
-            <template v-for="report in filtered" :key="report.id">
-              <tr
-                class="main-row"
-                :class="{
-                  expanded: expandedId === report.id,
-                  suspicious: report.is_suspicious,
-                  selected: isSelected(report.id)
-                }"
-                @click="toggleExpand(report.id)"
+            <select
+              class="season-tab-select"
+              :class="{ active: activeSeasonView === 'history' }"
+              v-model="historySeasonId"
+              @change="selectPreviousSeason"
+            >
+              <option value="">Previous Seasons</option>
+              <option
+                v-for="season in previousSeasons"
+                :key="season.id"
+                :value="season.id"
               >
-                <td v-if="canBulkAct" @click.stop>
-                  <input
-                    type="checkbox"
-                    :checked="isSelected(report.id)"
-                    @change="toggleSelection(report.id)"
-                  />
-                </td>
- 
-                <td class="expand-cell">
-                  <span class="expand-icon" :class="{ open: expandedId === report.id }">
-                    ▶
-                  </span>
-                </td>
- 
-                <td class="farmer-cell">
-                  <div class="farmer-name font-bold">
-                    {{ farmerName(report) }}
-                  </div>
-                  <div class="farmer-sub">
-                    {{ report.insurance_application?.farm?.farmer_profile?.user?.email || '—' }}
-                  </div>
-                </td>
-                <td>{{ report.insurance_application?.farm?.farm_name || '—' }}</td>
-                <td>{{ report.damage_cause || '—' }}</td>
-                <td>{{ formatDate(report.damage_date) }}</td>
-                <td>{{ report.distance_from_farm ?? '—' }}</td>
- 
-                <td>
-                  <span v-if="report.is_suspicious" class="severity-badge warning">
-                    ⚠ Suspicious
-                  </span>
-                  <span v-else class="severity-badge success">
-                    Normal
-                  </span>
-                </td>
- 
-                <td>
-                  <span class="status-pill" :class="report.status">
-                    {{ statusLabel(report.status) }}
-                  </span>
-                </td>
-              </tr>
- 
-              <tr v-if="expandedId === report.id" class="detail-row">
-                <td colspan="9">
-                  <div class="detail-box">
-                    <div class="detail-content">
-                      <div class="image-section">
-                        <span class="detail-label">Damage Photo</span>
- 
-                        <img
-                          v-if="report.damage_image_path"
-                          :src="imageUrl(report.damage_image_path)"
-                          class="damage-thumb"
-                          alt="Damage photo"
-                          @click.stop="openLightbox(report.damage_image_path)"
-                        />
- 
-                        <div v-else class="no-image">
-                          No image
+                {{ season.season_name || season.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="v-divider"></div>
+
+          <!-- User Profile -->
+          <div class="user-profile">
+            <div class="user-avatar">
+              {{ currentUser.initials }}
+            </div>
+            <div class="user-info">
+              <p class="user-name">{{ currentUser.name }}</p>
+              <p class="user-role">{{ currentUser.role }}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <main class =body>
+        <!-- Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Total Reports</span>
+              <span class="icon-badge blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <line x1="8" y1="9" x2="16" y2="9" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="12" y2="17" />
+                </svg>
+              </span>
+            </div>
+            <div class="card-value">{{ activeReports.length }}</div>
+          </div>
+    
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Submitted</span>
+              <span class="icon-badge amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <polyline points="12 7 12 12 16 14" />
+                </svg>
+              </span>
+            </div>
+            <div class="card-value">{{ countByStatus('submitted_to_mao') }}</div>
+          </div>
+    
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Validated</span>
+              <span class="icon-badge green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+            </div>
+            <div class="card-value">{{ countByStatus('validated_by_mao') }}</div>
+          </div>
+    
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Rejected</span>
+              <span class="icon-badge red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </span>
+            </div>
+            <div class="card-value">{{ countByStatus('rejected') }}</div>
+          </div>
+    
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-label">Suspicious</span>
+              <span class="icon-badge purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                </svg>
+              </span>
+            </div>
+            <div class="card-value">{{ suspiciousCount }}</div>
+          </div>
+        </div>
+    
+        <!-- Main panel -->
+        <div class="panel">
+          <div class="status-tab-bar">
+            <button
+              class="status-tab"
+              :class="{ active: activeStatusTab === 'submitted_to_mao' }"
+              @click="switchStatusTab('submitted_to_mao')"
+            >
+              <span class="dot dot-amber"></span>
+              Submitted to MAO
+              <span class="task-badge badge-amber">{{ countByStatus('submitted_to_mao') }}</span>
+            </button>
+    
+            <button
+              class="status-tab"
+              :class="{ active: activeStatusTab === 'validated_by_mao' }"
+              @click="switchStatusTab('validated_by_mao')"
+            >
+              <span class="dot dot-green"></span>
+              Validated by MAO
+              <span class="task-badge badge-green">{{ countByStatus('validated_by_mao') }}</span>
+            </button>
+    
+            <button
+              class="status-tab"
+              :class="{ active: activeStatusTab === 'rejected' }"
+              @click="switchStatusTab('rejected')"
+            >
+              <span class="dot dot-red"></span>
+              Rejected
+              <span class="task-badge badge-red">{{ countByStatus('rejected') }}</span>
+            </button>
+          </div>
+    
+          <div class="filters-row">
+            <div class="search-wrap">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+    
+              <input
+                v-model="searchName"
+                class="search-input"
+                type="text"
+                placeholder="Search farmer name..."
+              />
+            </div>
+    
+            <select v-model="filterCause" class="filter-select">
+              <option value="">All Causes</option>
+              <option v-for="c in causeOptions" :key="c" :value="c">
+                {{ c }}
+              </option>
+            </select>
+    
+            <label class="suspicious-toggle">
+              <input type="checkbox" v-model="suspiciousOnly" />
+              <span>Suspicious only</span>
+            </label>
+    
+            <button class="btn-outline btn-compact" @click="resetFilters">
+              Reset
+            </button>
+          </div>
+    
+          <div v-if="isLoading" class="state-box">
+            <div class="spinner"></div>
+            <span>Loading damage reports...</span>
+          </div>
+    
+          <div v-else-if="errorMessage" class="state-box error-box">
+            <span>{{ errorMessage }}</span>
+          </div>
+    
+          <div v-else class="table-responsive">
+            <div v-if="filtered.length === 0" class="empty-state">
+              No damage reports match your filters.
+            </div>
+    
+            <table v-else class="data-table">
+              <thead>
+                <tr>
+                  <th v-if="canBulkAct">
+                    <input
+                      type="checkbox"
+                      :checked="allFilteredSelected"
+                      @change="toggleSelectAllFiltered"
+                    />
+                  </th>
+                  <th></th>
+                  <th>Farmer</th>
+                  <th>Farm</th>
+                  <th>Cause</th>
+                  <th>Damage Date</th>
+                  <th>Distance (m)</th>
+                  <th>Flag</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+    
+              <tbody>
+                <template v-for="report in filtered" :key="report.id">
+                  <tr
+                    class="main-row"
+                    :class="{
+                      expanded: expandedId === report.id,
+                      suspicious: report.is_suspicious,
+                      selected: isSelected(report.id)
+                    }"
+                    @click="toggleExpand(report.id)"
+                  >
+                    <td v-if="canBulkAct" @click.stop>
+                      <input
+                        type="checkbox"
+                        :checked="isSelected(report.id)"
+                        @change="toggleSelection(report.id)"
+                      />
+                    </td>
+    
+                    <td class="expand-cell">
+                      <span class="expand-icon" :class="{ open: expandedId === report.id }">
+                        ▶
+                      </span>
+                    </td>
+    
+                    <td class="farmer-cell">
+                      <div class="farmer-name font-bold">
+                        {{ farmerName(report) }}
+                      </div>
+                      <div class="farmer-sub">
+                        {{ report.insurance_application?.farm?.farmer_profile?.user?.email || '—' }}
+                      </div>
+                    </td>
+                    <td>{{ report.insurance_application?.farm?.farm_name || '—' }}</td>
+                    <td>{{ report.damage_cause || '—' }}</td>
+                    <td>{{ formatDate(report.damage_date) }}</td>
+                    <td>{{ report.distance_from_farm ?? '—' }}</td>
+    
+                    <td>
+                      <span v-if="report.is_suspicious" class="severity-badge warning">
+                        ⚠ Suspicious
+                      </span>
+                      <span v-else class="severity-badge success">
+                        Normal
+                      </span>
+                    </td>
+    
+                    <td>
+                      <span class="status-pill" :class="report.status">
+                        {{ statusLabel(report.status) }}
+                      </span>
+                    </td>
+                  </tr>
+    
+                  <tr v-if="expandedId === report.id" class="detail-row">
+                    <td colspan="9">
+                      <div class="detail-box">
+                        <div class="detail-content">
+                          <div class="image-section">
+                            <span class="detail-label">Damage Photo</span>
+    
+                            <img
+                              v-if="report.damage_image_path"
+                              :src="imageUrl(report.damage_image_path)"
+                              class="damage-thumb"
+                              alt="Damage photo"
+                              @click.stop="openLightbox(report.damage_image_path)"
+                            />
+    
+                            <div v-else class="no-image">
+                              No image
+                            </div>
+                          </div>
+    
+                          <div class="info-section">
+                            <div class="detail-section">
+                              <div class="section-title">Farmer Information</div>
+    
+                              <div class="summary-grid">
+                                <div class="summary-card">
+                                  <div class="summary-label">Full Name</div>
+                                  <div class="summary-value text-dark">{{ farmerName(report) }}</div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Phone</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.insurance_application?.farm?.farmer_profile?.user?.phone_number || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Address</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.insurance_application?.farm?.farmer_profile?.address || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Farm</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.insurance_application?.farm?.farm_name || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Crop Type</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.insurance_application?.farm?.crop_type || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Farm Area</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.insurance_application?.farm?.farm_area ? report.insurance_application.farm.farm_area + ' ha' : '—' }}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+    
+                            <div class="detail-section">
+                              <div class="section-title">Damage Details</div>
+    
+                              <div class="summary-grid">
+                                <div class="summary-card">
+                                  <div class="summary-label">Cause</div>
+                                  <div class="summary-value text-dark">{{ report.damage_cause || '—' }}</div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Damage Date</div>
+                                  <div class="summary-value text-dark">{{ formatDate(report.damage_date) }}</div>
+                                </div>
+    
+                                <div class="summary-card col-span-full">
+                                  <div class="summary-label">Reported At</div>
+                                  <div class="summary-value text-dark">{{ formatDateTime(report.created_at) }}</div>
+                                </div>
+                              </div>
+                            </div>
+    
+                            <div class="detail-section">
+                              <div class="section-title">Location Verification</div>
+    
+                              <div class="summary-grid">
+                                <div class="summary-card">
+                                  <div class="summary-label">Farm Coordinates</div>
+                                  <div class="summary-value text-dark coords">
+                                    {{ report.insurance_application?.farm?.latitude || '—' }},
+                                    {{ report.insurance_application?.farm?.longitude || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Report Coordinates</div>
+                                  <div class="summary-value text-dark coords">
+                                    {{ report.report_latitude || '—' }},
+                                    {{ report.report_longitude || '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Distance from Farm</div>
+                                  <div class="summary-value text-dark">
+                                    {{ report.distance_from_farm != null ? report.distance_from_farm + ' m' : '—' }}
+                                  </div>
+                                </div>
+    
+                                <div class="summary-card">
+                                  <div class="summary-label">Flag</div>
+                                  <div class="summary-value">
+                                    <span v-if="report.is_suspicious" class="severity-badge warning">
+                                      ⚠ Location mismatch
+                                    </span>
+                                    <span v-else class="severity-badge success">
+                                      Normal
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+    
+                            <div class="detail-section">
+                              <div class="section-title">Damage Report Action</div>
+    
+                              <div class="status-update-row" @click.stop>
+                                <span class="status-pill" :class="report.status">
+                                  {{ statusLabel(report.status) }}
+                                </span>
+    
+                                <template v-if="report.status === 'submitted_to_mao'">
+                                  <button
+                                    class="btn-primary btn-compact"
+                                    @click="updateStatus(report, 'validated_by_mao')"
+                                    :disabled="updatingId === report.id"
+                                  >
+                                    Validate and Create Claim
+                                  </button>
+    
+                                  <button
+                                    class="btn-danger btn-compact"
+                                    @click="updateStatus(report, 'rejected')"
+                                    :disabled="updatingId === report.id"
+                                  >
+                                    Reject Report
+                                  </button>
+                                </template>
+    
+                                <template v-else-if="report.status === 'validated_by_mao'">
+                                  <span class="locked-pill approved">
+                                    🔒 Validated — Locked. Claim already created.
+                                  </span>
+                                </template>
+    
+                                <template v-else-if="report.status === 'rejected'">
+                                  <span class="locked-pill rejected">
+                                    🔒 Rejected — Locked. This report can no longer be changed.
+                                  </span>
+                                </template>
+    
+                                <span v-if="updatingId === report.id" class="updating-text">
+                                  Updating...
+                                </span>
+    
+                                <span v-if="updateSuccessId === report.id" class="success-text">
+                                  ✓ Updated
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
- 
-                      <div class="info-section">
-                        <div class="detail-section">
-                          <div class="section-title">Farmer Information</div>
- 
-                          <div class="summary-grid">
-                            <div class="summary-card">
-                              <div class="summary-label">Full Name</div>
-                              <div class="summary-value text-dark">{{ farmerName(report) }}</div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Phone</div>
-                              <div class="summary-value text-dark">
-                                {{ report.insurance_application?.farm?.farmer_profile?.user?.phone_number || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Address</div>
-                              <div class="summary-value text-dark">
-                                {{ report.insurance_application?.farm?.farmer_profile?.address || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Farm</div>
-                              <div class="summary-value text-dark">
-                                {{ report.insurance_application?.farm?.farm_name || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Crop Type</div>
-                              <div class="summary-value text-dark">
-                                {{ report.insurance_application?.farm?.crop_type || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Farm Area</div>
-                              <div class="summary-value text-dark">
-                                {{ report.insurance_application?.farm?.farm_area ? report.insurance_application.farm.farm_area + ' ha' : '—' }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
- 
-                        <div class="detail-section">
-                          <div class="section-title">Damage Details</div>
- 
-                          <div class="summary-grid">
-                            <div class="summary-card">
-                              <div class="summary-label">Cause</div>
-                              <div class="summary-value text-dark">{{ report.damage_cause || '—' }}</div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Damage Date</div>
-                              <div class="summary-value text-dark">{{ formatDate(report.damage_date) }}</div>
-                            </div>
- 
-                            <div class="summary-card col-span-full">
-                              <div class="summary-label">Reported At</div>
-                              <div class="summary-value text-dark">{{ formatDateTime(report.created_at) }}</div>
-                            </div>
-                          </div>
-                        </div>
- 
-                        <div class="detail-section">
-                          <div class="section-title">Location Verification</div>
- 
-                          <div class="summary-grid">
-                            <div class="summary-card">
-                              <div class="summary-label">Farm Coordinates</div>
-                              <div class="summary-value text-dark coords">
-                                {{ report.insurance_application?.farm?.latitude || '—' }},
-                                {{ report.insurance_application?.farm?.longitude || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Report Coordinates</div>
-                              <div class="summary-value text-dark coords">
-                                {{ report.report_latitude || '—' }},
-                                {{ report.report_longitude || '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Distance from Farm</div>
-                              <div class="summary-value text-dark">
-                                {{ report.distance_from_farm != null ? report.distance_from_farm + ' m' : '—' }}
-                              </div>
-                            </div>
- 
-                            <div class="summary-card">
-                              <div class="summary-label">Flag</div>
-                              <div class="summary-value">
-                                <span v-if="report.is_suspicious" class="severity-badge warning">
-                                  ⚠ Location mismatch
-                                </span>
-                                <span v-else class="severity-badge success">
-                                  Normal
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
- 
-                        <div class="detail-section">
-                          <div class="section-title">Damage Report Action</div>
- 
-                          <div class="status-update-row" @click.stop>
-                            <span class="status-pill" :class="report.status">
-                              {{ statusLabel(report.status) }}
-                            </span>
- 
-                            <template v-if="report.status === 'submitted_to_mao'">
-                              <button
-                                class="btn-primary btn-compact"
-                                @click="updateStatus(report, 'validated_by_mao')"
-                                :disabled="updatingId === report.id"
-                              >
-                                Validate and Create Claim
-                              </button>
- 
-                              <button
-                                class="btn-danger btn-compact"
-                                @click="updateStatus(report, 'rejected')"
-                                :disabled="updatingId === report.id"
-                              >
-                                Reject Report
-                              </button>
-                            </template>
- 
-                            <template v-else-if="report.status === 'validated_by_mao'">
-                              <span class="locked-pill approved">
-                                🔒 Validated — Locked. Claim already created.
-                              </span>
-                            </template>
- 
-                            <template v-else-if="report.status === 'rejected'">
-                              <span class="locked-pill rejected">
-                                🔒 Rejected — Locked. This report can no longer be changed.
-                              </span>
-                            </template>
- 
-                            <span v-if="updatingId === report.id" class="updating-text">
-                              Updating...
-                            </span>
- 
-                            <span v-if="updateSuccessId === report.id" class="success-text">
-                              ✓ Updated
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
-    </div>
- 
-    <transition name="float-bar">
-      <div v-if="canBulkAct && selectedIds.length > 0" class="bulk-action-bar floating">
-        <div class="bulk-left">
-          <strong>{{ selectedIds.length }}</strong>
-          <span>damage report(s) selected</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
         </div>
- 
-        <div class="bulk-actions">
-          <button
-            class="btn-primary btn-compact"
-            @click="bulkUpdateStatus('validated_by_mao')"
-            :disabled="bulkUpdating"
-          >
-            Validate Selected
-          </button>
- 
-          <button
-            class="btn-danger btn-compact"
-            @click="bulkUpdateStatus('rejected')"
-            :disabled="bulkUpdating"
-          >
-            Reject Selected
-          </button>
- 
-          <button class="link-btn-muted" @click="clearSelection">
-            Clear
+    
+        <transition name="float-bar">
+          <div v-if="canBulkAct && selectedIds.length > 0" class="bulk-action-bar floating">
+            <div class="bulk-left">
+              <strong>{{ selectedIds.length }}</strong>
+              <span>damage report(s) selected</span>
+            </div>
+    
+            <div class="bulk-actions">
+              <button
+                class="btn-primary btn-compact"
+                @click="bulkUpdateStatus('validated_by_mao')"
+                :disabled="bulkUpdating"
+              >
+                Validate Selected
+              </button>
+    
+              <button
+                class="btn-danger btn-compact"
+                @click="bulkUpdateStatus('rejected')"
+                :disabled="bulkUpdating"
+              >
+                Reject Selected
+              </button>
+    
+              <button class="link-btn-muted" @click="clearSelection">
+                Clear
+              </button>
+            </div>
+          </div>
+        </transition>
+    
+        <div v-if="lightboxImage" class="lightbox" @click="closeLightbox">
+          <img
+            :src="lightboxImage"
+            class="lightbox-img"
+            alt="Damage photo full view"
+          />
+          <button class="lightbox-close" @click="closeLightbox">
+            ✕
           </button>
         </div>
-      </div>
-    </transition>
- 
-    <div v-if="lightboxImage" class="lightbox" @click="closeLightbox">
-      <img
-        :src="lightboxImage"
-        class="lightbox-img"
-        alt="Damage photo full view"
-      />
-      <button class="lightbox-close" @click="closeLightbox">
-        ✕
-      </button>
+      </main>
+     
     </div>
   </div>
+ 
 </template>
 
 <script>
@@ -895,90 +901,6 @@ async fetchCurrentSeason() {
 <style scoped>
 * { box-sizing: border-box; }
  
-.damage-page {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #F8FAF8;
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
- 
-/* TOP HEADER */
-.top-header {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #E7F0EC;
-  flex-shrink: 0;
-  z-index: 20;
-  padding: 0px 15px;
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-title-group h1 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0F212F;
-  letter-spacing: -0.01em;
-}
-
-.header-title-group p {
-  font-size: 12px;
-  color: #5c6b64;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.v-divider {
-  height: 24px;
-  width: 1px;
-  background-color: #E7F0EC;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
-}
-
-.user-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0F212F;
-  line-height: 1.2;
-}
-
-.user-role {
-  font-size: 10px;
-  font-weight: 500;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 /* SEASON TABS (styled to match top-header) */
 .season-tabs-container {
   display: flex;
