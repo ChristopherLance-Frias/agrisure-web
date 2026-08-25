@@ -189,53 +189,64 @@ export default {
     },
 
     async verifyOtp() {
-    if (this.otpCode.length !== 6) {
-      this.errorMessage = 'Please enter the complete 6-digit OTP.'
+  if (this.otpCode.length !== 6) {
+    this.errorMessage = 'Please enter the complete 6-digit OTP.'
+    return
+  }
+
+  this.errorMessage = ''
+  this.successMessage = ''
+  this.isLoading = true
+
+  try {
+    const response = await axios.post(
+      `${API_BASE}/api/verify-login-otp`,
+      {
+        user_id: this.userId,
+        otp_code: this.otpCode,
+      }
+    )
+
+    const data = response.data
+
+    if (data.user.role !== 'barangay') {
+      this.errorMessage = 'Unauthorized access.'
+      this.isLoading = false
       return
     }
 
-    this.errorMessage = ''
-    this.successMessage = ''
-    this.isLoading = true
-
-    try {
-      const response = await axios.post(
-        `${API_BASE}/api/verify-login-otp`,  // ← updated endpoint
-        {
-          user_id: this.userId,
-          otp_code: this.otpCode,
-        }
-      )
-
-      // ↓ PUT IT HERE, replacing the old localStorage lines and router push
-      const data = response.data
-
-      localStorage.setItem('barangay_token', data.access_token)
-      localStorage.setItem('barangay_user', JSON.stringify(data.user))
-
-      if (data.user.role !== 'barangay') {
-        this.errorMessage = 'Unauthorized access.'
-        return
-      }
-
-      await this.$router.push({ name: 'barangay-dashboard' })
-
-    } catch (error) {
-      if (error.response) {
-        this.errorMessage =
-          error.response.data.message || 'Invalid or expired OTP.'
-      } else {
-        this.errorMessage = 'Unable to connect to server.'
-      }
-      this.otpDigits = ['', '', '', '', '', '']
-      this.$nextTick(() => {
-        const first = this.$refs['otpInput0']
-        if (first && first[0]) first[0].focus()
-      })
-    } finally {
-      this.isLoading = false
+    // Standardize user structure (including full name construction)
+    const userData = {
+      ...data.user,
+      name: [data.user.first_name, data.user.middle_name, data.user.last_name]
+        .filter(Boolean)
+        .join(' ')
     }
-  },
+
+    // Save tokens and user data consistently
+    localStorage.setItem('barangay_token', data.access_token)
+    localStorage.setItem('auth_token', data.access_token)
+    localStorage.setItem('barangay_user', JSON.stringify(userData))
+    localStorage.setItem('user', JSON.stringify(userData))
+
+    await this.$router.push({ name: 'barangay-dashboard' })
+
+  } catch (error) {
+    if (error.response) {
+      this.errorMessage =
+        error.response.data.message || 'Invalid or expired OTP.'
+    } else {
+      this.errorMessage = 'Unable to connect to server.'
+    }
+    this.otpDigits = ['', '', '', '', '', '']
+    this.$nextTick(() => {
+      const first = this.$refs['otpInput0']
+      if (first && first[0]) first[0].focus()
+    })
+  } finally {
+    this.isLoading = false
+  }
+},
 
     async resendOtp() {
       const login = localStorage.getItem('brgy_otp_login')
