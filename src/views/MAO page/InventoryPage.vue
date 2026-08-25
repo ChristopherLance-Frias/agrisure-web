@@ -1,6 +1,6 @@
 <template>
-  <div class="inv-layout">
-    <div class="inv-page">
+  <div class="layout">
+    <div class="main-wrapper">
   
       <!-- TOP BAR / HEADER -->
       <header class="top-header inv-top-header">
@@ -24,9 +24,9 @@
           </div>
         </div>
       </header>
-  
-      <!-- PAGE ACTIONS -->
-      <div class="page-actions">
+      
+      <main class="body">
+        <div class="page-actions">
         <button class="btn btn-ghost" @click="activeTab = 'inventory'; showAddSupply = true">
           <svg viewBox="0 0 20 20" class="icon"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
           Add supply
@@ -696,6 +696,10 @@
         <div class="toast" :class="'toast-' + toast.type" v-if="toast.visible">{{ toast.message }}</div>
       </transition>
   
+      </main>
+        
+      <!-- PAGE ACTIONS -->
+      
     </div>
   </div>
 </template>
@@ -1319,121 +1323,7 @@ export default {
 </script>
 <style scoped>
 * { box-sizing: border-box; }
-.inv-layout {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #F8FAF8;
-}
- 
-.inv-page {
- flex: 1;
-  min-width: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
- 
-/* ===================== HEADER ===================== */
-.top-header {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #E7F0EC;
-  flex-shrink: 0;
-  z-index: 20;
-  padding: 0px 15px;
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
- 
-.header-title-group .eyebrow {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #116D3E;
-  margin-bottom: 2px;
-}
- 
-.header-title-group h1 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0F212F;
-  letter-spacing: -0.01em;
-}
- 
-.header-title-group p:not(.eyebrow) {
-  font-size: 12px;
-  color: #5c6b64;
-  margin-top: 2px;
-}
- 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
- 
-.v-divider {
-  height: 24px;
-  width: 1px;
-  background-color: #E7F0EC;
-}
- 
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
- 
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
-}
- 
-.user-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0F212F;
-  line-height: 1.2;
-}
- 
-.user-role {
-  font-size: 10px;
-  font-weight: 500;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
-/* ===================== SCROLLABLE BODY =====================
-   Wraps everything below </header> inside .inv-page:
-   <div class="inv-body"> ...page actions, ledger, tabs, table,
-   distribution events... </div>
-   This is what supplies the left/right (and top/bottom) page
-   padding — without it .inv-page has none, which is why the
-   content was sitting flush against the viewport edges. */
-.inv-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
 
 /* ===================== PAGE ACTIONS ===================== */
 .page-actions {
