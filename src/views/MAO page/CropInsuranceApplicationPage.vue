@@ -245,11 +245,6 @@
             </span>
           </template>
 
-          <!--
-            submitted_to_pcic is now a terminal status for MAO (see isTerminal()).
-            Once applications reach it they are no longer selectable, so this
-            branch is effectively unreachable — kept only as a defensive fallback.
-          -->
           <template v-if="selectedStatus === 'submitted_to_pcic' || selectedStatus === 'insured' || selectedStatus === 'rejected'">
             <span class="bulk-terminal-note">No further action available for this status.</span>
           </template>
@@ -400,11 +395,6 @@
                         </span>
                       </template>
 
-                      <!--
-                        submitted_to_pcic is MAO's final system action for this application.
-                        PCIC now notifies the farmer directly via SMS with the outcome, so no
-                        "Mark Insured" / "Reject" action is exposed to MAO officers anymore.
-                      -->
                       <template v-if="app.status === 'submitted_to_pcic'">
                         <span class="action-hint">
                           ✅ Forwarded to PCIC. PCIC will contact the farmer directly via SMS with
@@ -630,7 +620,13 @@
 
                         <div class="detail-item full-width" v-if="app.payment_proof_path">
                           <span class="detail-label">Payment Proof</span>
-                          <a class="detail-link" :href="assetUrl(app.payment_proof_path)" target="_blank" rel="noopener">View uploaded proof</a>
+                          <img
+                            v-if="fileDataUrls[app.payment_proof_path]"
+                            :src="fileDataUrls[app.payment_proof_path]"
+                            alt="Payment proof"
+                            class="payment-proof-img"
+                          />
+                          <span v-else class="detail-val">Loading…</span>
                         </div>
                       </div>
                     </div>
@@ -642,22 +638,24 @@
                         <div class="document-tile">
                           <span class="detail-label">Farmer's Signature</span>
                           <img
-                            v-if="app.signature_path"
-                            :src="assetUrl(app.signature_path)"
+                            v-if="app.signature_path && fileDataUrls[app.signature_path]"
+                            :src="fileDataUrls[app.signature_path]"
                             alt="Farmer signature"
                             class="signature-img"
                           />
+                          <span v-else-if="app.signature_path" class="detail-val">Loading…</span>
                           <span v-else class="detail-val">—</span>
                         </div>
 
                         <div class="document-tile">
                           <span class="detail-label">Farm Photo</span>
                           <img
-                            v-if="app.farm?.farm_image_path"
-                            :src="assetUrl(app.farm.farm_image_path)"
+                            v-if="app.farm?.farm_image_path && fileDataUrls[app.farm.farm_image_path]"
+                            :src="fileDataUrls[app.farm.farm_image_path]"
                             alt="Farm photo"
                             class="farm-photo-img"
                           />
+                          <span v-else-if="app.farm?.farm_image_path" class="detail-val">Loading…</span>
                           <span v-else class="detail-val">—</span>
                         </div>
                       </div>
@@ -838,8 +836,8 @@
                   <td>{{ app?.west_boundary || '' }}</td>
                   <td class="text-center signature-cell">
                     <img
-                      v-if="app?.signature_path"
-                      :src="signatureDataUrls[app.signature_path] || assetUrl(app.signature_path)"
+                      v-if="app?.signature_path && fileDataUrls[app.signature_path]"
+                      :src="fileDataUrls[app.signature_path]"
                       alt="Signature"
                       class="pdf-signature-img"
                     />
@@ -915,14 +913,7 @@ export default {
       pcicBatchList: [],
       currentSeason: null,
 
-      // Maps a raw signature_path -> preloaded base64 data URI, populated by
-      // preloadSignatureImages() just before PDF generation. html2canvas
-      // (used by html2pdf) needs to read image pixel data cross-origin to
-      // draw it into the PDF canvas; the live CDN in front of the API
-      // strips/withholds CORS headers on image responses, so fetching
-      // signatures as base64 JSON instead (which passes through the same
-      // CORS pipeline as the rest of the API) sidesteps that entirely.
-      signatureDataUrls: {},
+      fileDataUrls: {},
 
       showSeasonModal: false,
       seasonModalError: '',
@@ -961,12 +952,6 @@ export default {
         : this.historyApplications
     },
 
-    // Everything EXCEPT the status filter: search + crop + season. Stat
-    // cards and the status-pill counts read from this (not from
-    // activeApplications) so the numbers stay in sync with whatever
-    // season/search/crop is currently narrowing the table — previously
-    // they always summed the whole tab's data regardless of the season
-    // dropdown, so counts looked "wrong" as soon as you picked a season.
     scopedApplications() {
       var search = this.searchName.toLowerCase()
       var crop = this.filterCrop
@@ -991,16 +976,6 @@ export default {
       })
     },
 
-    // Rows that CAN be checked for bulk selection: not terminal, and not
-    // sitting on an unverified or rejected payment. A pending payment must
-    // be resolved (via verifyPayment/rejectPayment in the expanded row)
-    // before the application can join a batch, and a rejected payment
-    // blocks it permanently until the farmer resubmits proof — see
-    // isCheckboxDisabled below for the matching per-row lock.
-    //
-    // NOTE: the backend's actual payment_status enum is
-    // not_required | pending_verification | verified | rejected — there is
-    // no bare 'pending' value, so checks must use 'pending_verification'.
     selectableFiltered() {
       var self = this
       return this.filtered.filter(function(app) {
@@ -1119,11 +1094,6 @@ export default {
       }
     },
 
-    // Historical application records may carry their season reference either
-    // as a flat `insurance_season_id` field, a nested `season.id` relation,
-    // or (less commonly) `season_id`. This checks all three shapes and
-    // compares as strings so number/string API inconsistencies don't cause
-    // false negatives.
     matchesSeasonId(app, seasonId) {
       var appSeasonId = app.insurance_season_id ?? app.season?.id ?? app.season_id
       if (appSeasonId === undefined || appSeasonId === null) {
@@ -1195,21 +1165,10 @@ export default {
       })
     },
 
-    // submitted_to_pcic is now MAO's final system action: PCIC notifies the
-    // farmer directly via SMS with the outcome, so MAO no longer needs (or
-    // has) a manual "Insured" / "Rejected" step for these applications.
     isTerminal(status) {
       return status === 'submitted_to_pcic' || status === 'insured' || status === 'rejected'
     },
 
-    // Locks the row checkbox while payment is unverified OR rejected. An
-    // officer must open the row and resolve it via verifyPayment (which
-    // moves payment_status to 'verified') before the application can be
-    // added to a batch. A 'rejected' payment blocks selection permanently
-    // until the farmer resubmits proof through a separate flow — this keeps
-    // "Select All" and manual selection from ever picking up unresolved
-    // rows in the first place, rather than only rejecting them once a bulk
-    // action is attempted.
     isCheckboxDisabled(app) {
       if (app.payment_status === 'pending_verification' || app.payment_status === 'rejected') {
         return true
@@ -1305,10 +1264,6 @@ export default {
       }
     },
 
-    // NOTE: 'insured' and 'rejected' routes are retained here only for legacy
-    // / historical data reference. They are no longer reachable from this UI
-    // since submitted_to_pcic is now terminal for MAO officers — PCIC updates
-    // the farmer directly and MAO's system record stops at submitted_to_pcic.
     routeForStatus(status) {
       var routeMap = {
         approved_for_pcic: 'approve-for-pcic',
@@ -1320,21 +1275,12 @@ export default {
       return routeMap[status] || null
     },
 
-    // Matches InsuranceApplicationController@verifyPayment /
-    // InsuranceApplicationController@rejectPayment.
-    //
-    // verifyPayment only flips payment_status -> 'verified' on the backend;
-    // it does NOT advance the application's status. Since the whole point of
-    // this action (per the scenario) is "verify payment, then move the app
-    // to 'To be submitted to PCIC'", we chain a second call to approve-for-pcic
-    // right after a successful verification, but only when the application
-    // is still sitting in a status that action makes sense for.
     async verifyPayment(appId) {
       if (!confirm('Verify this payment and move it to "To be submitted to PCIC"?')) {
         return
       }
       try {
-        await axios.put(
+        await axios.post(
           API_BASE + '/api/insurance-applications/' + appId + '/verify-payment',
           {},
           this.authHeaders()
@@ -1376,10 +1322,6 @@ export default {
       }
     },
 
-    // Gates the PCIC-submission action: if a payment was required, it must
-    // be verified first (per the backend's own verifyPayment message —
-    // "Application may now proceed to PCIC"). Records with no payment_status
-    // at all (legacy data) are allowed through.
     canSubmitToPcic(app) {
       return !app.payment_status
         || app.payment_status === 'verified'
@@ -1465,39 +1407,38 @@ export default {
       }
     },
 
-    // Fetches every unique signature image used in this batch as a base64
-    // data URI, ahead of PDF generation. This exists because the live CDN
-    // sitting in front of the API strips CORS headers on plain image
-    // responses, which blocks html2canvas from reading the pixels needed
-    // to draw the signature into the PDF (the image still displays fine as
-    // a normal <img> on the page — CORS only matters for canvas reads).
-    // Routing the same bytes through a JSON endpoint sidesteps that, since
-    // JSON API responses already pass CORS correctly here.
-async preloadSignatureImages(apps) {
-  const uniquePaths = Array.from(
-    new Set(apps.map((a) => a.signature_path).filter(Boolean))
-  );
+    async loadFile(path) {
+      if (!path) {
+        return ''
+      }
+      if (this.fileDataUrls[path]) {
+        return this.fileDataUrls[path]
+      }
+      try {
+        var config = this.authHeaders()
+        config.params = { path: path }
+        var response = await axios.get(API_BASE + '/api/storage/file', config)
+        this.fileDataUrls[path] = response.data.data
+        return response.data.data
+      } catch (err) {
+        console.error('Failed to load file: ' + path, err)
+        return ''
+      }
+    },
 
-  const results = await Promise.allSettled(
-    uniquePaths.map(async (path) => {
-      const filename = path.split('/').pop();
-      // Ensure it hits the /api/ route
-      const res = await axios.get(`/api/storage/signatures/${filename}`);
-      return { path, dataUrl: res.data.data };
-    })
-  );
+    async preloadSignatureImages(apps) {
+      var uniquePaths = Array.from(
+        new Set(apps.map(function(a) { return a.signature_path }).filter(Boolean))
+      )
+      var self = this
 
-  const map = {};
-  results.forEach((r) => {
-    if (r.status === 'fulfilled') {
-      map[r.value.path] = r.value.dataUrl;
-    } else {
-      console.error('Failed to preload signature image:', r.reason);
-    }
-  });
+      await Promise.allSettled(
+        uniquePaths.map(function(path) {
+          return self.loadFile(path)
+        })
+      )
+    },
 
-  this.signatureDataUrls = map;
-},
     async downloadSelectedPcicBatch() {
       if (this.selectedPcicReady.length === 0) {
         alert('Select applications with "To be submitted to PCIC" status only.')
@@ -1558,7 +1499,6 @@ async preloadSignatureImages(apps) {
               }
             },
           },
-          // LEGAL LANDSCAPE FORMAT (8.5 x 14 in / 215.9 x 355.6 mm)
           jsPDF: { unit: 'mm', format: [215.9, 355.6], orientation: 'landscape' },
           pagebreak: { mode: ['css'], before: '.pdf-page-break' },
         }
@@ -1722,6 +1662,23 @@ async preloadSignatureImages(apps) {
 
     toggleExpand(id) {
       this.expandedId = this.expandedId === id ? null : id
+
+      if (this.expandedId) {
+        var app = this.activeApplications.find(function(a) {
+          return a.id === id
+        })
+        if (app) {
+          if (app.signature_path) {
+            this.loadFile(app.signature_path)
+          }
+          if (app.farm && app.farm.farm_image_path) {
+            this.loadFile(app.farm.farm_image_path)
+          }
+          if (app.payment_proof_path) {
+            this.loadFile(app.payment_proof_path)
+          }
+        }
+      }
     },
 
     farmerName(app) {
@@ -1788,13 +1745,6 @@ async preloadSignatureImages(apps) {
       return sex
     },
 
-    assetUrl(path) {
-      if (!path) return ''
-      return API_BASE + '/api/storage/' + path
-    },
-
-    // NOTE: the backend's payment_status enum is
-    // not_required | pending_verification | verified | rejected.
     paymentStatusLabel(status) {
       var map = {
         not_required: 'Not Required',
@@ -1917,7 +1867,6 @@ async preloadSignatureImages(apps) {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
 
 .season-card {
   background: #FFFFFF;
@@ -2371,15 +2320,23 @@ async preloadSignatureImages(apps) {
 
 .payment-validation-actions { display: flex; gap: 10px; margin-top: 4px; }
 
+.payment-proof-img {
+  max-width: 260px;
+  max-height: 220px;
+  object-fit: contain;
+  border: 1px solid #eef2ef;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 6px;
+  margin-top: 4px;
+}
+
 .documents-row { display: flex; gap: 1.2rem; flex-wrap: wrap; }
 .document-tile { display: flex; flex-direction: column; gap: 6px; }
 
 .signature-img { max-width: 220px; max-height: 100px; object-fit: contain; border: 1px solid #eef2ef; border-radius: 8px; background: #FFFFFF; padding: 6px; }
 .farm-photo-img { max-width: 220px; max-height: 140px; object-fit: cover; border: 1px solid #eef2ef; border-radius: 8px; }
 
-/* -------------------------------------------------------------
-   EXACT PCIC OFFICIAL GOVERNMENT FORM STYLES (LEGAL LANDSCAPE)
-------------------------------------------------------------- */
 .pdf-export-wrapper {
   position: fixed;
   top: 0;
@@ -2390,7 +2347,7 @@ async preloadSignatureImages(apps) {
 }
 
 .pdf-export-container {
-  width: 1300px; /* Legal Landscape Target Capture Bounds */
+  width: 1300px;
   background: #ffffff;
   padding: 0;
   font-family: Arial, Helvetica, sans-serif;
@@ -2404,7 +2361,6 @@ async preloadSignatureImages(apps) {
   box-sizing: border-box;
 }
 
-/* Header Structure */
 .pcic-official-header {
   border: 2px solid #000000;
   margin-bottom: 8px;
@@ -2469,7 +2425,6 @@ async preloadSignatureImages(apps) {
   padding: 4px 8px;
 }
 
-/* Meta Table Grid */
 .pcic-meta-table {
   display: flex;
   flex-direction: column;
@@ -2495,7 +2450,6 @@ async preloadSignatureImages(apps) {
 .flex-1 { flex: 1; }
 .flex-2 { flex: 2; }
 
-/* PCIC Table Precision Grid */
 .pcic-official-table {
   width: 100%;
   border-collapse: collapse;
@@ -2527,7 +2481,6 @@ async preloadSignatureImages(apps) {
   vertical-align: middle;
 }
 
-/* Column Width Specifications (Page 1) */
 .col-num { width: 22px; }
 .col-lname { width: 65px; }
 .col-fname { width: 65px; }
@@ -2547,7 +2500,6 @@ async preloadSignatureImages(apps) {
 .col-date { width: 50px; }
 .col-var { width: 50px; }
 
-/* Column Width Specifications (Page 2) */
 .col-p2-name { width: 120px; }
 .col-p2-georef { width: 85px; }
 .col-p2-loc { width: 130px; }
@@ -2556,7 +2508,6 @@ async preloadSignatureImages(apps) {
 .col-p2-bnd { width: 80px; }
 .col-p2-sig { width: 90px; }
 
-/* Formatting Utilities */
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .bold { font-weight: bold; }
@@ -2580,7 +2531,6 @@ async preloadSignatureImages(apps) {
   page-break-before: always;
 }
 
-/* Footer Section */
 .pcic-footer-block {
   margin-top: 10px;
   border: 1px solid #000000;
@@ -2617,10 +2567,9 @@ async preloadSignatureImages(apps) {
   text-transform: uppercase;
 }
 
-/* Direct Browser Printing Support */
 @media print {
   @page {
-    size: 14in 8.5in; /* Legal Landscape Format */
+    size: 14in 8.5in;
     margin: 0;
   }
 

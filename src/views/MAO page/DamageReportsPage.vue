@@ -284,12 +284,16 @@
                             <span class="detail-label">Damage Photo</span>
     
                             <img
-                              v-if="report.damage_image_path"
-                              :src="imageUrl(report.damage_image_path)"
+                              v-if="report.damage_image_path && fileDataUrls[report.damage_image_path]"
+                              :src="fileDataUrls[report.damage_image_path]"
                               class="damage-thumb"
                               alt="Damage photo"
                               @click.stop="openLightbox(report.damage_image_path)"
                             />
+
+                            <div v-else-if="report.damage_image_path" class="no-image">
+                              Loading image...
+                            </div>
     
                             <div v-else class="no-image">
                               No image
@@ -508,7 +512,6 @@
      
     </div>
   </div>
- 
 </template>
 
 <script>
@@ -529,6 +532,8 @@ export default {
       seasons: [],
       currentSeason: null,
       historySeasonId: '',
+
+      fileDataUrls: {},
 
       selectedIds: [],
       isLoading: false,
@@ -561,17 +566,6 @@ export default {
       });
     },
 
-    /**
-     * FIX: Previously this just returned `this.reports` or `this.historyReports`
-     * wholesale — `historyReports` is every non-current-season report combined,
-     * with no further narrowing to the single previous season chosen in the
-     * dropdown. Only the table (`filtered`) applied that extra narrowing, so
-     * everything else derived from `activeReports` — the 5 metric cards,
-     * the status-tab counts, and the Cause filter options — stayed identical
-     * no matter which previous season you picked. Now the season-specific
-     * narrowing happens here, once, so every computed value built on top of
-     * `activeReports` is consistent with the selected season.
-     */
     activeReports() {
       const base = this.activeSeasonView === 'current' ? this.reports : this.historyReports
 
@@ -606,8 +600,6 @@ export default {
     },
 
     filtered() {
-      // Season scoping now happens in `activeReports`, so this only needs
-      // to apply the search/cause/status/suspicious filters on top of it.
       return this.activeReports.filter((report) => {
         const name = this.farmerName(report).toLowerCase()
 
@@ -655,22 +647,37 @@ export default {
       }
     },
 
-async fetchCurrentSeason() {
-  try {
-    const response = await axios.get(
-      API_BASE + '/api/insurance-seasons/current',
-      this.authHeaders()
-    )
+    async loadFile(path) {
+      if (!path || this.fileDataUrls[path]) return this.fileDataUrls[path]
+      try {
+        const res = await axios.get(API_BASE + '/api/storage/file', {
+          params: { path: path },
+          ...this.authHeaders()
+        })
+        this.fileDataUrls[path] = res.data.data
+        return res.data.data
+      } catch (err) {
+        console.error('Failed to load file:', path, err)
+        return ''
+      }
+    },
 
-    this.currentSeason = response.data?.season || null
+    async fetchCurrentSeason() {
+      try {
+        const response = await axios.get(
+          API_BASE + '/api/insurance-seasons/current',
+          this.authHeaders()
+        )
 
-    await this.fetchSeasons()
-    await this.fetchReports()
-  } catch (err) {
-    console.error("Error fetching current season:", err)
-    await this.fetchReports()
-  }
-},
+        this.currentSeason = response.data?.season || null
+
+        await this.fetchSeasons()
+        await this.fetchReports()
+      } catch (err) {
+        console.error("Error fetching current season:", err)
+        await this.fetchReports()
+      }
+    },
 
     async fetchSeasons() {
       try {
@@ -849,6 +856,12 @@ async fetchCurrentSeason() {
 
     toggleExpand(id) {
       this.expandedId = this.expandedId === id ? null : id
+      if (this.expandedId) {
+        const report = this.activeReports.find((r) => r.id === id)
+        if (report?.damage_image_path) {
+          this.loadFile(report.damage_image_path)
+        }
+      }
     },
 
     farmerName(report) {
@@ -857,13 +870,9 @@ async fetchCurrentSeason() {
       return [u.first_name, u.middle_name, u.last_name, u.extension_name].filter(Boolean).join(' ')
     },
 
-    imageUrl(path) {
-      if (!path) return ''
-      return API_BASE + '/storage/' + path
-    },
-
-    openLightbox(path) {
-      this.lightboxImage = this.imageUrl(path)
+    async openLightbox(path) {
+      const dataUrl = await this.loadFile(path)
+      this.lightboxImage = dataUrl || ''
     },
 
     closeLightbox() {
@@ -912,7 +921,6 @@ async fetchCurrentSeason() {
   },
 }
 </script>
-
 
 <style scoped>
 * { box-sizing: border-box; }
