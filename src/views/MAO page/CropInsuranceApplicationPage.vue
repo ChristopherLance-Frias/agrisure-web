@@ -1,876 +1,874 @@
 <template>
-  <div class="layout">
-    <div class="main-wrapper">
-      <header class="top-header no-print">
-        <div class="header-title-group">
-          <h1>Crop Insurance Applications</h1>
-          <p>Review, update, and manage farmer insurance applications submitted to MAO</p>
-        </div>
+  <div class="insurance-page">
+    <header class="top-header no-print">
+      <div class="header-title-group">
+        <h1>Crop Insurance Applications</h1>
+        <p>Review, update, and manage farmer insurance applications submitted to MAO</p>
+      </div>
 
-        <div class="header-actions">
-          <div class="v-divider"></div>
+      <div class="header-actions">
+        <div class="v-divider"></div>
 
-          <!-- User Profile -->
-          <div class="user-profile">
-            <div class="user-avatar">
-              {{ currentUser.initials }}
-            </div>
-            <div class="user-info">
-              <p class="user-name">{{ currentUser.name }}</p>
-              <p class="user-role">{{ currentUser.role }}</p>
-            </div>
+        <!-- User Profile -->
+        <div class="user-profile">
+          <div class="user-avatar">
+            {{ currentUser.initials }}
+          </div>
+          <div class="user-info">
+            <p class="user-name">{{ currentUser.name }}</p>
+            <p class="user-role">{{ currentUser.role }}</p>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <main class="body">
-        <div v-if="hasConfiguredSeason" class="panel season-card no-print">
-          <div class="season-info">
-            <span class="season-icon open">⏱</span>
+    <!-- Active Season Display Window -->
+    <div v-if="hasConfiguredSeason" class="season-card no-print">
+      <div class="season-info">
+        <div class="season-icon open">⏱</div>
 
-            <div class="season-text">
-              <span class="season-label">Current Insurance Season</span>
-              <span class="season-name">{{ currentSeason.season_name }}</span>
-            </div>
-
-            <div class="season-text">
-              <span class="season-label">Application Deadline</span>
-              <span class="season-name">{{ formatDate(currentSeason.deadline_date) }}</span>
-            </div>
-          </div>
-
-          <div class="season-actions">
-            <button class="btn-outline btn-compact" @click="openSeasonModal">Season Settings</button>
-            <button v-if="currentSeason.status === 'application_open'" class="btn-danger btn-compact" @click="closeSeason">Close Season</button>
-            <button v-else class="btn-primary btn-compact" @click="openNewSeasonModal">Start New Season</button>
-          </div>
+        <div class="season-text">
+          <span class="season-label">Current Insurance Season</span>
+          <span class="season-name">{{ currentSeason.season_name }}</span>
         </div>
 
-        <!-- Setup Prompt Card fallback -->
-        <div v-else class="panel setup-card no-print">
-          <div class="setup-icon">📅</div>
-          <h3>Season Setup Required</h3>
-          <p>Configure the current active insurance window to start processing applications.</p>
+        <div class="season-text">
+          <span class="season-label">Application Deadline</span>
+          <span class="season-name">{{ formatDate(currentSeason.deadline_date) }}</span>
+        </div>
+      </div>
 
-          <div class="setup-form">
-            <div class="form-field">
-              <label>Season Name</label>
-              <input
-                v-model="seasonForm.season_name"
-                type="text"
-                placeholder="Example: Wet Season 2026"
-              />
-            </div>
+      <div class="season-actions">
+        <button class="btn-season-secondary" @click="openSeasonModal">Season Settings</button>
+        <button v-if="currentSeason.status === 'application_open'" class="btn-season-danger" @click="closeSeason">Close Season</button>
+        <button v-else class="btn-season-primary" @click="openNewSeasonModal">Start New Season</button>
+      </div>
+    </div>
 
-            <div class="form-field">
-              <label>Application Deadline</label>
-              <input v-model="seasonForm.deadline_date" type="date" />
-            </div>
+    <!-- Setup Prompt Card fallback -->
+    <div v-else class="setup-card no-print">
+      <div class="setup-icon">📅</div>
+      <h3>Season Setup Required</h3>
+      <p>Configure the current active insurance window to start processing applications.</p>
 
-            <p v-if="seasonModalError" class="modal-error">{{ seasonModalError }}</p>
+      <div class="setup-form">
+        <div class="modal-field">
+          <label>Season Name</label>
+          <input
+            v-model="seasonForm.season_name"
+            type="text"
+            class="modal-input"
+            placeholder="Example: Wet Season 2026"
+          />
+        </div>
 
-            <button class="btn-primary btn-block" @click="saveSeason" :disabled="savingSeason">
-              {{ savingSeason ? 'Saving...' : 'Save and Show Applications' }}
+        <div class="modal-field">
+          <label>Application Deadline</label>
+          <input v-model="seasonForm.deadline_date" type="date" class="modal-input" />
+        </div>
+
+        <p v-if="seasonModalError" class="modal-error">{{ seasonModalError }}</p>
+
+        <button class="btn-season-primary" @click="saveSeason" :disabled="savingSeason">
+          {{ savingSeason ? 'Saving...' : 'Save and Show Applications' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Modification Modal Popup -->
+    <div v-if="showSeasonModal" class="modal-overlay no-print" @click.self="closeSeasonModal">
+      <div class="modal-box">
+        <h3 class="modal-title">{{ isStartingNewSeason ? 'Start New Season' : 'Season Settings' }}</h3>
+
+        <div class="modal-field">
+          <label>Season Name</label>
+          <input v-model="seasonForm.season_name" type="text" class="modal-input" />
+        </div>
+
+        <div class="modal-field">
+          <label>Application Deadline</label>
+          <input v-model="seasonForm.deadline_date" type="date" class="modal-input" />
+        </div>
+
+        <p v-if="seasonModalError" class="modal-error">{{ seasonModalError }}</p>
+
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" @click="closeSeasonModal" :disabled="savingSeason">
+            Cancel
+          </button>
+
+          <button class="btn-modal-save" @click="saveSeason" :disabled="savingSeason">
+            {{ savingSeason ? 'Saving...' : (isStartingNewSeason ? 'Create Season' : 'Save Changes') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider no-print">
+      <span>Applications Matrix</span>
+    </div>
+
+    <!-- Application Window Navigation Tabs -->
+    <div class="tab-bar no-print">
+      <button
+        class="tab-btn"
+        :class="{ active: activeAppTab === 'current' }"
+        @click="switchTab('current')"
+      >
+        Current Season Window
+      </button>
+
+      <button
+        class="tab-btn"
+        :class="{ active: activeAppTab === 'history' }"
+        @click="switchTab('history')"
+      >
+        Archived / Previous Seasons
+      </button>
+    </div>
+
+    <div class="refresh-bar no-print">
+      <div class="refresh-status">
+        <span class="refresh-dot" :class="{ live: autoRefresh }"></span>
+        <span v-if="autoRefresh">Auto-refresh on · every {{ refreshIntervalSeconds }}s</span>
+        <span v-else>Auto-refresh off</span>
+        <span v-if="lastRefreshedAt" class="refresh-last">· Last updated {{ formatTime(lastRefreshedAt) }}</span>
+      </div>
+
+      <div class="refresh-controls">
+        <button
+          class="btn-icon-refresh"
+          @click="manualRefresh"
+          :disabled="isLoading || isRefreshing"
+          title="Refresh now"
+        >
+          <span :class="{ spinning: isRefreshing }">⟳</span> Refresh
+        </button>
+
+        <label class="toggle-switch">
+          <input type="checkbox" v-model="autoRefresh" @change="onToggleAutoRefresh" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="filters-row no-print">
+      <div class="search-wrap">
+        <input
+          v-model="searchName"
+          class="search-input"
+          type="text"
+          placeholder="Search farmer name..."
+        />
+      </div>
+
+      <select v-model="filterCrop" class="filter-select">
+        <option value="">All Crop Types</option>
+        <option value="Rice">Rice</option>
+        <option value="Corn">Corn</option>
+      </select>
+
+      <select
+        v-if="activeAppTab === 'history'"
+        v-model="historySeasonId"
+        class="filter-select"
+      >
+        <option value="">All Previous Cycles</option>
+        <option
+          v-for="season in previousSeasons"
+          :key="season.id"
+          :value="season.id"
+        >
+          {{ season.season_name }}
+        </option>
+      </select>
+
+      <button class="btn-reset" @click="resetFilters">Reset Filters</button>
+    </div>
+
+    <div class="status-filter-row no-print">
+      <button
+        v-for="f in statusFilters"
+        :key="f.value"
+        class="status-filter-tag"
+        :class="[f.value ? 'sf-' + f.value : 'sf-all', { active: filterStatus === f.value }]"
+        @click="filterStatus = f.value"
+      >
+        {{ f.label }}
+        <span v-if="f.value" class="sf-count">{{ countByStatus(f.value) }}</span>
+      </button>
+    </div>
+
+    <!-- Status-aware floating bulk action bar -->
+    <transition name="float-bar">
+      <div v-if="selectedIds.length > 0" class="bulk-action-bar floating no-print" :class="{ mixed: !selectedStatus }">
+        <div class="bulk-left">
+          <strong>{{ selectedIds.length }}</strong>
+          <span>application(s) selected</span>
+
+          <span v-if="selectedStatus" class="status-badge" :class="selectedStatus">
+            {{ statusLabel(selectedStatus) }}
+          </span>
+        </div>
+
+        <div v-if="!selectedStatus" class="bulk-warning">
+          ⚠ Select applications with the same status to apply a bulk action.
+        </div>
+
+        <div v-else class="bulk-actions">
+          <template v-if="selectedStatus === 'submitted_to_mao' || selectedStatus === 'needs_revision'">
+            <button class="btn-action-approve" @click="bulkUpdateStatus('approved_for_pcic')">
+              Mark {{ selectedIds.length }} as To be Submitted to PCIC
             </button>
-          </div>
-        </div>
+          </template>
 
-        <!-- Settings Modification Modal Popup -->
-        <div v-if="showSeasonModal" class="modal-backdrop no-print" @click.self="closeSeasonModal">
-          <div class="modal">
-            <div class="modal-head">
-              <h4>{{ isStartingNewSeason ? 'Start New Season' : 'Season Settings' }}</h4>
-              <button class="modal-close" @click="closeSeasonModal">×</button>
-            </div>
-
-            <div class="form-field">
-              <label>Season Name</label>
-              <input v-model="seasonForm.season_name" type="text" />
-            </div>
-
-            <div class="form-field">
-              <label>Application Deadline</label>
-              <input v-model="seasonForm.deadline_date" type="date" />
-            </div>
-
-            <p v-if="seasonModalError" class="modal-error">{{ seasonModalError }}</p>
-
-            <div class="modal-actions">
-              <button class="btn-outline btn-compact" @click="closeSeasonModal" :disabled="savingSeason">
-                Cancel
-              </button>
-
-              <button class="btn-primary btn-compact" @click="saveSeason" :disabled="savingSeason">
-                {{ savingSeason ? 'Saving...' : (isStartingNewSeason ? 'Create Season' : 'Save Changes') }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Application Window Navigation Tabs -->
-        <div class="tab-bar no-print">
-          <button
-            class="tab-btn"
-            :class="{ active: activeAppTab === 'current' }"
-            @click="switchTab('current')"
-          >
-            Current Season Window
-          </button>
-
-          <button
-            class="tab-btn"
-            :class="{ active: activeAppTab === 'history' }"
-            @click="switchTab('history')"
-          >
-            Archived / Previous Seasons
-          </button>
-        </div>
-
-        <div class="panel">
-          <div class="refresh-bar no-print">
-            <div class="refresh-status">
-              <span class="refresh-dot" :class="{ live: autoRefresh }"></span>
-              <span v-if="autoRefresh">Auto-refresh on &middot; every {{ refreshIntervalSeconds }}s</span>
-              <span v-else>Auto-refresh off</span>
-              <span v-if="lastRefreshedAt" class="refresh-last">&middot; Last updated {{ formatTime(lastRefreshedAt) }}</span>
-            </div>
-
-            <div class="refresh-controls">
-              <button
-                class="btn-icon-refresh"
-                @click="manualRefresh"
-                :disabled="isLoading || isRefreshing"
-                title="Refresh now"
-              >
-                <span class="refresh-glyph" :class="{ spinning: isRefreshing }">⟳</span> Refresh
-              </button>
-
-              <label class="toggle-switch">
-                <input type="checkbox" v-model="autoRefresh" @change="onToggleAutoRefresh" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <div class="filters-row no-print">
-            <div class="search-wrap">
-              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                v-model="searchName"
-                class="search-input"
-                type="text"
-                placeholder="Search farmer name..."
-              />
-            </div>
-
-            <select v-model="filterCrop" class="filter-select">
-              <option value="">All Crop Types</option>
-              <option value="Rice">Rice</option>
-              <option value="Corn">Corn</option>
-            </select>
-
-            <select
-              v-if="activeAppTab === 'history'"
-              v-model="historySeasonId"
-              class="filter-select"
-            >
-              <option value="">All Previous Cycles</option>
-              <option
-                v-for="season in previousSeasons"
-                :key="season.id"
-                :value="season.id"
-              >
-                {{ season.season_name }}
-              </option>
-            </select>
-
-            <button class="btn-outline btn-compact" @click="resetFilters">Reset Filters</button>
-          </div>
-
-          <div class="status-filter-row no-print">
+          <template v-if="selectedStatus === 'approved_for_pcic'">
             <button
-              v-for="f in statusFilters"
-              :key="f.value"
-              class="status-filter-tag"
-              :class="[f.value ? 'sf-' + f.value : 'sf-all', { active: filterStatus === f.value }]"
-              @click="filterStatus = f.value"
+              class="btn-action-submit-pcic"
+              @click="bulkUpdateStatus('submitted_to_pcic')"
+              :disabled="!hasDownloadedSelectedBatch"
+              :title="!hasDownloadedSelectedBatch ? 'Download the batch PDF for this selection first' : ''"
             >
-              {{ f.label }}
-              <span v-if="f.value" class="sf-count">{{ countByStatus(f.value) }}</span>
+              Mark {{ selectedIds.length }} as Forwarded to PCIC
             </button>
-          </div>
 
-          <!-- Status-aware floating bulk action bar -->
-          <transition name="float-bar">
-            <div v-if="selectedIds.length > 0" class="bulk-action-bar floating no-print" :class="{ mixed: !selectedStatus }">
-              <div class="bulk-left">
-                <strong>{{ selectedIds.length }}</strong>
-                <span>application(s) selected</span>
+            <button
+              class="btn-print-pcic"
+              @click="downloadSelectedPcicBatch"
+              :disabled="isGeneratingPdf"
+            >
+              📥 {{ isGeneratingPdf ? 'Generating...' : 'Download Selected Batch PDF (' + selectedIds.length + ')' }}
+            </button>
 
-                <span v-if="selectedStatus" class="status-badge" :class="selectedStatus">
-                  {{ statusLabel(selectedStatus) }}
+            <span v-if="!hasDownloadedSelectedBatch" class="bulk-terminal-note">
+              Download the batch PDF before forwarding to PCIC.
+            </span>
+          </template>
+
+          <template v-if="selectedStatus === 'submitted_to_pcic' || selectedStatus === 'insured' || selectedStatus === 'rejected'">
+            <span class="bulk-terminal-note">No further action available for this status.</span>
+          </template>
+        </div>
+
+        <button class="btn-reset" @click="clearSelection">Clear</button>
+      </div>
+    </transition>
+
+    <div class="stats-row no-print">
+      <div class="stat-card">
+        <span class="stat-label">Total</span>
+        <span class="stat-value">{{ scopedApplications.length }}</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Pending MAO</span>
+        <span class="stat-value mao">{{ countByStatus('submitted_to_mao') }}</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Ready for PCIC</span>
+        <span class="stat-value pcic">{{ countByStatus('approved_for_pcic') }}</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Forwarded to PCIC</span>
+        <span class="stat-value review">{{ countByStatus('submitted_to_pcic') }}</span>
+      </div>
+    </div>
+
+    <div v-if="isLoading" class="state-box no-print">
+      <div class="spinner"></div>
+      <span>Fetching applications registry...</span>
+    </div>
+
+    <div v-else-if="errorMessage" class="state-box error-box no-print">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div v-else class="table-wrap no-print">
+      <div v-if="filtered.length === 0" class="empty-state">
+        No application records correspond to your filter parameters.
+      </div>
+
+      <table v-else class="app-table">
+        <thead>
+          <tr>
+            <th>
+              <input
+                type="checkbox"
+                :checked="allFilteredSelected"
+                :disabled="selectableFiltered.length === 0"
+                @change="toggleSelectAllFiltered"
+              />
+            </th>
+            <th></th>
+            <th>Farmer</th>
+            <th>Barangay</th>
+            <th>Farm Name</th>
+            <th>Crop</th>
+            <th>Variety</th>
+            <th>Farm Type</th>
+            <th>Area (ha)</th>
+            <th>Current Status</th>
+            <th>Season</th>
+            <th>Applied Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <template v-for="app in filtered" :key="app.id">
+            <tr
+              class="main-row"
+              :class="{ expanded: expandedId === app.id, selected: isSelected(app.id) }"
+              @click="toggleExpand(app.id)"
+            >
+              <td @click.stop>
+                <input
+                  type="checkbox"
+                  v-if="isTerminal(app.status) === false"
+                  :checked="isSelected(app.id)"
+                  :disabled="isCheckboxDisabled(app)"
+                  :title="app.payment_status === 'pending_verification' ? 'Expand details to verify payment before selecting' : (app.payment_status === 'rejected' ? 'Payment was rejected — this application cannot be selected' : '')"
+                  @change="toggleSelection(app.id)"
+                />
+              </td>
+
+              <td class="expand-cell">
+                <span class="expand-icon" :class="{ open: expandedId === app.id }">▶</span>
+              </td>
+
+              <td class="farmer-cell">
+                <div class="farmer-name">{{ farmerName(app) }}</div>
+                <div class="farmer-sub">{{ app.farm?.farmer_profile?.user?.email || '—' }}</div>
+              </td>
+
+              <td>{{ truncateAddress(app.farm?.farmer_profile?.address) }}</td>
+              <td>{{ app.farm?.farm_name || '—' }}</td>
+              <td>{{ app.farm?.crop_type || '—' }}</td>
+              <td>{{ app.variety || '—' }}</td>
+              <td>{{ app.farm_type || '—' }}</td>
+              <td>{{ app.farm?.farm_area || '—' }}</td>
+
+              <td>
+                <span class="status-badge" :class="app.status">
+                  {{ statusLabel(app.status) }}
                 </span>
+              </td>
+
+              <td>{{ app.season?.season_name || currentSeasonName(app) }}</td>
+              <td>{{ formatDate(app.application_date) }}</td>
+            </tr>
+
+            <tr v-if="expandedId === app.id" class="detail-row">
+              <td colspan="12">
+                <div class="detail-box" @click.stop>
+                  <div class="detail-actions-panel">
+                    <div class="action-sub-group">
+                      <span class="action-panel-label">
+                        <strong>Available Action:</strong>
+                      </span>
+
+                      <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
+                        <button
+                          v-if="app.payment_status !== 'pending_verification' && app.payment_status !== 'rejected'"
+                          class="btn-action-approve"
+                          @click="updateAppStatus(app.id, 'approved_for_pcic')"
+                        >
+                          Mark as To be Submitted to PCIC
+                        </button>
+
+                        <span v-else-if="app.payment_status === 'pending_verification'" class="action-hint">
+                          ⏳ Payment verification required before this can move to PCIC. Verify the
+                          payment below — it will automatically advance to "To be submitted to PCIC".
+                        </span>
+
+                        <span v-else-if="app.payment_status === 'rejected'" class="action-hint">
+                          ❌ Payment proof was rejected. This application cannot proceed to PCIC
+                          until the farmer resubmits valid payment proof.
+                        </span>
+                      </template>
+
+                      <template v-if="app.status === 'approved_for_pcic'">
+                        <span class="action-hint">
+                          ℹ️ PCIC requires batch transmittal. Select this application's checkbox
+                          (and any others ready for PCIC) to forward it.
+                        </span>
+                      </template>
+
+                      <template v-if="app.status === 'submitted_to_pcic'">
+                        <span class="action-hint">
+                          ✅ Forwarded to PCIC. PCIC will contact the farmer directly via SMS with
+                          the outcome of their application — no further action is needed from MAO.
+                        </span>
+                      </template>
+
+                      <template v-if="app.status === 'insured' || app.status === 'rejected'">
+                        <span class="action-hint">This application has reached a final status.</span>
+                      </template>
+                    </div>
+                  </div>
+
+                  <div class="detail-grid-wrapper">
+                    <div class="detail-section">
+                      <div class="section-title">Personal Information</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">Full Name</span>
+                          <span class="detail-val">{{ farmerName(app) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Civil Status</span>
+                          <span class="detail-val">{{ app.civil_status || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Beneficiary</span>
+                          <span class="detail-val">{{ app.beneficiary_name || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Spouse Name</span>
+                          <span class="detail-val">{{ app.spouse_name || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Parent / Guardian</span>
+                          <span class="detail-val">{{ app.parent_guardian_name || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Phone</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.user?.phone_number || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Email</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.email_or_phone || app.farm?.farmer_profile?.user?.email || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">RSBSA Reference</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.rsbsa_reference || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width">
+                          <span class="detail-label">Address</span>
+                          <span class="detail-val">{{ app.farm?.farmer_profile?.address || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.remarks">
+                          <span class="detail-label">Remarks</span>
+                          <span class="detail-val">{{ app.remarks }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Crop Information</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">Crop Type</span>
+                          <span class="detail-val">{{ app.farm?.crop_type || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Variety</span>
+                          <span class="detail-val">{{ app.variety || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Farm Type</span>
+                          <span class="detail-val">{{ app.farm_type || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Area Size</span>
+                          <span class="detail-val">{{ app.farm?.farm_area ? app.farm.farm_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Sowing Date</span>
+                          <span class="detail-val">{{ formatDate(app.sowing_date) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Transplanting</span>
+                          <span class="detail-val">{{ formatDate(app.transplanting_date) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Farm Location</span>
+                          <span class="detail-val">{{ app.farm_location || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Land Category</span>
+                          <span class="detail-val">{{ app.land_category || ' ' }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Land Boundaries & Tenure</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">North</span>
+                          <span class="detail-val">{{ app.north_boundary || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">East</span>
+                          <span class="detail-val">{{ app.east_boundary || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">West</span>
+                          <span class="detail-val">{{ app.west_boundary || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">South</span>
+                          <span class="detail-val">{{ app.south_boundary || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Land Owner</span>
+                          <span class="detail-val">{{ app.is_land_owner ? 'Yes' : 'No' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Tenure Status</span>
+                          <span class="detail-val">{{ app.tenure_status || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.farm?.latitude && app.farm?.longitude">
+                          <span class="detail-label">Farm Coordinates</span>
+                          <span class="detail-val">{{ app.farm.latitude }}, {{ app.farm.longitude }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Coverage &amp; Payment</div>
+
+                      <div class="detail-grid">
+                        <div class="detail-item">
+                          <span class="detail-label">Insured Area</span>
+                          <span class="detail-val">{{ app.insured_area ? app.insured_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Covered Free Area</span>
+                          <span class="detail-val">{{ app.covered_free_area ? app.covered_free_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Excess Area</span>
+                          <span class="detail-val">{{ app.excess_area ? app.excess_area + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Free Coverage Before</span>
+                          <span class="detail-val">{{ app.free_coverage_before ? app.free_coverage_before + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Free Coverage After</span>
+                          <span class="detail-val">{{ app.free_coverage_after ? app.free_coverage_after + ' ha' : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Premium Amount</span>
+                          <span class="detail-val">{{ formatCurrency(app.premium_amount) }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Status</span>
+                          <span class="detail-val">{{ paymentStatusLabel(app.payment_status) }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.payment_method && app.payment_status === 'pending_verification'">
+                          <span class="detail-label">Payment Validation</span>
+                          <div class="payment-validation-actions">
+                            <button class="btn-action-approve" @click="verifyPayment(app.id)">
+                              Confirm Paid
+                            </button>
+                            <button class="btn-action-reject" @click="rejectPayment(app.id)">
+                              Mark Failed
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Method</span>
+                          <span class="detail-val">{{ app.payment_method || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">GCash Reference #</span>
+                          <span class="detail-val">{{ app.gcash_reference_number || ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item">
+                          <span class="detail-label">Payment Submitted</span>
+                          <span class="detail-val">{{ app.payment_submitted_at ? formatDate(app.payment_submitted_at) : ' ' }}</span>
+                        </div>
+
+                        <div class="detail-item full-width" v-if="app.payment_proof_path">
+                          <span class="detail-label">Payment Proof</span>
+                          <img
+                            v-if="fileDataUrls[app.payment_proof_path]"
+                            :src="fileDataUrls[app.payment_proof_path]"
+                            alt="Payment proof"
+                            class="payment-proof-img"
+                          />
+                          <span v-else class="detail-val">Loading…</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-section">
+                      <div class="section-title">Documents</div>
+
+                      <div class="documents-row">
+                        <div class="document-tile">
+                          <span class="detail-label">Farmer's Signature</span>
+                          <img
+                            v-if="app.signature_path && fileDataUrls[app.signature_path]"
+                            :src="fileDataUrls[app.signature_path]"
+                            alt="Farmer signature"
+                            class="signature-img"
+                          />
+                          <span v-else-if="app.signature_path" class="detail-val">Loading…</span>
+                          <span v-else class="detail-val">—</span>
+                        </div>
+
+                        <div class="document-tile">
+                          <span class="detail-label">Farm Photo</span>
+                          <img
+                            v-if="app.farm?.farm_image_path && fileDataUrls[app.farm.farm_image_path]"
+                            :src="fileDataUrls[app.farm.farm_image_path]"
+                            alt="Farm photo"
+                            class="farm-photo-img"
+                          />
+                          <span v-else-if="app.farm?.farm_image_path" class="detail-val">Loading…</span>
+                          <span v-else class="detail-val">—</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PDF Legal-Size Batch Export Container -->
+    <div v-if="isPrintingPcicBatch" id="pdf-export-wrapper" class="pdf-export-wrapper">
+      <div id="pdf-download-area" class="pdf-export-container legal-size-print">
+
+        <template v-for="(pageRows, setIdx) in pcicBatchPages" :key="'set-' + setIdx">
+
+          <!-- ================= PAGE 1: APPLICATION FORM ================= -->
+          <div :class="{ 'pdf-page-break': setIdx > 0 }" class="pcic-page-container">
+            <!-- Header Block -->
+            <div class="pcic-official-header">
+              <div class="pcic-header-top">
+                <div class="pcic-logo-placeholder"></div>
+                <div class="pcic-title-box">
+                  <div class="pcic-republic">Republic of the Philippines</div>
+                  <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
+                  <div class="pcic-dept">DEPARTMENT OF AGRICULTURE</div>
+                  <div class="pcic-form-title">APPLICATION FOR CROP INSURANCE (GROUP APPLICATION)</div>
+                </div>
+                <div class="pcic-form-code">PCIC-RO-01</div>
               </div>
 
-              <div v-if="!selectedStatus" class="bulk-warning">
-                ⚠ Select applications with the same status to apply a bulk action.
+              <!-- Meta Data Grid Header -->
+              <div class="pcic-meta-table">
+                <div class="meta-row">
+                  <div class="meta-cell flex-2"><strong>NAME OF FO / FA / COOP / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP SEASON:</strong> {{ currentSeason ? currentSeason.season_name : 'REGULAR' }}</div>
+                </div>
+                <div class="meta-row">
+                  <div class="meta-cell flex-2"><strong>OFFICE ADDRESS / BARANGAY:</strong> ECHAGUE, CAGAYAN VALLEY</div>
+                  <div class="meta-cell flex-1"><strong>BATCH NO:</strong> BATCH-{{ setIdx + 1 }}</div>
+                  <div class="meta-cell flex-1"><strong>DATE SUBMITTED:</strong> {{ formatDate(new Date()) }}</div>
+                </div>
               </div>
-
-              <div v-else class="bulk-actions">
-                <template v-if="selectedStatus === 'submitted_to_mao' || selectedStatus === 'needs_revision'">
-                  <button class="btn-primary btn-compact" @click="bulkUpdateStatus('approved_for_pcic')">
-                    Mark {{ selectedIds.length }} as To be Submitted to PCIC
-                  </button>
-                </template>
-
-                <template v-if="selectedStatus === 'approved_for_pcic'">
-                  <button
-                    class="btn-primary btn-compact"
-                    @click="bulkUpdateStatus('submitted_to_pcic')"
-                    :disabled="!hasDownloadedSelectedBatch"
-                    :title="!hasDownloadedSelectedBatch ? 'Download the batch PDF for this selection first' : ''"
-                  >
-                    Mark {{ selectedIds.length }} as Forwarded to PCIC
-                  </button>
-
-                  <button
-                    class="btn-outline btn-compact"
-                    @click="downloadSelectedPcicBatch"
-                    :disabled="isGeneratingPdf"
-                  >
-                    📥 {{ isGeneratingPdf ? 'Generating...' : 'Download Selected Batch PDF (' + selectedIds.length + ')' }}
-                  </button>
-
-                  <span v-if="!hasDownloadedSelectedBatch" class="bulk-terminal-note">
-                    Download the batch PDF before forwarding to PCIC.
-                  </span>
-                </template>
-
-                <!--
-                  submitted_to_pcic is now a terminal status for MAO (see isTerminal()).
-                  Once applications reach it they are no longer selectable, so this
-                  branch is effectively unreachable — kept only as a defensive fallback.
-                -->
-                <template v-if="selectedStatus === 'submitted_to_pcic' || selectedStatus === 'insured' || selectedStatus === 'rejected'">
-                  <span class="bulk-terminal-note">No further action available for this status.</span>
-                </template>
-              </div>
-
-              <button class="link-btn-muted" @click="clearSelection">Clear</button>
             </div>
-          </transition>
 
-          <div class="metrics-grid no-print">
-            <div class="metric-card">
-              <div class="card-header">
-                <span class="card-label">Total</span>
-                <span class="icon-badge blue">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                    <line x1="8" y1="9" x2="16" y2="9" />
-                    <line x1="8" y1="13" x2="16" y2="13" />
-                  </svg>
-                </span>
-              </div>
-              <div class="card-value">{{ scopedApplications.length }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="card-header">
-                <span class="card-label">Pending MAO</span>
-                <span class="icon-badge amber">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9" />
-                    <polyline points="12 7 12 12 16 14" />
-                  </svg>
-                </span>
-              </div>
-              <div class="card-value">{{ countByStatus('submitted_to_mao') }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="card-header">
-                <span class="card-label">Ready for PCIC</span>
-                <span class="icon-badge teal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-              </div>
-              <div class="card-value">{{ countByStatus('approved_for_pcic') }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="card-header">
-                <span class="card-label">Forwarded to PCIC</span>
-                <span class="icon-badge purple">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 6h16M4 12h16M4 18h10" />
-                  </svg>
-                </span>
-              </div>
-              <div class="card-value">{{ countByStatus('submitted_to_pcic') }}</div>
-            </div>
-          </div>
-
-          <div v-if="isLoading" class="state-box no-print">
-            <div class="spinner"></div>
-            <span>Fetching applications registry...</span>
-          </div>
-
-          <div v-else-if="errorMessage" class="state-box error-box no-print">
-            <span>{{ errorMessage }}</span>
-          </div>
-
-          <div v-else class="table-responsive no-print">
-            <div v-if="filtered.length === 0" class="empty-state">
-              No application records correspond to your filter parameters.
-            </div>
-
-            <table v-else class="data-table app-table">
+            <!-- Page 1 Table -->
+            <table class="pcic-official-table">
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      :checked="allFilteredSelected"
-                      :disabled="selectableFiltered.length === 0"
-                      @change="toggleSelectAllFiltered"
-                    />
-                  </th>
-                  <th></th>
-                  <th>Farmer</th>
-                  <th>Barangay</th>
-                  <th>Farm Name</th>
-                  <th>Crop</th>
-                  <th>Variety</th>
-                  <th>Farm Type</th>
-                  <th>Area (ha)</th>
-                  <th>Current Status</th>
-                  <th>Season</th>
-                  <th>Applied Date</th>
+                  <th rowspan="2" class="col-num">NO.</th>
+                  <th colspan="4" class="col-name-group">NAME OF FARMER</th>
+                  <th rowspan="2" class="col-sex">SEX</th>
+                  <th rowspan="2" class="col-civil">CIVIL STATUS</th>
+                  <th rowspan="2" class="col-addr">ADDRESS (Sitio/Barangay)</th>
+                  <th rowspan="2" class="col-dob">DATE OF BIRTH</th>
+                  <th rowspan="2" class="col-rsbsa">RSBSA REF. NO.</th>
+                  <th rowspan="2" class="col-pay">PAYMENT MODE</th>
+                  <th rowspan="2" class="col-phone">TEL / PHONE</th>
+                  <th rowspan="2" class="col-spouse">SPOUSE NAME</th>
+                  <th rowspan="2" class="col-parent">PARENT / GUARDIAN</th>
+                  <th rowspan="2" class="col-ben">BENEFICIARY NAME</th>
+                  <th rowspan="2" class="col-area">AREA (ha)</th>
+                  <th rowspan="2" class="col-date">SOWING / DS</th>
+                  <th rowspan="2" class="col-date">TRANSPLANT</th>
+                  <th rowspan="2" class="col-var">VARIETY</th>
+                </tr>
+                <tr>
+                  <th class="col-lname">LAST NAME</th>
+                  <th class="col-fname">FIRST NAME</th>
+                  <th class="col-mname">MIDDLE</th>
+                  <th class="col-ext">EXT</th>
                 </tr>
               </thead>
 
               <tbody>
-                <template v-for="app in filtered" :key="app.id">
-                  <tr
-                    class="main-row"
-                    :class="{ expanded: expandedId === app.id, selected: isSelected(app.id) }"
-                    @click="toggleExpand(app.id)"
-                  >
-                    <td @click.stop>
-                      <input
-                        type="checkbox"
-                        v-if="isTerminal(app.status) === false"
-                        :checked="isSelected(app.id)"
-                        :disabled="isCheckboxDisabled(app)"
-                        :title="app.payment_status === 'pending_verification' ? 'Expand details to verify payment before selecting' : (app.payment_status === 'rejected' ? 'Payment was rejected — this application cannot be selected' : '')"
-                        @change="toggleSelection(app.id)"
-                      />
-                    </td>
-
-                    <td class="expand-cell">
-                      <span class="expand-icon" :class="{ open: expandedId === app.id }">▶</span>
-                    </td>
-
-                    <td class="farmer-cell">
-                      <div class="farmer-name font-bold">{{ farmerName(app) }}</div>
-                      <div class="farmer-sub">{{ app.farm?.farmer_profile?.user?.email || '—' }}</div>
-                    </td>
-
-                    <td>{{ truncateAddress(app.farm?.farmer_profile?.address) }}</td>
-                    <td>{{ app.farm?.farm_name || '—' }}</td>
-                    <td>{{ app.farm?.crop_type || '—' }}</td>
-                    <td>{{ app.variety || '—' }}</td>
-                    <td>{{ app.farm_type || '—' }}</td>
-                    <td>{{ app.farm?.farm_area || '—' }}</td>
-
-                    <td>
-                      <span class="status-badge" :class="app.status">
-                        {{ statusLabel(app.status) }}
-                      </span>
-                    </td>
-
-                    <td>{{ app.season?.season_name || currentSeasonName(app) }}</td>
-                    <td>{{ formatDate(app.application_date) }}</td>
-                  </tr>
-
-                  <tr v-if="expandedId === app.id" class="detail-row">
-                    <td colspan="12">
-                      <div class="detail-box" @click.stop>
-                        <div class="action-panel">
-                          <span class="action-panel-label">Available Action:</span>
-
-                          <template v-if="app.status === 'submitted_to_mao' || app.status === 'needs_revision'">
-                            <button
-                              v-if="app.payment_status !== 'pending_verification' && app.payment_status !== 'rejected'"
-                              class="btn-primary btn-compact"
-                              @click="updateAppStatus(app.id, 'approved_for_pcic')"
-                            >
-                              Mark as To be Submitted to PCIC
-                            </button>
-
-                            <span v-else-if="app.payment_status === 'pending_verification'" class="action-hint amber">
-                              ⏳ Payment verification required before this can move to PCIC. Verify the
-                              payment below — it will automatically advance to "To be submitted to PCIC".
-                            </span>
-
-                            <span v-else-if="app.payment_status === 'rejected'" class="action-hint red">
-                              ❌ Payment proof was rejected. This application cannot proceed to PCIC
-                              until the farmer resubmits valid payment proof.
-                            </span>
-                          </template>
-
-                          <template v-if="app.status === 'approved_for_pcic'">
-                            <span class="action-hint blue">
-                              ℹ️ PCIC requires batch transmittal. Select this application's checkbox
-                              (and any others ready for PCIC) to forward it.
-                            </span>
-                          </template>
-
-                          <!--
-                            submitted_to_pcic is MAO's final system action for this application.
-                            PCIC now notifies the farmer directly via SMS with the outcome, so no
-                            "Mark Insured" / "Reject" action is exposed to MAO officers anymore.
-                          -->
-                          <template v-if="app.status === 'submitted_to_pcic'">
-                            <span class="action-hint green">
-                              ✅ Forwarded to PCIC. PCIC will contact the farmer directly via SMS with
-                              the outcome of their application — no further action is needed from MAO.
-                            </span>
-                          </template>
-
-                          <template v-if="app.status === 'insured' || app.status === 'rejected'">
-                            <span class="action-hint">This application has reached a final status.</span>
-                          </template>
-                        </div>
-
-                        <div class="detail-content full-width">
-                          <div class="info-section">
-                            <div class="detail-section">
-                              <div class="section-title">Personal Information</div>
-
-                              <div class="summary-grid">
-                                <div class="summary-card">
-                                  <div class="summary-label">Full Name</div>
-                                  <div class="summary-value text-dark">{{ farmerName(app) }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Civil Status</div>
-                                  <div class="summary-value text-dark">{{ app.civil_status || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Beneficiary</div>
-                                  <div class="summary-value text-dark">{{ app.beneficiary_name || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Spouse Name</div>
-                                  <div class="summary-value text-dark">{{ app.spouse_name || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Parent / Guardian</div>
-                                  <div class="summary-value text-dark">{{ app.parent_guardian_name || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Phone</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.farmer_profile?.user?.phone_number || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Email</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.farmer_profile?.email_or_phone || app.farm?.farmer_profile?.user?.email || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">RSBSA Reference</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.farmer_profile?.rsbsa_reference || '—' }}</div>
-                                </div>
-                                <div class="summary-card col-span-full">
-                                  <div class="summary-label">Address</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.farmer_profile?.address || '—' }}</div>
-                                </div>
-                                <div class="summary-card col-span-full" v-if="app.remarks">
-                                  <div class="summary-label">Remarks</div>
-                                  <div class="summary-value text-dark">{{ app.remarks }}</div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div class="detail-section">
-                              <div class="section-title">Crop Information</div>
-
-                              <div class="summary-grid">
-                                <div class="summary-card">
-                                  <div class="summary-label">Crop Type</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.crop_type || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Variety</div>
-                                  <div class="summary-value text-dark">{{ app.variety || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Farm Type</div>
-                                  <div class="summary-value text-dark">{{ app.farm_type || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Area Size</div>
-                                  <div class="summary-value text-dark">{{ app.farm?.farm_area ? app.farm.farm_area + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Sowing Date</div>
-                                  <div class="summary-value text-dark">{{ formatDate(app.sowing_date) }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Transplanting</div>
-                                  <div class="summary-value text-dark">{{ formatDate(app.transplanting_date) }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Farm Location</div>
-                                  <div class="summary-value text-dark">{{ app.farm_location || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Land Category</div>
-                                  <div class="summary-value text-dark">{{ app.land_category || '—' }}</div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div class="detail-section">
-                              <div class="section-title">Land Boundaries &amp; Tenure</div>
-
-                              <div class="summary-grid">
-                                <div class="summary-card">
-                                  <div class="summary-label">North</div>
-                                  <div class="summary-value text-dark">{{ app.north_boundary || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">East</div>
-                                  <div class="summary-value text-dark">{{ app.east_boundary || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">West</div>
-                                  <div class="summary-value text-dark">{{ app.west_boundary || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">South</div>
-                                  <div class="summary-value text-dark">{{ app.south_boundary || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Land Owner</div>
-                                  <div class="summary-value text-dark">{{ app.is_land_owner ? 'Yes' : 'No' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Tenure Status</div>
-                                  <div class="summary-value text-dark">{{ app.tenure_status || '—' }}</div>
-                                </div>
-                                <div class="summary-card col-span-full" v-if="app.farm?.latitude && app.farm?.longitude">
-                                  <div class="summary-label">Farm Coordinates</div>
-                                  <div class="summary-value text-dark coords">{{ app.farm.latitude }}, {{ app.farm.longitude }}</div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div class="detail-section">
-                              <div class="section-title">Coverage &amp; Payment</div>
-
-                              <div class="summary-grid">
-                                <div class="summary-card">
-                                  <div class="summary-label">Insured Area</div>
-                                  <div class="summary-value text-dark">{{ app.insured_area ? app.insured_area + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Covered Free Area</div>
-                                  <div class="summary-value text-dark">{{ app.covered_free_area ? app.covered_free_area + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Excess Area</div>
-                                  <div class="summary-value text-dark">{{ app.excess_area ? app.excess_area + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Free Coverage Before</div>
-                                  <div class="summary-value text-dark">{{ app.free_coverage_before ? app.free_coverage_before + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Free Coverage After</div>
-                                  <div class="summary-value text-dark">{{ app.free_coverage_after ? app.free_coverage_after + ' ha' : '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Premium Amount</div>
-                                  <div class="summary-value text-dark">{{ formatCurrency(app.premium_amount) }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Payment Status</div>
-                                  <div class="summary-value text-dark">{{ paymentStatusLabel(app.payment_status) }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Payment Method</div>
-                                  <div class="summary-value text-dark">{{ app.payment_method || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">GCash Reference #</div>
-                                  <div class="summary-value text-dark">{{ app.gcash_reference_number || '—' }}</div>
-                                </div>
-                                <div class="summary-card">
-                                  <div class="summary-label">Payment Submitted</div>
-                                  <div class="summary-value text-dark">{{ app.payment_submitted_at ? formatDate(app.payment_submitted_at) : '—' }}</div>
-                                </div>
-                                <div class="summary-card col-span-full" v-if="app.payment_method && app.payment_status === 'pending_verification'">
-                                  <div class="summary-label">Payment Validation</div>
-                                  <div class="payment-validation-actions">
-                                    <button class="btn-primary btn-compact" @click="verifyPayment(app.id)">
-                                      Confirm Paid
-                                    </button>
-                                    <button class="btn-danger btn-compact" @click="rejectPayment(app.id)">
-                                      Mark Failed
-                                    </button>
-                                  </div>
-                                </div>
-                                <div class="summary-card col-span-full" v-if="app.payment_proof_path">
-                                  <div class="summary-label">Payment Proof</div>
-                                  <a class="detail-link" :href="assetUrl(app.payment_proof_path)" target="_blank" rel="noopener">View uploaded proof</a>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div class="detail-section">
-                              <div class="section-title">Documents</div>
-
-                              <div class="documents-row">
-                                <div class="document-tile">
-                                  <span class="detail-label">Farmer's Signature</span>
-                                  <img
-                                    v-if="app.signature_path"
-                                    :src="assetUrl(app.signature_path)"
-                                    alt="Farmer signature"
-                                    class="signature-img"
-                                  />
-                                  <span v-else class="summary-value text-dark">—</span>
-                                </div>
-
-                                <div class="document-tile">
-                                  <span class="detail-label">Farm Photo</span>
-                                  <img
-                                    v-if="app.farm?.farm_image_path"
-                                    :src="assetUrl(app.farm.farm_image_path)"
-                                    alt="Farm photo"
-                                    class="farm-photo-img"
-                                  />
-                                  <span v-else class="summary-value text-dark">—</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
+                <tr v-for="(app, idx) in pageRows" :key="'p1-' + setIdx + '-' + idx" class="pcic-data-row">
+                  <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.last_name || '' }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.first_name || '' }}</td>
+                  <td>{{ app?.farm?.farmer_profile?.user?.middle_name || '' }}</td>
+                  <td class="text-center">{{ app?.farm?.farmer_profile?.user?.extension_name || '' }}</td>
+                  <td class="text-center">{{ genderLabel(app?.farm?.farmer_profile?.user?.sex) }}</td>
+                  <td class="text-center">{{ app?.civil_status || '' }}</td>
+                  <td>{{ truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.farm?.farmer_profile?.birthdate) : '' }}</td>
+                  <td class="text-center font-mono">{{ app?.farm?.farmer_profile?.rsbsa_reference || '' }}</td>
+                  <td class="text-center">{{ app?.payment_method || '' }}</td>
+                  <td class="text-center">{{ app?.farm?.farmer_profile?.user?.phone_number || '' }}</td>
+                  <td>{{ app?.spouse_name || '' }}</td>
+                  <td>{{ app?.parent_guardian_name || '' }}</td>
+                  <td>{{ app?.beneficiary_name || '' }}</td>
+                  <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.sowing_date) : '' }}</td>
+                  <td class="text-center">{{ app ? formatDate(app.transplanting_date) : '' }}</td>
+                  <td>{{ app?.variety || '' }}</td>
+                </tr>
               </tbody>
             </table>
-          </div>
-        </div>
 
-        <!-- PDF Legal-Size Batch Export Container -->
-        <div v-if="isPrintingPcicBatch" id="pdf-export-wrapper" class="pdf-export-wrapper">
-          <div id="pdf-download-area" class="pdf-export-container legal-size-print">
-
-            <template v-for="(pageRows, setIdx) in pcicBatchPages" :key="'set-' + setIdx">
-
-              <!-- ================= PAGE 1: APPLICATION FORM ================= -->
-              <div :class="{ 'pdf-page-break': setIdx > 0 }" class="pcic-page-container">
-                <!-- Header Block -->
-                <div class="pcic-official-header">
-                  <div class="pcic-header-top">
-                    <div class="pcic-logo-placeholder"></div>
-                    <div class="pcic-title-box">
-                      <div class="pcic-republic">Republic of the Philippines</div>
-                      <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
-                      <div class="pcic-dept">DEPARTMENT OF AGRICULTURE</div>
-                      <div class="pcic-form-title">APPLICATION FOR CROP INSURANCE (GROUP APPLICATION)</div>
-                    </div>
-                    <div class="pcic-form-code">PCIC-RO-01</div>
-                  </div>
-
-                  <!-- Meta Data Grid Header -->
-                  <div class="pcic-meta-table">
-                    <div class="meta-row">
-                      <div class="meta-cell flex-2"><strong>NAME OF FO / FA / COOP / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
-                      <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
-                      <div class="meta-cell flex-1"><strong>CROP SEASON:</strong> {{ currentSeason ? currentSeason.season_name : 'REGULAR' }}</div>
-                    </div>
-                    <div class="meta-row">
-                      <div class="meta-cell flex-2"><strong>OFFICE ADDRESS / BARANGAY:</strong> ECHAGUE, CAGAYAN VALLEY</div>
-                      <div class="meta-cell flex-1"><strong>BATCH NO:</strong> BATCH-{{ setIdx + 1 }}</div>
-                      <div class="meta-cell flex-1"><strong>DATE SUBMITTED:</strong> {{ formatDate(new Date()) }}</div>
-                    </div>
-                  </div>
+            <!-- Page Footer / Signatures -->
+            <div class="pcic-footer-block">
+              <div class="pcic-cert-text">
+                I hereby certify that the information provided above is true and correct to the best of my knowledge and belief.
+              </div>
+              <div class="pcic-sig-grid">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Prepared / Submitted By (MAO Officer)</div>
                 </div>
-
-                <!-- Page 1 Table -->
-                <table class="pcic-official-table">
-                  <thead>
-                    <tr>
-                      <th rowspan="2" class="col-num">NO.</th>
-                      <th colspan="4" class="col-name-group">NAME OF FARMER</th>
-                      <th rowspan="2" class="col-sex">SEX</th>
-                      <th rowspan="2" class="col-civil">CIVIL STATUS</th>
-                      <th rowspan="2" class="col-addr">ADDRESS (Sitio/Barangay)</th>
-                      <th rowspan="2" class="col-dob">DATE OF BIRTH</th>
-                      <th rowspan="2" class="col-rsbsa">RSBSA REF. NO.</th>
-                      <th rowspan="2" class="col-pay">PAYMENT MODE</th>
-                      <th rowspan="2" class="col-phone">TEL / PHONE</th>
-                      <th rowspan="2" class="col-spouse">SPOUSE NAME</th>
-                      <th rowspan="2" class="col-parent">PARENT / GUARDIAN</th>
-                      <th rowspan="2" class="col-ben">BENEFICIARY NAME</th>
-                      <th rowspan="2" class="col-area">AREA (ha)</th>
-                      <th rowspan="2" class="col-date">SOWING / DS</th>
-                      <th rowspan="2" class="col-date">TRANSPLANT</th>
-                      <th rowspan="2" class="col-var">VARIETY</th>
-                    </tr>
-                    <tr>
-                      <th class="col-lname">LAST NAME</th>
-                      <th class="col-fname">FIRST NAME</th>
-                      <th class="col-mname">MIDDLE</th>
-                      <th class="col-ext">EXT</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr v-for="(app, idx) in pageRows" :key="'p1-' + setIdx + '-' + idx" class="pcic-data-row">
-                      <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
-                      <td>{{ app?.farm?.farmer_profile?.user?.last_name || '' }}</td>
-                      <td>{{ app?.farm?.farmer_profile?.user?.first_name || '' }}</td>
-                      <td>{{ app?.farm?.farmer_profile?.user?.middle_name || '' }}</td>
-                      <td class="text-center">{{ app?.farm?.farmer_profile?.user?.extension_name || '' }}</td>
-                      <td class="text-center">{{ genderLabel(app?.farm?.farmer_profile?.user?.sex) }}</td>
-                      <td class="text-center">{{ app?.civil_status || '' }}</td>
-                      <td>{{ truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
-                      <td class="text-center">{{ app ? formatDate(app.farm?.farmer_profile?.birthdate) : '' }}</td>
-                      <td class="text-center font-mono">{{ app?.farm?.farmer_profile?.rsbsa_reference || '' }}</td>
-                      <td class="text-center">{{ app?.payment_method || '' }}</td>
-                      <td class="text-center">{{ app?.farm?.farmer_profile?.user?.phone_number || '' }}</td>
-                      <td>{{ app?.spouse_name || '' }}</td>
-                      <td>{{ app?.parent_guardian_name || '' }}</td>
-                      <td>{{ app?.beneficiary_name || '' }}</td>
-                      <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
-                      <td class="text-center">{{ app ? formatDate(app.sowing_date) : '' }}</td>
-                      <td class="text-center">{{ app ? formatDate(app.transplanting_date) : '' }}</td>
-                      <td>{{ app?.variety || '' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <!-- Page Footer / Signatures -->
-                <div class="pcic-footer-block">
-                  <div class="pcic-cert-text">
-                    I hereby certify that the information provided above is true and correct to the best of my knowledge and belief.
-                  </div>
-                  <div class="pcic-sig-grid">
-                    <div class="sig-box">
-                      <div class="sig-line"></div>
-                      <div class="sig-title">Prepared / Submitted By (MAO Officer)</div>
-                    </div>
-                    <div class="sig-box">
-                      <div class="sig-line"></div>
-                      <div class="sig-title">Validated / Received By (PCIC Representative)</div>
-                    </div>
-                  </div>
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Validated / Received By (PCIC Representative)</div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- ================= PAGE 2: LOCATION & BOUNDARIES SCHEDULE ================= -->
-              <div class="pdf-page-break pcic-page-container">
-                <!-- Page 2 Header -->
-                <div class="pcic-official-header">
-                  <div class="pcic-header-top">
-                    <div class="pcic-logo-placeholder"></div>
-                    <div class="pcic-title-box">
-                      <div class="pcic-republic">Republic of the Philippines</div>
-                      <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
-                      <div class="pcic-form-title">FARM LOCATION &amp; BOUNDARY SCHEDULE (PAGE 2)</div>
-                    </div>
-                    <div class="pcic-form-code">PCIC-RO-01B</div>
-                  </div>
-
-                  <div class="pcic-meta-table">
-                    <div class="meta-row">
-                      <div class="meta-cell flex-1"><strong>BATCH PAGE:</strong> SET {{ setIdx + 1 }} OF {{ pcicBatchPages.length }}</div>
-                      <div class="meta-cell flex-2"><strong>ORGANIZATION / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
-                      <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
-                      <div class="meta-cell flex-1"><strong>DATE:</strong> {{ formatDate(new Date()) }}</div>
-                    </div>
-                  </div>
+          <!-- ================= PAGE 2: LOCATION & BOUNDARIES SCHEDULE ================= -->
+          <div class="pdf-page-break pcic-page-container">
+            <!-- Page 2 Header -->
+            <div class="pcic-official-header">
+              <div class="pcic-header-top">
+                <div class="pcic-logo-placeholder"></div>
+                <div class="pcic-title-box">
+                  <div class="pcic-republic">Republic of the Philippines</div>
+                  <div class="pcic-corp-name">PHILIPPINE CROP INSURANCE CORPORATION</div>
+                  <div class="pcic-form-title">FARM LOCATION & BOUNDARY SCHEDULE (PAGE 2)</div>
                 </div>
-
-                <!-- Page 2 Table -->
-                <table class="pcic-official-table">
-                  <thead>
-                    <tr>
-                      <th class="col-num">NO.</th>
-                      <th class="col-p2-name">NAME OF FARMER</th>
-                      <th class="col-p2-georef">GEOREF ID / FARM ID</th>
-                      <th class="col-p2-loc">FARM LOCATION (Sitio / Barangay)</th>
-                      <th class="col-area">AREA (ha)</th>
-                      <th class="col-p2-cat">LAND CATEGORY</th>
-                      <th class="col-p2-tenure">TENURIAL STATUS</th>
-                      <th class="col-p2-bnd">NORTH BOUNDARY</th>
-                      <th class="col-p2-bnd">SOUTH BOUNDARY</th>
-                      <th class="col-p2-bnd">EAST BOUNDARY</th>
-                      <th class="col-p2-bnd">WEST BOUNDARY</th>
-                      <th class="col-p2-sig">SIGNATURE OF FARMER</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr v-for="(app, idx) in pageRows" :key="'p2-' + setIdx + '-' + idx" class="pcic-data-row">
-                      <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
-                      <td class="bold">{{ app ? pcicFormName(app) : '' }}</td>
-                      <td class="text-center font-mono">{{ app?.farm?.id ? 'FM-' + app.farm.id : '' }}</td>
-                      <td>{{ app?.farm_location || truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
-                      <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
-                      <td class="text-center">{{ app?.land_category || '' }}</td>
-                      <td class="text-center">{{ app?.tenure_status || '' }}</td>
-                      <td>{{ app?.north_boundary || '' }}</td>
-                      <td>{{ app?.south_boundary || '' }}</td>
-                      <td>{{ app?.east_boundary || '' }}</td>
-                      <td>{{ app?.west_boundary || '' }}</td>
-                      <td class="text-center signature-cell">
-                        <img
-                          v-if="app?.signature_path"
-                          :src="signatureDataUrls[app.signature_path] || assetUrl(app.signature_path)"
-                          alt="Signature"
-                          class="pdf-signature-img"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <!-- Page 2 Footer -->
-                <div class="pcic-footer-block">
-                  <div class="pcic-cert-text">
-                    Note: All boundary details specified above correspond strictly to actual ground layout and RSBSA-registered agricultural plots.
-                  </div>
-                  <div class="pcic-sig-grid">
-                    <div class="sig-box">
-                      <div class="sig-line"></div>
-                      <div class="sig-title">MAO Inspector / Verifier Signature</div>
-                    </div>
-                    <div class="sig-box">
-                      <div class="sig-line"></div>
-                      <div class="sig-title">Municipal Agricultural Officer</div>
-                    </div>
-                  </div>
-                </div>
+                <div class="pcic-form-code">PCIC-RO-01B</div>
               </div>
 
-            </template>
+              <div class="pcic-meta-table">
+                <div class="meta-row">
+                  <div class="meta-cell flex-1"><strong>BATCH PAGE:</strong> SET {{ setIdx + 1 }} OF {{ pcicBatchPages.length }}</div>
+                  <div class="meta-cell flex-2"><strong>ORGANIZATION / BARANGAY:</strong> {{ farmerOrgName || 'MAO AGRICULTURAL REGISTRY' }}</div>
+                  <div class="meta-cell flex-1"><strong>CROP TYPE:</strong> {{ pdfCropLabel }}</div>
+                  <div class="meta-cell flex-1"><strong>DATE:</strong> {{ formatDate(new Date()) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Page 2 Table -->
+            <table class="pcic-official-table">
+              <thead>
+                <tr>
+                  <th class="col-num">NO.</th>
+                  <th class="col-p2-name">NAME OF FARMER</th>
+                  <th class="col-p2-georef">GEOREF ID / FARM ID</th>
+                  <th class="col-p2-loc">FARM LOCATION (Sitio / Barangay)</th>
+                  <th class="col-area">AREA (ha)</th>
+                  <th class="col-p2-cat">LAND CATEGORY</th>
+                  <th class="col-p2-tenure">TENURIAL STATUS</th>
+                  <th class="col-p2-bnd">NORTH BOUNDARY</th>
+                  <th class="col-p2-bnd">SOUTH BOUNDARY</th>
+                  <th class="col-p2-bnd">EAST BOUNDARY</th>
+                  <th class="col-p2-bnd">WEST BOUNDARY</th>
+                  <th class="col-p2-sig">SIGNATURE OF FARMER</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr v-for="(app, idx) in pageRows" :key="'p2-' + setIdx + '-' + idx" class="pcic-data-row">
+                  <td class="text-center bold">{{ (setIdx * 15) + idx + 1 }}</td>
+                  <td class="bold">{{ app ? pcicFormName(app) : '' }}</td>
+                  <td class="text-center font-mono">{{ app?.farm?.id ? 'FM-' + app.farm.id : '' }}</td>
+                  <td>{{ app?.farm_location || truncateAddress(app?.farm?.farmer_profile?.address) }}</td>
+                  <td class="text-right bold">{{ app?.farm?.farm_area || '' }}</td>
+                  <td class="text-center">{{ app?.land_category || '' }}</td>
+                  <td class="text-center">{{ app?.tenure_status || '' }}</td>
+                  <td>{{ app?.north_boundary || '' }}</td>
+                  <td>{{ app?.south_boundary || '' }}</td>
+                  <td>{{ app?.east_boundary || '' }}</td>
+                  <td>{{ app?.west_boundary || '' }}</td>
+                  <td class="text-center signature-cell">
+                    <img
+                      v-if="app?.signature_path && fileDataUrls[app.signature_path]"
+                      :src="fileDataUrls[app.signature_path]"
+                      alt="Signature"
+                      class="pdf-signature-img"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Page 2 Footer -->
+            <div class="pcic-footer-block">
+              <div class="pcic-cert-text">
+                Note: All boundary details specified above correspond strictly to actual ground layout and RSBSA-registered agricultural plots.
+              </div>
+              <div class="pcic-sig-grid">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">MAO Inspector / Verifier Signature</div>
+                </div>
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Municipal Agricultural Officer</div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </main>
+
+        </template>
+
+      </div>
     </div>
+
   </div>
 </template>
 
@@ -915,14 +913,7 @@ export default {
       pcicBatchList: [],
       currentSeason: null,
 
-      // Maps a raw signature_path -> preloaded base64 data URI, populated by
-      // preloadSignatureImages() just before PDF generation. html2canvas
-      // (used by html2pdf) needs to read image pixel data cross-origin to
-      // draw it into the PDF canvas; the live CDN in front of the API
-      // strips/withholds CORS headers on image responses, so fetching
-      // signatures as base64 JSON instead (which passes through the same
-      // CORS pipeline as the rest of the API) sidesteps that entirely.
-      signatureDataUrls: {},
+      fileDataUrls: {},
 
       showSeasonModal: false,
       seasonModalError: '',
@@ -961,12 +952,6 @@ export default {
         : this.historyApplications
     },
 
-    // Everything EXCEPT the status filter: search + crop + season. Stat
-    // cards and the status-pill counts read from this (not from
-    // activeApplications) so the numbers stay in sync with whatever
-    // season/search/crop is currently narrowing the table — previously
-    // they always summed the whole tab's data regardless of the season
-    // dropdown, so counts looked "wrong" as soon as you picked a season.
     scopedApplications() {
       var search = this.searchName.toLowerCase()
       var crop = this.filterCrop
@@ -991,16 +976,6 @@ export default {
       })
     },
 
-    // Rows that CAN be checked for bulk selection: not terminal, and not
-    // sitting on an unverified or rejected payment. A pending payment must
-    // be resolved (via verifyPayment/rejectPayment in the expanded row)
-    // before the application can join a batch, and a rejected payment
-    // blocks it permanently until the farmer resubmits proof — see
-    // isCheckboxDisabled below for the matching per-row lock.
-    //
-    // NOTE: the backend's actual payment_status enum is
-    // not_required | pending_verification | verified | rejected — there is
-    // no bare 'pending' value, so checks must use 'pending_verification'.
     selectableFiltered() {
       var self = this
       return this.filtered.filter(function(app) {
@@ -1119,11 +1094,6 @@ export default {
       }
     },
 
-    // Historical application records may carry their season reference either
-    // as a flat `insurance_season_id` field, a nested `season.id` relation,
-    // or (less commonly) `season_id`. This checks all three shapes and
-    // compares as strings so number/string API inconsistencies don't cause
-    // false negatives.
     matchesSeasonId(app, seasonId) {
       var appSeasonId = app.insurance_season_id ?? app.season?.id ?? app.season_id
       if (appSeasonId === undefined || appSeasonId === null) {
@@ -1195,21 +1165,10 @@ export default {
       })
     },
 
-    // submitted_to_pcic is now MAO's final system action: PCIC notifies the
-    // farmer directly via SMS with the outcome, so MAO no longer needs (or
-    // has) a manual "Insured" / "Rejected" step for these applications.
     isTerminal(status) {
       return status === 'submitted_to_pcic' || status === 'insured' || status === 'rejected'
     },
 
-    // Locks the row checkbox while payment is unverified OR rejected. An
-    // officer must open the row and resolve it via verifyPayment (which
-    // moves payment_status to 'verified') before the application can be
-    // added to a batch. A 'rejected' payment blocks selection permanently
-    // until the farmer resubmits proof through a separate flow — this keeps
-    // "Select All" and manual selection from ever picking up unresolved
-    // rows in the first place, rather than only rejecting them once a bulk
-    // action is attempted.
     isCheckboxDisabled(app) {
       if (app.payment_status === 'pending_verification' || app.payment_status === 'rejected') {
         return true
@@ -1305,10 +1264,6 @@ export default {
       }
     },
 
-    // NOTE: 'insured' and 'rejected' routes are retained here only for legacy
-    // / historical data reference. They are no longer reachable from this UI
-    // since submitted_to_pcic is now terminal for MAO officers — PCIC updates
-    // the farmer directly and MAO's system record stops at submitted_to_pcic.
     routeForStatus(status) {
       var routeMap = {
         approved_for_pcic: 'approve-for-pcic',
@@ -1320,21 +1275,12 @@ export default {
       return routeMap[status] || null
     },
 
-    // Matches InsuranceApplicationController@verifyPayment /
-    // InsuranceApplicationController@rejectPayment.
-    //
-    // verifyPayment only flips payment_status -> 'verified' on the backend;
-    // it does NOT advance the application's status. Since the whole point of
-    // this action (per the scenario) is "verify payment, then move the app
-    // to 'To be submitted to PCIC'", we chain a second call to approve-for-pcic
-    // right after a successful verification, but only when the application
-    // is still sitting in a status that action makes sense for.
     async verifyPayment(appId) {
       if (!confirm('Verify this payment and move it to "To be submitted to PCIC"?')) {
         return
       }
       try {
-        await axios.put(
+        await axios.post(
           API_BASE + '/api/insurance-applications/' + appId + '/verify-payment',
           {},
           this.authHeaders()
@@ -1376,10 +1322,6 @@ export default {
       }
     },
 
-    // Gates the PCIC-submission action: if a payment was required, it must
-    // be verified first (per the backend's own verifyPayment message —
-    // "Application may now proceed to PCIC"). Records with no payment_status
-    // at all (legacy data) are allowed through.
     canSubmitToPcic(app) {
       return !app.payment_status
         || app.payment_status === 'verified'
@@ -1465,39 +1407,38 @@ export default {
       }
     },
 
-    // Fetches every unique signature image used in this batch as a base64
-    // data URI, ahead of PDF generation. This exists because the live CDN
-    // sitting in front of the API strips CORS headers on plain image
-    // responses, which blocks html2canvas from reading the pixels needed
-    // to draw the signature into the PDF (the image still displays fine as
-    // a normal <img> on the page — CORS only matters for canvas reads).
-    // Routing the same bytes through a JSON endpoint sidesteps that, since
-    // JSON API responses already pass CORS correctly here.
-async preloadSignatureImages(apps) {
-  const uniquePaths = Array.from(
-    new Set(apps.map((a) => a.signature_path).filter(Boolean))
-  );
+    async loadFile(path) {
+      if (!path) {
+        return ''
+      }
+      if (this.fileDataUrls[path]) {
+        return this.fileDataUrls[path]
+      }
+      try {
+        var config = this.authHeaders()
+        config.params = { path: path }
+        var response = await axios.get(API_BASE + '/api/storage/file', config)
+        this.fileDataUrls[path] = response.data.data
+        return response.data.data
+      } catch (err) {
+        console.error('Failed to load file: ' + path, err)
+        return ''
+      }
+    },
 
-  const results = await Promise.allSettled(
-    uniquePaths.map(async (path) => {
-      const filename = path.split('/').pop();
-      // Ensure it hits the /api/ route
-      const res = await axios.get(`/api/storage/signatures/${filename}`);
-      return { path, dataUrl: res.data.data };
-    })
-  );
+    async preloadSignatureImages(apps) {
+      var uniquePaths = Array.from(
+        new Set(apps.map(function(a) { return a.signature_path }).filter(Boolean))
+      )
+      var self = this
 
-  const map = {};
-  results.forEach((r) => {
-    if (r.status === 'fulfilled') {
-      map[r.value.path] = r.value.dataUrl;
-    } else {
-      console.error('Failed to preload signature image:', r.reason);
-    }
-  });
+      await Promise.allSettled(
+        uniquePaths.map(function(path) {
+          return self.loadFile(path)
+        })
+      )
+    },
 
-  this.signatureDataUrls = map;
-},
     async downloadSelectedPcicBatch() {
       if (this.selectedPcicReady.length === 0) {
         alert('Select applications with "To be submitted to PCIC" status only.')
@@ -1558,7 +1499,6 @@ async preloadSignatureImages(apps) {
               }
             },
           },
-          // LEGAL LANDSCAPE FORMAT (8.5 x 14 in / 215.9 x 355.6 mm)
           jsPDF: { unit: 'mm', format: [215.9, 355.6], orientation: 'landscape' },
           pagebreak: { mode: ['css'], before: '.pdf-page-break' },
         }
@@ -1722,6 +1662,23 @@ async preloadSignatureImages(apps) {
 
     toggleExpand(id) {
       this.expandedId = this.expandedId === id ? null : id
+
+      if (this.expandedId) {
+        var app = this.activeApplications.find(function(a) {
+          return a.id === id
+        })
+        if (app) {
+          if (app.signature_path) {
+            this.loadFile(app.signature_path)
+          }
+          if (app.farm && app.farm.farm_image_path) {
+            this.loadFile(app.farm.farm_image_path)
+          }
+          if (app.payment_proof_path) {
+            this.loadFile(app.payment_proof_path)
+          }
+        }
+      }
     },
 
     farmerName(app) {
@@ -1788,13 +1745,6 @@ async preloadSignatureImages(apps) {
       return sex
     },
 
-    assetUrl(path) {
-      if (!path) return ''
-      return API_BASE + '/api/storage/' + path
-    },
-
-    // NOTE: the backend's payment_status enum is
-    // not_required | pending_verification | verified | rejected.
     paymentStatusLabel(status) {
       var map = {
         not_required: 'Not Required',
@@ -1838,516 +1788,808 @@ async preloadSignatureImages(apps) {
 </script>
 
 <style scoped>
-* { box-sizing: border-box; }
-
-/* ===================== SHELL ===================== */
-.dashboard-layout {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #F8FAF8;
+.insurance-page {
+  font-family: 'DM Sans', sans-serif;
+  background: #F5F7F5;
+  padding: 2rem 2rem 6rem;
+  color: #263238;
 }
-
-.main-wrapper {
-  flex: 1;
-  min-width: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .top-header {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid #E7F0EC;
   flex-shrink: 0;
   z-index: 20;
-  padding: 0 1.75rem;
-  min-height: 64px;
+  padding: 0px 15px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.header-title-group h1 { font-size: 18px; font-weight: 700; color: #0F212F; letter-spacing: -0.01em; }
-.header-title-group p { font-size: 12px; color: #5c6b64; margin-top: 2px; }
-
-.header-actions { display: flex; align-items: center; gap: 16px; }
-.v-divider { height: 24px; width: 1px; background-color: #E7F0EC; }
-
-.user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
-.user-avatar {
-  width: 36px; height: 36px; border-radius: 12px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 12px;
-  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
-}
-.user-name { font-size: 12px; font-weight: 700; color: #0F212F; line-height: 1.2; }
-.user-role { font-size: 10px; font-weight: 500; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-
-.dashboard-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* ===================== PANEL ===================== */
-.panel {
-  background: #FFFFFF;
-  border: 1px solid #EAF1EC;
-  border-radius: 16px;
-  padding: 1.35rem 1.5rem;
-  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-}
-
-/* ===================== SEASON CARD ===================== */
-.season-card {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.season-info { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
-
-.season-icon {
-  width: 42px; height: 42px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; flex-shrink: 0;
-  background: rgba(17, 109, 62, 0.1); color: #116D3E;
-}
-
-.season-text { display: flex; flex-direction: column; gap: 2px; }
-.season-label { font-size: 0.7rem; font-weight: 600; color: #5c6b64; text-transform: uppercase; letter-spacing: 0.3px; }
-.season-name { font-size: 0.9rem; font-weight: 700; color: #0F212F; }
-
-.season-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* ===================== SETUP CARD ===================== */
-.setup-card { align-items: flex-start; max-width: 520px; }
-.setup-icon { font-size: 2rem; margin-bottom: 0.2rem; }
-.setup-card h3 { font-size: 1rem; font-weight: 700; color: #0F212F; }
-.setup-card p { font-size: 0.82rem; color: #5c6b64; }
-.setup-form { display: flex; flex-direction: column; gap: 0.9rem; width: 100%; margin-top: 0.4rem; }
-
-.modal-error {
-  font-size: 0.78rem;
-  color: #C1473D;
-  background: rgba(193, 71, 61, 0.08);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-/* ===================== FORM FIELDS ===================== */
-.form-field { display: flex; flex-direction: column; gap: 6px; }
-.form-field label { font-size: 0.76rem; font-weight: 600; color: #5c6b64; }
-.form-field input {
-  border: 1.5px solid #E0EAE3;
-  border-radius: 9px;
-  padding: 9px 12px;
-  font-size: 0.82rem;
+.header-title-group h1 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
   color: #0F212F;
-  background: #FFFFFF;
-  outline: none;
-  font-family: inherit;
-  transition: border-color 0.15s ease;
+  letter-spacing: -0.01em;
 }
-.form-field input:focus { border-color: #116D3E; }
 
-/* ===================== MODAL ===================== */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 33, 47, 0.5);
+.header-title-group p {
+  font-size: 12px;
+  color: #5c6b64;
+}
+
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 20px;
+  gap: 16px;
 }
 
-.modal {
-  background: #FFFFFF;
-  border-radius: 18px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 24px 60px rgba(15, 33, 47, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.v-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #E7F0EC;
 }
 
-.modal-head { display: flex; align-items: flex-start; justify-content: space-between; }
-.modal-head h4 { font-size: 1.05rem; font-weight: 700; color: #0F212F; }
-.modal-close {
-  width: 30px; height: 30px; border-radius: 8px; border: none;
-  background: #F1F6F2; color: #5c6b64; font-size: 1.1rem; line-height: 1; cursor: pointer;
-}
-.modal-close:hover { background: #E7F0EC; color: #0F212F; }
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 0.6rem;
-  border-top: 1px solid #F1F6F2;
-}
-
-/* ===================== SECTION DIVIDER ===================== */
-.section-divider {
+.user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #5c6b64;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-.section-divider::before, .section-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #EAF1EC;
+  cursor: pointer;
 }
 
-/* ===================== TABS ===================== */
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F212F;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.season-card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #2E7D32;
+}
+
+.season-info { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+.season-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  background: #eaf5ea;
+  color: #2E7D32;
+}
+
+.season-text { display: flex; flex-direction: column; gap: 3px; }
+.season-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: #5c6b64; font-weight: 600; }
+.season-name { font-size: 1rem; font-weight: 700; color: #263238; }
+.season-actions { display: flex; gap: 10px; }
+
+.btn-season-secondary,
+.btn-season-danger,
+.btn-season-primary {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-season-secondary { background: #FFFFFF; color: #2E7D32; border: 1px solid #66BB6A; }
+.btn-season-secondary:hover { background: #eaf5ea; }
+.btn-season-danger { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
+.btn-season-danger:hover { background: #fdf0f0; }
+.btn-season-primary { background: #2E7D32; color: #FFFFFF; width: 100%; }
+.btn-season-primary:hover { background: #256428; }
+.btn-season-primary:disabled { background: #a9c9ab; cursor: not-allowed; }
+
+.setup-card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 2.5rem;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.setup-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
+.setup-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: #263238; }
+.setup-card p { margin: 0 0 1.2rem; color: #5c6b64; font-size: 0.88rem; }
+.setup-form { max-width: 360px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; text-align: left; }
+
+.modal-field { display: flex; flex-direction: column; gap: 6px; }
+.modal-field label { font-size: 0.78rem; font-weight: 600; color: #5c6b64; }
+.modal-input {
+  border: 1px solid #d7e2d8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #263238;
+  background: #FFFFFF;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #66BB6A;
+  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
+}
+
+.modal-error { color: #b3261e; font-size: 0.8rem; margin: 0; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 50, 56, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-box {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 1.6rem;
+  width: 90%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-title { margin: 0; font-size: 1.05rem; color: #263238; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 0.4rem; }
+
+.btn-modal-cancel,
+.btn-modal-save {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-modal-cancel { background: #F5F7F5; color: #5c6b64; }
+.btn-modal-save { background: #2E7D32; color: #FFFFFF; }
+.btn-modal-save:hover { background: #256428; }
+.btn-modal-save:disabled { background: #a9c9ab; cursor: not-allowed; }
+
+.section-divider { display: flex; align-items: center; margin: 1.8rem 0 1.2rem; }
+.section-divider::before,
+.section-divider::after { content: ''; flex: 1; height: 1px; background: #dde8de; }
+.section-divider span {
+  padding: 0 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c6b64;
+}
+
 .tab-bar {
   display: flex;
   gap: 4px;
-  background: #F1F6F2;
-  padding: 4px;
-  border-radius: 10px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 5px;
   width: fit-content;
+  margin-bottom: 1.3rem;
+  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
 }
+
 .tab-btn {
-  border: none; background: transparent; font-size: 0.8rem; font-weight: 600;
-  color: #5c6b64; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 9px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5c6b64;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.tab-btn.active { background: #FFFFFF; color: #0F212F; box-shadow: 0 2px 8px rgba(15, 33, 47, 0.08); }
 
-/* ===================== REFRESH BAR ===================== */
-.refresh-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid #F1F6F2;
+.tab-btn.active { background: #2E7D32; color: #FFFFFF; }
+
+.refresh-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.refresh-status { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #5c6b64; }
+.refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: #93a29a; flex-shrink: 0; }
+.refresh-dot.live {
+  background: #2E7D32;
+  box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5);
+  animation: pulse-dot 2s infinite;
 }
 
-.refresh-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #5c6b64;
-  flex-wrap: wrap;
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.45); }
+  70% { box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
 }
 
-.refresh-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex-shrink: 0;
-}
-.refresh-dot.live { background: #116D3E; box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.18); }
-
-.refresh-last { color: #94a3b8; }
-
+.refresh-last { color: #93a29a; }
 .refresh-controls { display: flex; align-items: center; gap: 12px; }
 
 .btn-icon-refresh {
-  display: inline-flex; align-items: center; gap: 6px;
-  border: 1.5px solid #E0EAE3; background: #FFFFFF; color: #5c6b64;
-  font-size: 0.76rem; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7e2d8;
+  background: #FFFFFF;
+  color: #2E7D32;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
 }
-.btn-icon-refresh:hover:not(:disabled) { border-color: #116D3E; color: #116D3E; }
-.btn-icon-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
-.refresh-glyph { display: inline-block; }
-.refresh-glyph.spinning { animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.btn-icon-refresh:hover { background: #eaf5ea; }
+.btn-icon-refresh:disabled { color: #93a29a; cursor: not-allowed; background: #FFFFFF; }
+.btn-icon-refresh .spinning { display: inline-block; animation: spin 0.8s linear infinite; }
 
-.toggle-switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+.toggle-switch { position: relative; display: inline-block; width: 38px; height: 21px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-  position: absolute; cursor: pointer; inset: 0;
-  background: #E0EAE3; border-radius: 999px; transition: background 0.15s ease;
-}
-.toggle-slider::before {
-  content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
-  background: #FFFFFF; border-radius: 50%; transition: transform 0.15s ease;
-  box-shadow: 0 1px 3px rgba(15, 33, 47, 0.2);
-}
-.toggle-switch input:checked + .toggle-slider { background: #116D3E; }
-.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #d7e2d8; border-radius: 999px; transition: background-color 0.2s ease; }
+.toggle-slider::before { content: ''; position: absolute; height: 15px; width: 15px; left: 3px; bottom: 3px; background-color: #FFFFFF; border-radius: 50%; transition: transform 0.2s ease; }
+.toggle-switch input:checked + .toggle-slider { background-color: #2E7D32; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
 
-/* ===================== FILTERS ===================== */
-.filters-row {
+.filters-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.search-wrap { flex: 1; min-width: 220px; }
+
+.search-input,
+.filter-select {
+  width: 100%;
+  border: 1px solid #d7e2d8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #263238;
+  background: #FFFFFF;
+  box-sizing: border-box;
+}
+
+.filter-select { width: auto; min-width: 170px; }
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #66BB6A;
+  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.25);
+}
+
+.btn-reset {
+  border: 1px solid #d7e2d8;
+  background: #FFFFFF;
+  color: #5c6b64;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-reset:hover { background: #f0f4f0; }
+
+.btn-print-pcic {
+  border: none;
+  background: #F9A825;
+  color: #263238;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-print-pcic:hover { background: #e0960f; }
+.btn-print-pcic:disabled { background: #fbe6af; cursor: not-allowed; }
+
+.status-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.status-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7e2d8;
+  background: #FFFFFF;
+  color: #5c6b64;
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.status-filter-tag:hover { border-color: #66BB6A; }
+.sf-count { background: rgba(38, 50, 56, 0.08); border-radius: 10px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; }
+.status-filter-tag.active { color: #FFFFFF; border-color: transparent; }
+.status-filter-tag.active .sf-count { background: rgba(255, 255, 255, 0.25); }
+.status-filter-tag.sf-all.active { background: #263238; }
+.status-filter-tag.sf-submitted_to_mao.active { background: #1976D2; }
+.status-filter-tag.sf-approved_for_pcic.active { background: #F9A825; color: #263238; }
+.status-filter-tag.sf-approved_for_pcic.active .sf-count { background: rgba(38, 50, 56, 0.15); }
+.status-filter-tag.sf-submitted_to_pcic.active { background: #6A4C93; }
+.status-filter-tag.sf-needs_revision.active { background: #e08a1e; }
+.status-filter-tag.sf-insured.active { background: #2E7D32; }
+.status-filter-tag.sf-rejected.active { background: #b3261e; }
+
+.bulk-action-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1.2rem;
   flex-wrap: wrap;
+  background: #eaf5ea;
+  border: 1px solid #bfe0c1;
+  border-radius: 12px;
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1.2rem;
 }
 
-.search-wrap { position: relative; flex: 1; min-width: 220px; }
-.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-.search-input, .filter-select {
-  width: 100%; border: 1.5px solid #E0EAE3; border-radius: 9px; padding: 8px 12px;
-  font-size: 0.8rem; color: #0F212F; background: #FFFFFF; outline: none;
-  transition: border-color 0.15s ease;
-}
-.search-input { padding-left: 32px; }
-.search-input:focus, .filter-select:focus { border-color: #116D3E; }
-.filter-select { width: auto; min-width: 150px; cursor: pointer; }
-
-/* ===================== STATUS FILTER PILLS ===================== */
-.status-filter-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.status-filter-tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  border: 1.5px solid #E0EAE3; background: #FFFFFF; color: #5c6b64;
-  font-size: 0.76rem; font-weight: 600; padding: 7px 13px; border-radius: 999px; cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-.status-filter-tag:hover { border-color: #C7DECF; }
-.status-filter-tag.active { border-color: transparent; color: #FFFFFF; }
-.status-filter-tag.sf-all.active { background: linear-gradient(135deg, #0F212F, #0A5232); }
-.status-filter-tag.sf-submitted_to_mao.active { background: linear-gradient(135deg, #2E6F8E, #1B4A5F); }
-.status-filter-tag.sf-approved_for_pcic.active { background: linear-gradient(135deg, #D29539, #AC7A2F); }
-.status-filter-tag.sf-submitted_to_pcic.active { background: linear-gradient(135deg, #6B5B95, #4E4270); }
-.sf-count { font-size: 0.68rem; font-weight: 700; opacity: 0.85; }
-
-/* ===================== METRICS ===================== */
-.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-.metric-card {
-  background: #F8FAF8; border: 1px solid #EAF1EC; border-radius: 14px; padding: 1rem 1.15rem;
-}
-.card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.6rem; }
-.card-label { font-size: 0.74rem; font-weight: 600; color: #5c6b64; }
-.icon-badge { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-.icon-badge svg { width: 15px; height: 15px; }
-.icon-badge.blue   { background: rgba(46, 111, 142, 0.12); color: #2E6F8E; }
-.icon-badge.amber  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
-.icon-badge.teal   { background: rgba(14, 138, 125, 0.12); color: #0E8A7D; }
-.icon-badge.purple { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
-.card-value { font-size: 1.4rem; font-weight: 700; color: #0F212F; }
-
-/* ===================== BUTTONS ===================== */
-.btn-outline {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: #FFFFFF; color: #0F212F; border: 1.5px solid #E0EAE3; border-radius: 9px;
-  font-size: 0.8rem; font-weight: 600; cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.btn-outline:hover { border-color: #116D3E; background: #F1F6F2; }
-.btn-outline:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.btn-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: linear-gradient(135deg, #116D3E, #0A5232); color: #FFFFFF; border: none; border-radius: 9px;
-  font-size: 0.82rem; font-weight: 700; cursor: pointer;
-  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
-}
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
-
-.btn-danger {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: linear-gradient(135deg, #C1473D, #922E26); color: #FFFFFF; border: none; border-radius: 9px;
-  font-size: 0.82rem; font-weight: 700; cursor: pointer;
-  box-shadow: 0 8px 18px rgba(193, 71, 61, 0.28);
+.bulk-action-bar.floating {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 600;
+  margin-bottom: 0;
+  width: min(920px, calc(100% - 48px));
+  box-shadow: 0 10px 30px rgba(38, 50, 56, 0.22), 0 2px 8px rgba(38, 50, 56, 0.12);
+  background: #FFFFFF;
+  border: 1px solid #dde8de;
+  border-left: 4px solid #2E7D32;
 }
 
-.btn-block { width: 100%; padding: 11px; }
-.btn-compact { padding: 9px 15px; }
+.bulk-action-bar.floating.mixed { border-left-color: #F9A825; background: #FFFFFF; }
+.bulk-action-bar.mixed { background: #fdf1d6; border-color: #f3d38a; }
+.float-bar-enter-active, .float-bar-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
+.float-bar-enter-from, .float-bar-leave-to { transform: translateX(-50%) translateY(16px); opacity: 0; }
 
-.link-btn-muted {
-  background: none; border: none; color: #5c6b64; font-size: 0.76rem; font-weight: 600; cursor: pointer;
+.bulk-left { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #263238; }
+.bulk-warning { font-size: 0.82rem; color: #7a5205; flex: 1; }
+.bulk-actions { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+.bulk-terminal-note { font-size: 0.82rem; color: #5c6b64; font-style: italic; }
+
+.btn-action-approve,
+.btn-action-submit-pcic,
+.btn-action-finalize,
+.btn-action-reject {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
 }
-.link-btn-muted:hover { color: #116D3E; }
 
-/* ===================== STATES ===================== */
+.btn-action-approve { background: #1976D2; color: #FFFFFF; }
+.btn-action-approve:hover { background: #145ea8; }
+.btn-action-submit-pcic { background: #F9A825; color: #263238; }
+.btn-action-submit-pcic:hover { background: #e0960f; }
+.btn-action-finalize { background: #2E7D32; color: #FFFFFF; }
+.btn-action-finalize:hover { background: #256428; }
+.btn-action-reject { background: #FFFFFF; color: #b3261e; border: 1px solid #f3c6c6; }
+.btn-action-reject:hover { background: #fdf0f0; }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1.4rem;
+}
+
+.stat-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.06);
+}
+
+.stat-label { font-size: 0.72rem; color: #5c6b64; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+.stat-value { font-size: 1.35rem; font-weight: 700; color: #263238; }
+.stat-value.mao { color: #1976D2; }
+.stat-value.pcic { color: #F9A825; }
+.stat-value.review { color: #6A4C93; }
+.stat-value.revision { color: #e08a1e; }
+.stat-value.insured { color: #2E7D32; }
+.stat-value.rejected { color: #b3261e; }
+
 .state-box {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 2.5rem; color: #5c6b64; font-size: 0.85rem;
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 2.5rem;
+  text-align: center;
+  color: #5c6b64;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
 }
-.error-box { color: #C1473D; }
-.spinner {
-  width: 18px; height: 18px; border: 2.5px solid #E0EAE3; border-top-color: #116D3E;
-  border-radius: 50%; animation: spin 0.7s linear infinite;
-}
-.empty-state { text-align: center; padding: 2.5rem; color: #5c6b64; font-size: 0.85rem; }
 
-/* ===================== TABLE ===================== */
-.table-responsive { overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table thead th {
-  text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.4px; color: #5c6b64; padding: 8px 10px; background: #F1F6F2; white-space: nowrap;
-}
-.data-table tbody td { font-size: 0.8rem; color: #0F212F; padding: 10px; border-bottom: 1px solid #F1F6F2; }
-.font-bold { font-weight: 700; }
+.error-box { color: #b3261e; }
+.spinner { width: 26px; height: 26px; border: 3px solid #dde8de; border-top-color: #2E7D32; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { text-align: center; padding: 2.5rem; color: #93a29a; font-size: 0.88rem; }
 
+.table-wrap {
+  background: #FFFFFF;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(38, 50, 56, 0.08);
+}
+
+.app-table { width: 100%; border-collapse: collapse; }
+.app-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5c6b64;
+  background: #F5F7F5;
+  padding: 12px 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-table td { padding: 12px 14px; font-size: 0.83rem; border-top: 1px solid #eef2ef; color: #263238; }
 .main-row { cursor: pointer; transition: background 0.15s ease; }
-.main-row:hover { background: #F8FAF8; }
-.main-row.selected { background: rgba(17, 109, 62, 0.06); }
+.main-row:hover { background: #f7faf7; }
+.main-row.selected { background: #eaf5ea; }
+.main-row.expanded { background: #f2f9f2; }
 
-.expand-cell { width: 22px; }
-.expand-icon { display: inline-block; font-size: 0.6rem; color: #94a3b8; transition: transform 0.15s ease; }
-.expand-icon.open { transform: rotate(90deg); color: #116D3E; }
+.expand-cell { width: 24px; }
+.expand-icon { display: inline-block; font-size: 0.7rem; color: #93a29a; transition: transform 0.15s ease; }
+.expand-icon.open { transform: rotate(90deg); color: #2E7D32; }
 
-.farmer-sub { font-size: 0.7rem; color: #5c6b64; margin-top: 2px; }
+.farmer-name { font-weight: 600; color: #263238; }
+.farmer-sub { font-size: 0.75rem; color: #93a29a; }
 
-/* ===================== STATUS BADGES ===================== */
-.status-badge {
-  display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
-  font-size: 0.68rem; font-weight: 700; white-space: nowrap;
-}
-.status-badge.submitted_to_mao   { background: rgba(46, 111, 142, 0.1);  color: #2E6F8E; }
-.status-badge.approved_for_pcic  { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
-.status-badge.submitted_to_pcic  { background: rgba(107, 91, 149, 0.1);  color: #6B5B95; }
-.status-badge.needs_revision     { background: rgba(193, 71, 61, 0.1);   color: #C1473D; }
-.status-badge.insured            { background: rgba(17, 109, 62, 0.1);   color: #116D3E; }
-.status-badge.rejected           { background: rgba(193, 71, 61, 0.1);   color: #C1473D; }
+.status-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+.status-badge.submitted_to_mao { background: #e3edfa; color: #1976D2; }
+.status-badge.approved_for_pcic { background: #fdf1d6; color: #b9790a; }
+.status-badge.submitted_to_pcic { background: #ece4f5; color: #6A4C93; }
+.status-badge.needs_revision { background: #fbe6d0; color: #b3610f; }
+.status-badge.insured { background: #e5f4e6; color: #2E7D32; }
+.status-badge.rejected { background: #fde3e3; color: #b3261e; }
 
-/* ===================== DETAIL ROW ===================== */
-.detail-row td { padding: 0; border-bottom: 1px solid #F1F6F2; }
-.detail-box { background: #F8FAF8; padding: 1.3rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.detail-row td { padding: 0; border-top: none; }
+.detail-box { background: #fafcfa; padding: 1.4rem; border-top: 1px solid #eef2ef; border-bottom: 2px solid #dde8de; }
+.detail-actions-panel { margin-bottom: 1.2rem; }
+.action-sub-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.action-panel-label { font-size: 0.8rem; color: #5c6b64; }
+.action-hint { font-size: 0.8rem; color: #5c6b64; font-style: italic; }
 
-.action-panel {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: #FFFFFF; border: 1px solid #EAF1EC; border-radius: 12px; padding: 10px 14px;
-}
-.action-panel-label { font-size: 0.76rem; font-weight: 700; color: #0F212F; }
+.detail-grid-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem; }
+.detail-section { background: #FFFFFF; border: 1px solid #eef2ef; border-radius: 10px; padding: 1rem; }
+.section-title { font-size: 0.78rem; font-weight: 700; color: #2E7D32; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.8rem; }
 
-.action-hint { font-size: 0.78rem; color: #5c6b64; }
-.action-hint.amber { color: #AC7A2F; }
-.action-hint.red { color: #C1473D; }
-.action-hint.blue { color: #2E6F8E; }
-.action-hint.green { color: #116D3E; }
-
-.info-section { display: flex; flex-direction: column; gap: 1.1rem; }
-.section-title { font-size: 0.82rem; font-weight: 700; color: #0F212F; margin-bottom: 0.6rem; }
-
-.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
-.summary-card { background: #FFFFFF; border: 1px solid #EAF1EC; border-radius: 12px; padding: 0.75rem 0.9rem; }
-.summary-card.col-span-full { grid-column: 1 / -1; }
-.summary-label { font-size: 0.66rem; color: #5c6b64; margin-bottom: 4px; }
-.summary-value { font-size: 0.8rem; font-weight: 600; }
-.summary-value.coords { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; }
-.text-dark { color: #0F212F; }
-
-.payment-validation-actions { display: flex; gap: 8px; margin-top: 6px; }
-
-.detail-link { font-size: 0.78rem; font-weight: 600; color: #116D3E; text-decoration: none; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.detail-item { display: flex; flex-direction: column; gap: 2px; }
+.detail-item.full-width { grid-column: 1 / -1; }
+.detail-label { font-size: 0.7rem; color: #93a29a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+.detail-val { font-size: 0.85rem; color: #263238; font-weight: 500; }
+.detail-link { font-size: 0.85rem; color: #2E7D32; font-weight: 600; text-decoration: none; }
 .detail-link:hover { text-decoration: underline; }
 
-.documents-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-.document-tile {
-  display: flex; flex-direction: column; gap: 8px; background: #FFFFFF;
-  border: 1px solid #EAF1EC; border-radius: 12px; padding: 0.9rem; min-width: 200px;
+.payment-validation-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+.payment-proof-img {
+  max-width: 260px;
+  max-height: 220px;
+  object-fit: contain;
+  border: 1px solid #eef2ef;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 6px;
+  margin-top: 4px;
 }
-.document-tile .detail-label { font-size: 0.68rem; color: #5c6b64; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
-.signature-img, .farm-photo-img { max-width: 220px; border-radius: 8px; border: 1px solid #EAF1EC; }
 
-/* ===================== FLOATING BULK BAR ===================== */
-.bulk-action-bar.floating {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  background: #0F212F; color: #FFFFFF; border-radius: 14px; padding: 12px 18px;
-  box-shadow: 0 16px 36px rgba(15, 33, 47, 0.3); z-index: 30; max-width: 92vw;
-}
-.bulk-action-bar.floating.mixed { background: #7a3a1f; }
-.bulk-left { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
-.bulk-warning { font-size: 0.78rem; color: #FCE4CC; }
-.bulk-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.bulk-terminal-note { font-size: 0.72rem; color: rgba(255, 255, 255, 0.7); }
+.documents-row { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.document-tile { display: flex; flex-direction: column; gap: 6px; }
 
-.float-bar-enter-active, .float-bar-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-.float-bar-enter-from, .float-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(12px); }
+.signature-img { max-width: 220px; max-height: 100px; object-fit: contain; border: 1px solid #eef2ef; border-radius: 8px; background: #FFFFFF; padding: 6px; }
+.farm-photo-img { max-width: 220px; max-height: 140px; object-fit: cover; border: 1px solid #eef2ef; border-radius: 8px; }
 
-/* ===================== PDF EXPORT (official document look) ===================== */
-/* This block is intentionally NOT themed like the rest of the app — it's the
-   actual printed PCIC form layout, captured by html2canvas, so it mimics a
-   real government document: black text, ruled tables, serif headings. */
 .pdf-export-wrapper {
   position: fixed;
   top: 0;
-  left: -99999px;
+  left: 0;
   visibility: hidden;
-  background: #FFFFFF;
+  pointer-events: none;
   z-index: -1;
 }
 
 .pdf-export-container {
-  background: #FFFFFF;
+  width: 1300px;
+  background: #ffffff;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
   color: #000000;
-  font-family: Georgia, 'Times New Roman', serif;
-  width: 1344px; /* ~355.6mm at 96dpi scale used for capture */
-  padding: 24px;
+  box-sizing: border-box;
 }
 
-.pcic-page-container { padding-bottom: 16px; }
-.pdf-page-break { page-break-before: always; }
+.pcic-page-container {
+  padding: 15px 20px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
 
-.pcic-official-header { border-bottom: 2px solid #000; margin-bottom: 10px; padding-bottom: 8px; }
-.pcic-header-top { display: flex; align-items: center; gap: 16px; }
+.pcic-official-header {
+  border: 2px solid #000000;
+  margin-bottom: 8px;
+}
+
+.pcic-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 2px solid #000000;
+}
+
 .pcic-logo-placeholder {
-  width: 64px; height: 64px; border: 1px solid #000; border-radius: 50%; flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border: 1px dashed #666;
+  position: relative;
 }
-.pcic-title-box { flex: 1; text-align: center; }
-.pcic-republic { font-size: 12px; }
-.pcic-corp-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
-.pcic-dept { font-size: 11px; }
-.pcic-form-title { font-size: 13px; font-weight: 700; margin-top: 4px; text-decoration: underline; }
-.pcic-form-code { font-size: 11px; font-weight: 700; white-space: nowrap; }
-
-.pcic-meta-table { margin-top: 8px; font-size: 11px; }
-.meta-row { display: flex; gap: 12px; border-top: 1px solid #000; padding: 3px 0; }
-.meta-row:first-child { border-top: none; }
-.meta-cell.flex-1 { flex: 1; }
-.meta-cell.flex-2 { flex: 2; }
-
-.pcic-official-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 6px; }
-.pcic-official-table th, .pcic-official-table td {
-  border: 1px solid #000; padding: 4px 5px; vertical-align: middle;
+.pcic-logo-placeholder::after {
+  content: 'LOGO';
+  font-size: 8pt;
+  color: #888;
+  display: block;
+  text-align: center;
+  line-height: 50px;
 }
-.pcic-official-table th { background: #EDEDED; font-weight: 700; text-align: center; font-size: 9.5px; }
-.pcic-data-row td { height: 26px; }
+
+.pcic-title-box {
+  text-align: center;
+  flex: 1;
+}
+
+.pcic-republic {
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pcic-corp-name {
+  font-size: 12pt;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.pcic-dept {
+  font-size: 8pt;
+  font-weight: bold;
+}
+
+.pcic-form-title {
+  font-size: 10.5pt;
+  font-weight: bold;
+  margin-top: 3px;
+  text-decoration: underline;
+}
+
+.pcic-form-code {
+  font-size: 9pt;
+  font-weight: bold;
+  border: 1px solid #000;
+  padding: 4px 8px;
+}
+
+.pcic-meta-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-row {
+  display: flex;
+  border-bottom: 1px solid #000000;
+}
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-cell {
+  padding: 4px 8px;
+  font-size: 7.5pt;
+  border-right: 1px solid #000000;
+}
+.meta-cell:last-child {
+  border-right: none;
+}
+
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+
+.pcic-official-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 2px solid #000000;
+}
+
+.pcic-official-table th,
+.pcic-official-table td {
+  border: 1px solid #000000;
+  padding: 2px 3px;
+  font-size: 6.8pt;
+  line-height: 1.1;
+  color: #000000;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+
+.pcic-official-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+.pcic-data-row td {
+  height: 22px;
+  vertical-align: middle;
+}
+
+.col-num { width: 22px; }
+.col-lname { width: 65px; }
+.col-fname { width: 65px; }
+.col-mname { width: 45px; }
+.col-ext { width: 22px; }
+.col-sex { width: 25px; }
+.col-civil { width: 45px; }
+.col-addr { width: 110px; }
+.col-dob { width: 55px; }
+.col-rsbsa { width: 75px; }
+.col-pay { width: 50px; }
+.col-phone { width: 65px; }
+.col-spouse { width: 75px; }
+.col-parent { width: 75px; }
+.col-ben { width: 75px; }
+.col-area { width: 35px; }
+.col-date { width: 50px; }
+.col-var { width: 50px; }
+
+.col-p2-name { width: 120px; }
+.col-p2-georef { width: 85px; }
+.col-p2-loc { width: 130px; }
+.col-p2-cat { width: 65px; }
+.col-p2-tenure { width: 65px; }
+.col-p2-bnd { width: 80px; }
+.col-p2-sig { width: 90px; }
 
 .text-center { text-align: center; }
 .text-right { text-align: right; }
-.bold { font-weight: 700; }
-.font-mono { font-family: 'Courier New', monospace; }
+.bold { font-weight: bold; }
+.font-mono { font-family: monospace, sans-serif; font-size: 6.5pt; }
 
-.pcic-footer-block { margin-top: 14px; }
-.pcic-cert-text { font-size: 10px; font-style: italic; margin-bottom: 18px; }
-.pcic-sig-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
-.sig-box { text-align: center; }
-.sig-line { border-top: 1px solid #000; margin-bottom: 4px; }
-.sig-title { font-size: 10px; }
-
-.signature-cell { width: 90px; }
-.pdf-signature-img { max-width: 80px; max-height: 34px; object-fit: contain; }
-
-/* ===================== RESPONSIVE ===================== */
-@media (max-width: 1300px) {
-  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+.signature-cell {
+  padding: 0;
+  vertical-align: middle;
 }
-@media (max-width: 768px) {
-  .metrics-grid { grid-template-columns: 1fr; }
-  .summary-grid { grid-template-columns: 1fr; }
-  .season-card { flex-direction: column; align-items: flex-start; }
+
+.pdf-signature-img {
+  max-width: 80px;
+  max-height: 20px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.pdf-page-break {
+  break-before: page;
+  page-break-before: always;
+}
+
+.pcic-footer-block {
+  margin-top: 10px;
+  border: 1px solid #000000;
+  padding: 8px 12px;
+}
+
+.pcic-cert-text {
+  font-size: 7pt;
+  font-style: italic;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.pcic-sig-grid {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+}
+
+.sig-box {
+  width: 260px;
+  text-align: center;
+}
+
+.sig-line {
+  border-bottom: 1px solid #000000;
+  height: 20px;
+  margin-bottom: 4px;
+}
+
+.sig-title {
+  font-size: 7.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+@media print {
+  @page {
+    size: 14in 8.5in;
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .pdf-export-wrapper {
+    position: static !important;
+    visibility: visible !important;
+  }
+
+  .pdf-export-container {
+    width: 100% !important;
+    padding: 0 !important;
+  }
 }
 </style>
