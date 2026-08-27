@@ -8,6 +8,27 @@
         </div>
 
         <div class="header-actions">
+          <div class="season-toggle">
+            <button
+              class="toggle-btn"
+              :class="{ active: activeTab === 'current' }"
+              @click="setSeasonTab('current')"
+            >
+              Current Season
+            </button>
+  
+            <select
+              class="field-input toggle-select"
+              :class="{ active: activeTab === 'previous' }"
+              v-model="historySeasonId"
+              @change="selectPreviousSeason"
+            >
+              <option value="">Previous Seasons</option>
+              <option v-for="season in previousSeasons" :key="season.id" :value="season.id">
+                {{ season.season_name || season.name }}
+              </option>
+            </select>
+          </div>
 
           <div class="v-divider"></div>
 
@@ -24,46 +45,6 @@
         </div>
       </header>
       <main class="body">
-               <!-- ============================== -->
-          <!-- SEASON CARD                     -->
-          <!-- ============================== -->
-          <div class="card season-card">
-            <div class="season-info">
-              <span
-                class="badge season-status-badge"
-                :class="currentSeason && currentSeason.status === 'application_open' ? 'badge-open' : 'badge-subtle'"
-              >
-                <span class="status-dot" :class="currentSeason && currentSeason.status === 'application_open' ? 'dot-open' : 'dot-closed'"></span>
-                {{ currentSeason && currentSeason.status === 'application_open' ? 'Application open' : 'Application closed' }}
-              </span>
-            </div>
-    
-            <div class="season-toggle">
-              <button
-                class="toggle-btn"
-                :class="{ active: activeTab === 'current' }"
-                @click="setSeasonTab('current')"
-              >
-                Current Season
-              </button>
-    
-              <select
-                class="field-input toggle-select"
-                :class="{ active: activeTab === 'previous' }"
-                v-model="historySeasonId"
-                @change="selectPreviousSeason"
-              >
-                <option value="">Previous Seasons</option>
-                <option v-for="season in previousSeasons" :key="season.id" :value="season.id">
-                  {{ season.season_name || season.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-    
-          <!-- ============================== -->
-          <!-- STATUS TABS                     -->
-          <!-- ============================== -->
           <div class="status-tab-bar">
             <button
               v-for="tab in statusTabs"

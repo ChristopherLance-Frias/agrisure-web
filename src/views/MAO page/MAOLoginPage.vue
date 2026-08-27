@@ -7,10 +7,10 @@
       <!-- Left Panel -->
       <div class="left-panel">
         <div class="brand">
-          <div class="logo-mark"><span>A</span></div>
+          <div class="logo-mark"><span>M</span></div>
           <div class="brand-text">
             <h1>AGRISURE</h1>
-            <p>Admin Portal</p>
+            <p>MAO Portal</p>
           </div>
         </div>
  
@@ -113,10 +113,13 @@
               Authenticating...
             </span>
           </button>
- 
-          <div class="form-footer">
-            <p>AgriSure &copy; {{ currentYear }}</p>
-            <p>Digital Crop Insurance and Agricultural Assistance Management System</p>
+          <div class="back-link">
+            <a href="#" @click.prevent="$router.push({ name: 'portal-select' })">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              </svg>
+              Back to portal selection
+            </a>
           </div>
         </div>
       </div>
@@ -268,8 +271,6 @@ export default {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
- 
 * { box-sizing: border-box; }
  
 .login-wrapper {
@@ -278,7 +279,7 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: linear-gradient(135deg, #116D3E 0%, #0A5232 45%, #0F212F 100%);
   position: relative;
   overflow: hidden;
@@ -366,14 +367,14 @@ export default {
 }
  
 .logo-mark span {
-  font-family: 'DM Serif Display', serif;
   font-size: 20px;
+  font-weight: 700;
   color: #0F212F;
 }
  
 .brand-text h1 {
-  font-family: 'DM Serif Display', serif;
   font-size: 15px;
+  font-weight: 700;
   letter-spacing: 2.8px;
   color: #FFFFFF;
 }
@@ -393,9 +394,8 @@ export default {
 }
  
 .tagline h2 {
-  font-family: 'DM Serif Display', serif;
   font-size: 1.9rem;
-  font-weight: 400;
+  font-weight: 700;
   margin-bottom: 12px;
   color: #FFFFFF;
 }
@@ -444,9 +444,8 @@ export default {
 }
  
 .form-header h3 {
-  font-family: 'DM Serif Display', serif;
   font-size: 1.5rem;
-  font-weight: 400;
+  font-weight: 700;
   color: #0F212F;
   margin-bottom: 4px;
 }
@@ -599,6 +598,25 @@ export default {
 .spinner {
   animation: spin 0.8s linear infinite;
 }
+.back-link {
+  text-align: center;
+  margin-top: 1.4rem;
+}
+
+.back-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #5c6b64;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link a:hover {
+  color: #116D3E;
+}
+
  
 @keyframes spin {
   from { transform: rotate(0deg); }

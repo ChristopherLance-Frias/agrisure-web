@@ -71,7 +71,7 @@
       </div>
  
       <div class="portal-footer">
-        <p>AgriSure &copy; {{ currentYear }} &middot; Digital Crop Insurance and Agricultural Assistance Management System</p>
+        <p>AgriSure &copy; {{ currentYear }} &middot; Digital Crop Insurance and Agricultural Assistance Management System for Rice and Corn Farmers</p>
         <p>Authorized personnel only. Unauthorized access is prohibited.</p>
       </div>
     </div>
@@ -89,8 +89,6 @@ export default {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
- 
 * { box-sizing: border-box; }
  
 .portal-wrapper {
@@ -99,7 +97,7 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: linear-gradient(135deg, #116D3E 0%, #0A5232 45%, #0F212F 100%);
   position: relative;
   overflow: hidden;
@@ -177,14 +175,14 @@ export default {
 }
  
 .logo-mark span {
-  font-family: 'DM Serif Display', serif;
   font-size: 26px;
+  font-weight: 700;
   color: #0F212F;
 }
  
 .brand-text h1 {
-  font-family: 'DM Serif Display', serif;
   font-size: 17px;
+  font-weight: 700;
   letter-spacing: 3.5px;
   color: #FFFFFF;
 }
@@ -198,9 +196,8 @@ export default {
 }
  
 .portal-header h2 {
-  font-family: 'DM Serif Display', serif;
   font-size: 2.1rem;
-  font-weight: 400;
+  font-weight: 700;
   margin: 0 0 10px;
   color: #FFFFFF;
 }
@@ -283,9 +280,8 @@ export default {
 }
  
 .card-title {
-  font-family: 'DM Serif Display', serif;
   font-size: 1.15rem;
-  font-weight: 400;
+  font-weight: 700;
   color: #0F212F;
   margin-bottom: 6px;
 }

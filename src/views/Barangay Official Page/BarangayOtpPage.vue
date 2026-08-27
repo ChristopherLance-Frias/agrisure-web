@@ -1,54 +1,60 @@
 <template>
   <div class="otp-wrapper">
     <div class="otp-card">
+      <span class="corner-accent corner-tr"></span>
+      <span class="corner-accent corner-bl"></span>
+
       <div class="brand">
         <div class="brand-icon">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 2L3 9v6c0 8.25 5.5 15.97 13 18 7.5-2.03 13-9.75 13-18V9L16 2z" fill="#1d4ed8" fill-opacity="0.15" stroke="#1d4ed8" stroke-width="1.5" stroke-linejoin="round"/>
-            <path d="M16 8v8m0 0l4-4m-4 4l-4-4" stroke="#1d4ed8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M12 2L4 5v6c0 5.5 3.4 9.7 8 11 4.6-1.3 8-5.5 8-11V5l-8-3z"
+              stroke="#FFFFFF"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              fill="#FFFFFF"
+              fill-opacity="0.18"
+            />
+            <path
+              d="M8.5 12.2l2.3 2.3 4.7-4.9"
+              stroke="#FFFFFF"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
         <span class="brand-label">Barangay Portal</span>
       </div>
 
-      <h2>Verify Your Identity</h2>
+      <h2>Verify OTP</h2>
 
       <p class="subtitle">
-        Enter the 6-digit code sent to your registered email or mobile number.
+        Enter the 6-digit verification code sent to your email or phone.
       </p>
 
-      <div v-if="errorMessage" class="alert error">
-        <span class="alert-icon">&#9888;</span>
-        {{ errorMessage }}
-      </div>
+      <transition name="fade">
+        <div v-if="errorMessage" class="alert error">{{ errorMessage }}</div>
+      </transition>
 
-      <div v-if="successMessage" class="alert success">
-        <span class="alert-icon">&#10003;</span>
-        {{ successMessage }}
-      </div>
+      <transition name="fade">
+        <div v-if="successMessage" class="alert success">{{ successMessage }}</div>
+      </transition>
 
-      <div class="otp-fields">
+      <div class="otp-input-group" @paste="onPaste">
         <input
           v-for="(digit, index) in otpDigits"
           :key="index"
-          :ref="'otpInput' + index"
+          :ref="el => setDigitRef(el, index)"
           v-model="otpDigits[index]"
           type="text"
           inputmode="numeric"
           maxlength="1"
-          class="otp-box"
-          :class="{ filled: digit !== '' }"
-          @input="handleInput(index)"
-          @keydown="handleKeydown($event, index)"
-          @paste="handlePaste($event)"
+          class="otp-digit"
+          :class="['accent-' + (index % 3), { filled: digit !== '' }]"
+          @input="onDigitInput(index, $event)"
+          @keydown="onDigitKeydown(index, $event)"
         />
-      </div>
-
-      <div class="timer-row" v-if="countdown > 0">
-        <span class="timer-text">Code expires in <strong>{{ formattedCountdown }}</strong></span>
-      </div>
-      <div class="timer-row" v-else>
-        <span class="timer-text expired">Code has expired</span>
       </div>
 
       <button
@@ -56,25 +62,52 @@
         @click="verifyOtp"
         :disabled="isLoading || otpCode.length !== 6"
       >
-        <span v-if="isLoading" class="spinner"></span>
-        {{ isLoading ? 'Verifying...' : 'Verify OTP' }}
+        {{ isLoading ? 'Verifying…' : 'Verify OTP' }}
       </button>
 
-      <div class="divider"></div>
+      <div class="resend-row">
+        <div v-if="resendCooldown > 0" class="timer-block">
+          <div class="timer-ring-wrap">
+            <svg class="timer-ring" viewBox="0 0 64 64">
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#D29539" />
+                  <stop offset="100%" stop-color="#116D3E" />
+                </linearGradient>
+              </defs>
 
-      <button
-        class="btn-secondary"
-        @click="resendOtp"
-        :disabled="isLoading || resendCooldown > 0"
-      >
-        {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP' }}
-      </button>
+              <circle class="ring-bg" cx="32" cy="32" r="27" />
 
-      <button
-        class="btn-link"
-        @click="goBack"
-      >
-        &larr; Back to Login
+              <circle
+                class="ring-progress"
+                cx="32" cy="32" r="27"
+                :style="ringStyle"
+              />
+            </svg>
+
+            <div class="timer-center">
+              <span class="timer-value">{{ resendCooldown }}</span>
+            </div>
+          </div>
+
+          <span class="resend-hint">
+            Didn't get the code?<br />
+            Resend available in <strong>{{ formattedCooldown }}</strong>
+          </span>
+        </div>
+
+        <button
+          v-else
+          class="btn-resend"
+          @click="resendOtp"
+          :disabled="isLoading"
+        >
+          ↻ Resend OTP
+        </button>
+      </div>
+
+      <button class="btn-back" @click="goBack">
+        ← Back to Login
       </button>
     </div>
   </div>
@@ -84,6 +117,7 @@
 import axios from 'axios'
 
 const API_BASE = 'https://sanagustinagrisure.com'
+const RESEND_COOLDOWN_SECONDS = 180 // 3 minutes
 
 export default {
   name: 'BarangayOtpPage',
@@ -91,13 +125,14 @@ export default {
   data() {
     return {
       otpDigits: ['', '', '', '', '', ''],
+      digitRefs: [],
+
       isLoading: false,
       errorMessage: '',
       successMessage: '',
-      countdown: 300,
-      resendCooldown: 0,
-      countdownTimer: null,
-      resendTimer: null,
+
+      resendCooldown: RESEND_COOLDOWN_SECONDS,
+      cooldownTimer: null,
     }
   },
 
@@ -110,145 +145,186 @@ export default {
       return this.otpDigits.join('')
     },
 
-    formattedCountdown() {
-      const m = Math.floor(this.countdown / 60)
-      const s = this.countdown % 60
-      return `${m}:${s.toString().padStart(2, '0')}`
-    }
+    formattedCooldown() {
+      var seconds = this.resendCooldown
+      var m = Math.floor(seconds / 60)
+      var s = seconds % 60
+      return m + ':' + String(s).padStart(2, '0')
+    },
+
+    ringStyle() {
+      var radius = 27
+      var circumference = 2 * Math.PI * radius
+      var fraction = this.resendCooldown / RESEND_COOLDOWN_SECONDS
+      var offset = circumference * (1 - fraction)
+
+      return {
+        strokeDasharray: circumference + 'px',
+        strokeDashoffset: offset + 'px',
+      }
+    },
   },
 
   mounted() {
-    this.startCountdown()
-    this.$nextTick(() => {
-      const firstInput = this.$refs['otpInput0']
-      if (firstInput && firstInput[0]) firstInput[0].focus()
-    })
+    this.startCooldown()
+
+    this.$nextTick(function() {
+      if (this.digitRefs[0]) this.digitRefs[0].focus()
+    }.bind(this))
   },
 
   beforeUnmount() {
-  clearInterval(this.countdownTimer)
-  clearInterval(this.resendTimer)
-},
+    this.stopCooldown()
+  },
 
   methods: {
-    startCountdown() {
-      clearInterval(this.countdownTimer)
-      this.countdown = 300
-      this.countdownTimer = setInterval(() => {
-        if (this.countdown > 0) {
-          this.countdown--
-        } else {
-          clearInterval(this.countdownTimer)
-        }
-      }, 1000)
+    setDigitRef(el, index) {
+      this.digitRefs[index] = el
     },
 
-    startResendCooldown() {
-      this.resendCooldown = 60
-      clearInterval(this.resendTimer)
-      this.resendTimer = setInterval(() => {
-        if (this.resendCooldown > 0) {
-          this.resendCooldown--
-        } else {
-          clearInterval(this.resendTimer)
-        }
-      }, 1000)
-    },
+    onDigitInput(index, event) {
+      var value = event.target.value.replace(/[^0-9]/g, '').slice(-1)
+      this.otpDigits[index] = value
 
-    handleInput(index) {
-      const val = this.otpDigits[index]
-      if (val && !/^\d$/.test(val)) {
-        this.otpDigits[index] = ''
-        return
+      if (value && index < 5) {
+        this.$nextTick(function() {
+          if (this.digitRefs[index + 1]) this.digitRefs[index + 1].focus()
+        }.bind(this))
       }
-      if (val && index < 5) {
-        const next = this.$refs['otpInput' + (index + 1)]
-        if (next && next[0]) next[0].focus()
+
+      if (this.otpCode.length === 6) {
+        this.errorMessage = ''
       }
     },
 
-    handleKeydown(event, index) {
+    onDigitKeydown(index, event) {
       if (event.key === 'Backspace' && !this.otpDigits[index] && index > 0) {
-        const prev = this.$refs['otpInput' + (index - 1)]
-        if (prev && prev[0]) {
-          prev[0].focus()
-          this.otpDigits[index - 1] = ''
-        }
+        this.otpDigits[index - 1] = ''
+
+        this.$nextTick(function() {
+          if (this.digitRefs[index - 1]) this.digitRefs[index - 1].focus()
+        }.bind(this))
+      }
+
+      if (event.key === 'ArrowLeft' && index > 0) {
+        this.digitRefs[index - 1].focus()
+      }
+
+      if (event.key === 'ArrowRight' && index < 5) {
+        this.digitRefs[index + 1].focus()
       }
     },
 
-    handlePaste(event) {
+    onPaste(event) {
+      var pasted = (event.clipboardData || window.clipboardData)
+        .getData('text')
+        .replace(/[^0-9]/g, '')
+        .slice(0, 6)
+
+      if (!pasted) return
+
       event.preventDefault()
-      const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-      pasted.split('').forEach((char, i) => {
-        if (i < 6) this.otpDigits[i] = char
-      })
-      const focusIndex = Math.min(pasted.length, 5)
-      const target = this.$refs['otpInput' + focusIndex]
-      if (target && target[0]) target[0].focus()
+
+      var chars = pasted.split('')
+
+      for (var i = 0; i < 6; i++) {
+        this.otpDigits[i] = chars[i] || ''
+      }
+
+      var lastIndex = Math.min(chars.length, 6) - 1
+
+      this.$nextTick(function() {
+        if (lastIndex >= 0 && this.digitRefs[lastIndex]) {
+          this.digitRefs[lastIndex].focus()
+        }
+      }.bind(this))
+    },
+
+    startCooldown() {
+      this.stopCooldown()
+      this.resendCooldown = RESEND_COOLDOWN_SECONDS
+
+      var self = this
+
+      this.cooldownTimer = setInterval(function() {
+        if (self.resendCooldown > 0) {
+          self.resendCooldown -= 1
+        }
+
+        if (self.resendCooldown <= 0) {
+          self.stopCooldown()
+        }
+      }, 1000)
+    },
+
+    stopCooldown() {
+      if (this.cooldownTimer) {
+        clearInterval(this.cooldownTimer)
+        this.cooldownTimer = null
+      }
     },
 
     async verifyOtp() {
-  if (this.otpCode.length !== 6) {
-    this.errorMessage = 'Please enter the complete 6-digit OTP.'
-    return
-  }
-
-  this.errorMessage = ''
-  this.successMessage = ''
-  this.isLoading = true
-
-  try {
-    const response = await axios.post(
-      `${API_BASE}/api/verify-login-otp`,
-      {
-        user_id: this.userId,
-        otp_code: this.otpCode,
+      if (this.otpCode.length !== 6) {
+        this.errorMessage = 'Please enter a valid 6-digit OTP.'
+        return
       }
-    )
 
-    const data = response.data
+      this.errorMessage = ''
+      this.isLoading = true
 
-    if (data.user.role !== 'barangay') {
-      this.errorMessage = 'Unauthorized access.'
-      this.isLoading = false
-      return
-    }
+      try {
+        const response = await axios.post(
+          `${API_BASE}/api/verify-login-otp`,
+          {
+            user_id: this.userId,
+            otp_code: this.otpCode,
+          }
+        )
 
-    // Standardize user structure (including full name construction)
-    const userData = {
-      ...data.user,
-      name: [data.user.first_name, data.user.middle_name, data.user.last_name]
-        .filter(Boolean)
-        .join(' ')
-    }
+        const data = response.data
 
-    // Save tokens and user data consistently
-    localStorage.setItem('barangay_token', data.access_token)
-    localStorage.setItem('auth_token', data.access_token)
-    localStorage.setItem('barangay_user', JSON.stringify(userData))
-    localStorage.setItem('user', JSON.stringify(userData))
+        if (data.user.role !== 'barangay') {
+          this.errorMessage = 'Unauthorized access.'
+          this.isLoading = false
+          return
+        }
 
-    await this.$router.push({ name: 'barangay-dashboard' })
+        const userData = {
+          ...data.user,
+          name: [data.user.first_name, data.user.middle_name, data.user.last_name]
+            .filter(Boolean)
+            .join(' ')
+        }
 
-  } catch (error) {
-    if (error.response) {
-      this.errorMessage =
-        error.response.data.message || 'Invalid or expired OTP.'
-    } else {
-      this.errorMessage = 'Unable to connect to server.'
-    }
-    this.otpDigits = ['', '', '', '', '', '']
-    this.$nextTick(() => {
-      const first = this.$refs['otpInput0']
-      if (first && first[0]) first[0].focus()
-    })
-  } finally {
-    this.isLoading = false
-  }
-},
+        localStorage.setItem('barangay_token', data.access_token)
+        localStorage.setItem('auth_token', data.access_token)
+        localStorage.setItem('barangay_user', JSON.stringify(userData))
+        localStorage.setItem('user', JSON.stringify(userData))
+
+        axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`
+
+        this.$router.push({ name: 'barangay-dashboard' })
+      } catch (error) {
+        if (error.response) {
+          this.errorMessage = error.response.data.message || 'Invalid OTP.'
+        } else {
+          this.errorMessage = 'Unable to connect to server.'
+        }
+
+        this.otpDigits = ['', '', '', '', '', '']
+
+        this.$nextTick(function() {
+          if (this.digitRefs[0]) this.digitRefs[0].focus()
+        }.bind(this))
+      } finally {
+        this.isLoading = false
+      }
+    },
 
     async resendOtp() {
+      if (this.resendCooldown > 0) return
+
       const login = localStorage.getItem('brgy_otp_login')
       const password = localStorage.getItem('brgy_otp_password')
 
@@ -262,26 +338,20 @@ export default {
       this.isLoading = true
 
       try {
-        const response = await axios.post(
-          `${API_BASE}/api/barangay/login`,
-          { login, password }
-        )
-
-        this.successMessage =
-          response.data.message || 'A new OTP has been sent.'
-
-        this.otpDigits = ['', '', '', '', '', '']
-        this.startCountdown()
-        this.startResendCooldown()
-
-        this.$nextTick(() => {
-          const first = this.$refs['otpInput0']
-          if (first && first[0]) first[0].focus()
+        const response = await axios.post(`${API_BASE}/api/barangay/login`, {
+          login,
+          password,
         })
 
+        this.successMessage = response.data.message || 'A new OTP has been sent.'
+        this.otpDigits = ['', '', '', '', '', '']
+        this.startCooldown()
+
+        this.$nextTick(function() {
+          if (this.digitRefs[0]) this.digitRefs[0].focus()
+        }.bind(this))
       } catch (error) {
-        this.errorMessage =
-          error.response?.data?.message || 'Failed to resend OTP.'
+        this.errorMessage = error.response?.data?.message || 'Failed to resend OTP.'
       } finally {
         this.isLoading = false
       }
@@ -289,8 +359,8 @@ export default {
 
     goBack() {
       this.$router.push({ name: 'barangay-login' })
-    }
-  }
+    },
+  },
 }
 </script>
 
@@ -300,18 +370,70 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #eff6ff;
   padding: 20px;
+  font-family: 'DM Sans', sans-serif;
+  background: linear-gradient(135deg, #116D3E 0%, #0A5232 45%, #0F212F 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.otp-wrapper::before,
+.otp-wrapper::after {
+  content: '';
+  position: absolute;
+  background: #D29539;
+  opacity: 0.14;
+  border-radius: 10px;
+}
+
+.otp-wrapper::before {
+  width: 160px;
+  height: 160px;
+  top: -40px;
+  right: 8%;
+  transform: rotate(18deg);
+}
+
+.otp-wrapper::after {
+  width: 110px;
+  height: 110px;
+  bottom: -20px;
+  left: 10%;
+  transform: rotate(-12deg);
 }
 
 .otp-card {
+  position: relative;
   width: 100%;
-  max-width: 440px;
-  background: white;
-  padding: 40px 35px;
-  border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(29, 78, 216, 0.08);
-  border-top: 4px solid #1d4ed8;
+  max-width: 420px;
+  background: #FFFFFF;
+  padding: 2.4rem 2.2rem;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 33, 47, 0.35);
+  text-align: center;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.corner-accent {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  background: #D29539;
+  border-radius: 7px;
+}
+
+.corner-tr {
+  top: -12px;
+  right: 18px;
+  transform: rotate(20deg);
+}
+
+.corner-bl {
+  bottom: -12px;
+  left: 18px;
+  transform: rotate(-20deg);
+  background: #0A5232;
 }
 
 .brand {
@@ -319,186 +441,228 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 22px;
+  margin-bottom: 1.1rem;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.35);
+}
+
+.brand-icon svg path {
+  stroke: #FFFFFF;
+  fill: #FFFFFF;
+  fill-opacity: 0.18;
 }
 
 .brand-label {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0F212F;
 }
 
 h2 {
-  text-align: center;
-  margin-bottom: 10px;
-  color: #1e3a8a;
-  font-size: 22px;
+  margin: 0 0 8px;
+  color: #0F212F;
+  font-size: 1.35rem;
   font-weight: 700;
 }
 
 .subtitle {
-  text-align: center;
-  color: #64748b;
-  margin-bottom: 28px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.otp-fields {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.otp-box {
-  width: 48px;
-  height: 56px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e3a8a;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background: #f8fafc;
-}
-
-.otp-box:focus {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
-  background: white;
-}
-
-.otp-box.filled {
-  border-color: #1d4ed8;
-  background: #eff6ff;
-}
-
-.timer-row {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.timer-text {
-  font-size: 13px;
-  color: #64748b;
-}
-
-.timer-text.expired {
-  color: #dc2626;
-}
-
-.btn-primary {
-  width: 100%;
-  padding: 14px;
-  background: #1d4ed8;
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.2s, opacity 0.2s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1e40af;
-}
-
-.btn-primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.divider {
-  height: 1px;
-  background: #e2e8f0;
-  margin: 18px 0;
-}
-
-.btn-secondary {
-  width: 100%;
-  padding: 12px;
-  background: transparent;
-  border: 1.5px solid #1d4ed8;
-  border-radius: 10px;
-  color: #1d4ed8;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #eff6ff;
-}
-
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-link {
-  width: 100%;
-  margin-top: 12px;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.btn-link:hover {
-  color: #1d4ed8;
+  color: #5c6b64;
+  margin: 0 0 1.6rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .alert {
-  padding: 12px 14px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  border-left: 4px solid transparent;
+}
+
+.error { background: #fde3e3; color: #b3261e; border-left-color: #b3261e; }
+.success { background: #E7F0EC; color: #116D3E; border-left-color: #116D3E; }
+
+.otp-input-group {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  justify-content: center;
+  gap: 9px;
+  margin-bottom: 1.6rem;
 }
 
-.alert-icon {
+.otp-digit {
+  width: 44px;
+  height: 54px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0F212F;
+  border: 1.5px solid #d7e2d8;
+  border-radius: 10px;
+  background: #FFFFFF;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.otp-digit:focus {
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.otp-digit.accent-0:focus { border-color: #116D3E; box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.22); }
+.otp-digit.accent-1:focus { border-color: #D29539; box-shadow: 0 0 0 3px rgba(210, 149, 57, 0.25); }
+.otp-digit.accent-2:focus { border-color: #0A5232; box-shadow: 0 0 0 3px rgba(10, 82, 50, 0.22); }
+
+.otp-digit.accent-0.filled { border-color: #116D3E; background: #E7F0EC; color: #116D3E; }
+.otp-digit.accent-1.filled { border-color: #D29539; background: #FAF2E7; color: #AC7A2F; }
+.otp-digit.accent-2.filled { border-color: #0A5232; background: #E7F0EC; color: #0A5232; }
+
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  border: none;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(17, 109, 62, 0.4);
+}
+
+.btn-primary:disabled {
+  background: #ACCCBB;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.resend-row {
+  margin-top: 1.3rem;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.timer-ring-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
-  font-size: 15px;
 }
 
-.error {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+.timer-ring {
+  width: 64px;
+  height: 64px;
+  transform: rotate(-90deg);
 }
 
-.success {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+.ring-bg {
+  fill: none;
+  stroke: #E7F0EC;
+  stroke-width: 5;
 }
 
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
+.ring-progress {
+  fill: none;
+  stroke: url(#ringGrad);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.timer-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.timer-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0F212F;
+  font-variant-numeric: tabular-nums;
+}
+
+.resend-hint {
+  font-size: 0.8rem;
+  color: #5c6b64;
+  line-height: 1.4;
+}
+
+.resend-hint strong {
+  color: #116D3E;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-resend {
+  background: linear-gradient(135deg, #D29539, #AC7A2F);
+  border: none;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 10px 22px;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(210, 149, 57, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-resend:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(210, 149, 57, 0.45);
+}
+
+.btn-resend:disabled {
+  background: #ACCCBB;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-back {
+  width: 100%;
+  margin-top: 1.4rem;
+  background: transparent;
+  border: none;
+  color: #5c6b64;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 6px;
+}
+
+.btn-back:hover { color: #0F212F; }
+
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
 </style>

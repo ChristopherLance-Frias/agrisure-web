@@ -28,111 +28,108 @@
 
       <!-- Right Panel -->
       <div class="right-panel">
-        <div class="form-header">
-          <h3>Welcome back</h3>
-          <p>Sign in with your Barangay Official account</p>
-        </div>
-
-        <form @submit.prevent="handleLogin" class="login-form" novalidate>
-
-          <div v-if="errorMessage" class="alert alert-error">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            {{ errorMessage }}
+        <div class="step-pane">
+          <div class="form-header">
+            <h3>Welcome back</h3>
+            <p>Sign in with your Barangay Official account</p>
           </div>
 
-          <div v-if="successMessage" class="alert alert-success">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            {{ successMessage }}
-          </div>
+          <form @submit.prevent="handleLogin" class="login-form" novalidate>
 
-          <!-- Email Field -->
-          <div class="field" :class="{ 'field--error': errors.email }">
-            <label for="email">Email Address</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
+            <div v-if="errorMessage" class="alert alert-error">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              <input
-                id="email"
-                v-model="form.email"
-                type="email"
-                placeholder="you@barangay.gov.ph"
-                autocomplete="email"
-                :disabled="isLoading"
-                @blur="validateEmail"
-              />
+              {{ errorMessage }}
             </div>
-            <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
-          </div>
 
-          <!-- Password -->
-          <div class="field" :class="{ 'field--error': errors.password }">
-            <label for="password">Password</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <div v-if="successMessage" class="alert alert-success">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
               </svg>
-              <input
-                id="password"
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Enter your password"
-                autocomplete="current-password"
-                :disabled="isLoading"
-                @blur="validatePassword"
-              />
-              <button type="button" class="toggle-password" @click="showPassword = !showPassword" :disabled="isLoading">
-                <svg v-if="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                </svg>
-                <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              </button>
+              {{ successMessage }}
             </div>
-            <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
-          </div>
 
-          <!-- Remember & Forgot -->
-          <div class="form-options">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="form.remember" :disabled="isLoading" />
-              <span class="checkmark"></span>
-              <span>Remember me</span>
-            </label>
-            <a href="#" class="forgot-link" @click.prevent="handleForgotPassword">Forgot password?</a>
-          </div>
+            <!-- Email Field -->
+            <div class="field" :class="{ 'field--error': errors.email }">
+              <label for="email">Email Address</label>
+              <div class="input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <input
+                  id="email"
+                  v-model="form.email"
+                  type="email"
+                  placeholder="you@barangay.gov.ph"
+                  autocomplete="email"
+                  :disabled="isLoading"
+                  @blur="validateEmail"
+                />
+              </div>
+              <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
+            </div>
 
-          <button type="submit" class="btn-login" :disabled="isLoading">
-            <span v-if="!isLoading">Sign In</span>
-            <span v-else class="loading-state">
-              <svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            <!-- Password -->
+            <div class="field" :class="{ 'field--error': errors.password }">
+              <label for="password">Password</label>
+              <div class="input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input
+                  id="password"
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  :disabled="isLoading"
+                  @blur="validatePassword"
+                />
+                <button type="button" class="toggle-password" @click="showPassword = !showPassword" :disabled="isLoading">
+                  <svg v-if="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
+              <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+            </div>
+
+            <!-- Remember & Forgot -->
+            <div class="form-options">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="form.remember" :disabled="isLoading" />
+                <span class="checkmark"></span>
+                <span>Remember me</span>
+              </label>
+              <a href="#" class="forgot-link" @click.prevent="handleForgotPassword">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn-login" :disabled="isLoading">
+              <span v-if="!isLoading">Sign In</span>
+              <span v-else class="loading-state">
+                <svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Authenticating...
+              </span>
+            </button>
+          </form>
+
+          <div class="back-link">
+            <a href="#" @click.prevent="$router.push({ name: 'portal-select' })">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
               </svg>
-              Authenticating...
-            </span>
-          </button>
-        </form>
-
-        <div class="back-link">
-          <a href="#" @click.prevent="$router.push({ name: 'portal-select' })">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Back to portal selection
-          </a>
-        </div>
-
-        <div class="form-footer">
-          <p>MAO Admin System &copy; {{ currentYear }}</p>
-          <p>Municipal Agricultural Office</p>
+              Back to portal selection
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -325,139 +322,377 @@ export default {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
 
 .login-wrapper {
   min-height: 100vh;
-  background: #0c1220;
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem;
-  font-family: 'DM Sans', sans-serif;
-  position: relative; overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #116D3E 0%, #0A5232 45%, #0F212F 100%);
+  position: relative;
+  overflow: hidden;
 }
 
 .bg-grid {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(66, 133, 244, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(66, 133, 244, 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  pointer-events: none;
 }
 
 .bg-accent {
   position: absolute;
-  width: 600px; height: 600px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(66, 133, 244, 0.12) 0%, transparent 70%);
-  top: -100px; right: -100px; pointer-events: none;
+  width: 220px;
+  height: 220px;
+  top: -60px;
+  right: 8%;
+  background: #D29539;
+  opacity: 0.14;
+  border-radius: 16px;
+  transform: rotate(18deg);
+  pointer-events: none;
 }
 
 .login-container {
-  position: relative; z-index: 1;
-  display: flex; width: 100%; max-width: 900px; min-height: 560px;
-  border-radius: 20px; overflow: hidden;
-  border: 1px solid rgba(66, 133, 244, 0.2);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 920px;
+  min-height: 560px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #FFFFFF;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px rgba(15, 33, 47, 0.4);
 }
 
+/* LEFT PANEL */
 .left-panel {
-  flex: 1;
-  background: linear-gradient(160deg, #111d3a 0%, #0c1220 100%);
-  padding: 3rem 2.5rem;
-  display: flex; flex-direction: column; justify-content: space-between;
-  border-right: 1px solid rgba(66, 133, 244, 0.15);
+  background: linear-gradient(160deg, #116D3E 0%, #0A5232 55%, #0F212F 100%);
+  padding: 2.6rem 2.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #FFFFFF;
+  position: relative;
 }
 
-.brand { display: flex; align-items: center; gap: 14px; }
+.left-panel::after {
+  content: '';
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  bottom: -30px;
+  left: -30px;
+  background: #D29539;
+  opacity: 0.16;
+  border-radius: 14px;
+  transform: rotate(-14deg);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
 
 .logo-mark {
-  width: 52px; height: 52px; background: #4285f4;
-  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #D29539, #AC7A2F);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 8px 18px rgba(210, 149, 57, 0.35);
 }
-.logo-mark span { font-family: 'DM Serif Display', serif; font-size: 26px; color: #fff; line-height: 1; }
 
-.brand-text h1 { font-family: 'DM Serif Display', serif; font-size: 22px; color: #e8eeff; letter-spacing: 3px; line-height: 1.1; }
-.brand-text p  { font-size: 11px; color: rgba(66,133,244,0.7); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.logo-mark span {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F212F;
+}
 
-.tagline { padding: 2rem 0; }
-.tagline h2 { font-family: 'DM Serif Display', serif; font-size: 28px; color: #c8d6f5; line-height: 1.3; margin-bottom: 1rem; }
-.tagline p  { font-size: 14px; color: rgba(200,214,245,0.55); line-height: 1.7; }
+.brand-text h1 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2.8px;
+  color: #FFFFFF;
+}
 
-.decorative-lines { display: flex; flex-direction: column; gap: 8px; }
-.line { height: 2px; background: linear-gradient(90deg, rgba(66,133,244,0.5), transparent); border-radius: 2px; }
-.line:nth-child(2) { width: 60%; opacity: 0.6; }
-.line:nth-child(3) { width: 35%; opacity: 0.3; }
+.brand-text p {
+  font-size: 8.5px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
 
+.tagline {
+  position: relative;
+  z-index: 1;
+  margin-top: 2.4rem;
+}
+
+.tagline h2 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #FFFFFF;
+}
+
+.tagline p {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.72);
+  max-width: 340px;
+}
+
+.decorative-lines {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2rem;
+}
+
+.line {
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.16);
+}
+
+.line:nth-child(1) { width: 70%; background: #D29539; opacity: 0.8; }
+.line:nth-child(2) { width: 45%; }
+.line:nth-child(3) { width: 28%; }
+
+/* RIGHT PANEL */
 .right-panel {
-  flex: 1.1; background: #f5f7ff;
-  padding: 2.5rem; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 2.8rem 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.form-header { margin-bottom: 1.5rem; }
-.form-header h3 { font-family: 'DM Serif Display', serif; font-size: 28px; color: #1a1e3a; margin-bottom: 6px; }
-.form-header p  { font-size: 14px; color: #6b6e8a; }
+.step-pane {
+  width: 100%;
+  max-width: 360px;
+}
 
-.alert { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; font-size: 13.5px; margin-bottom: 1rem; font-weight: 500; }
-.alert-error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-.alert-success { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.form-header {
+  margin-bottom: 1.6rem;
+}
 
-.field { margin-bottom: 1.25rem; }
-.field label { display: block; font-size: 13px; font-weight: 600; color: #2d3480; margin-bottom: 7px; letter-spacing: 0.3px; }
+.form-header h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0F212F;
+  margin-bottom: 4px;
+}
 
-.input-wrapper { position: relative; display: flex; align-items: center; }
-.input-icon    { position: absolute; left: 13px; color: #7a85c0; pointer-events: none; }
+.form-header p {
+  font-size: 0.86rem;
+  color: #5c6b64;
+}
+
+.login-form {
+  display: block;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  margin-bottom: 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-left: 4px solid transparent;
+}
+
+.alert-error { background: #fde3e3; color: #b3261e; border-left-color: #b3261e; }
+.alert-success { background: #E7F0EC; color: #116D3E; border-left-color: #116D3E; }
+
+.field {
+  margin-bottom: 1.15rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0F212F;
+  margin-bottom: 6px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #d7e2d8;
+  border-radius: 10px;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: #116D3E;
+  box-shadow: 0 0 0 3px rgba(17, 109, 62, 0.16);
+}
+
+.field--error .input-wrapper {
+  border-color: #b3261e;
+}
+
+.input-icon {
+  margin-left: 12px;
+  color: #8a9791;
+  flex-shrink: 0;
+}
 
 .input-wrapper input {
-  width: 100%; padding: 11px 44px;
-  border: 1.5px solid #cdd1f0; border-radius: 10px;
-  font-size: 14px; font-family: 'DM Sans', sans-serif;
-  color: #1a1e3a; background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 11px 12px;
+  font-size: 0.9rem;
+  color: #0F212F;
+  font-family: inherit;
 }
-.input-wrapper input::placeholder { color: #a8aed4; }
-.input-wrapper input:focus        { border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,0.12); }
-.input-wrapper input:disabled     { opacity: 0.6; cursor: not-allowed; background: #f0f2ff; }
-.field--error .input-wrapper input       { border-color: #f87171; }
-.field--error .input-wrapper input:focus { box-shadow: 0 0 0 3px rgba(248,113,113,0.12); }
-.error-text { display: block; font-size: 12px; color: #dc2626; margin-top: 5px; }
 
-.toggle-password { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #7a85c0; padding: 4px; display: flex; align-items: center; transition: color 0.2s; }
-.toggle-password:hover    { color: #4285f4; }
-.toggle-password:disabled { opacity: 0.5; cursor: not-allowed; }
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8a9791;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+}
 
-.form-options { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.toggle-password:hover { color: #116D3E; }
 
-.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #4a4e80; user-select: none; }
-.checkbox-label input[type="checkbox"] { display: none; }
-.checkmark { width: 17px; height: 17px; border: 1.5px solid #b0b8e0; border-radius: 5px; background: #fff; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-.checkbox-label input:checked ~ .checkmark { background: #4285f4; border-color: #4285f4; }
-.checkbox-label input:checked ~ .checkmark::after { content: ''; display: block; width: 5px; height: 9px; border: 2px solid #fff; border-top: none; border-left: none; transform: rotate(45deg) translate(-1px, -1px); }
+.error-text {
+  display: block;
+  font-size: 0.74rem;
+  color: #b3261e;
+  margin-top: 5px;
+}
 
-.forgot-link { font-size: 13px; color: #4285f4; text-decoration: none; font-weight: 500; transition: color 0.2s; }
-.forgot-link:hover { color: #2563eb; }
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.4rem;
+}
 
-.btn-login { width: 100%; padding: 13px; background: #4285f4; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s, transform 0.1s; letter-spacing: 0.3px; }
-.btn-login:hover:not(:disabled)  { background: #3070d6; }
-.btn-login:active:not(:disabled) { transform: scale(0.99); }
-.btn-login:disabled               { opacity: 0.7; cursor: not-allowed; }
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: #5c6b64;
+  cursor: pointer;
+}
 
-.loading-state { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.spinner { animation: spin 0.8s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.checkbox-label input { accent-color: #116D3E; width: 15px; height: 15px; }
 
-.back-link { text-align: center; margin-top: 1rem; }
-.back-link a { font-size: 13px; color: #6b6e8a; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s; }
-.back-link a:hover { color: #4285f4; }
+.checkmark {
+  display: none;
+}
 
-.form-footer { margin-top: 1rem; text-align: center; }
-.form-footer p { font-size: 12px; color: #9a9db5; line-height: 1.6; }
+.forgot-link {
+  font-size: 0.82rem;
+  color: #116D3E;
+  font-weight: 600;
+  text-decoration: none;
+}
 
-@media (max-width: 680px) {
-  .login-wrapper { padding: 1rem; }
-  .login-container { flex-direction: column; min-height: unset; }
-  .left-panel { padding: 2rem 1.5rem; border-right: none; border-bottom: 1px solid rgba(66,133,244,0.15); }
-  .tagline h2 { font-size: 22px; }
-  .decorative-lines { display: none; }
-  .right-panel { padding: 2rem 1.5rem; }
+.forgot-link:hover { text-decoration: underline; }
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  border: none;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.3);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(17, 109, 62, 0.4);
+}
+
+.btn-login:disabled {
+  background: #ACCCBB;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 1.4rem;
+}
+
+.back-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #5c6b64;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link a:hover {
+  color: #116D3E;
+}
+
+.form-footer {
+  text-align: center;
+  margin-top: 1.6rem;
+  font-size: 0.75rem;
+  color: #8a9791;
+  line-height: 1.5;
+}
+
+@media (max-width: 780px) {
+  .login-container { grid-template-columns: 1fr; }
+  .left-panel { display: none; }
 }
 </style>

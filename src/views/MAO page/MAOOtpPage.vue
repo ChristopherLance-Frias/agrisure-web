@@ -4,8 +4,27 @@
       <span class="corner-accent corner-tr"></span>
       <span class="corner-accent corner-bl"></span>
 
-      <div class="otp-icon">
-        <span>✉️</span>
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M12 2L4 5v6c0 5.5 3.4 9.7 8 11 4.6-1.3 8-5.5 8-11V5l-8-3z"
+              stroke="#FFFFFF"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              fill="#FFFFFF"
+              fill-opacity="0.18"
+            />
+            <path
+              d="M8.5 12.2l2.3 2.3 4.7-4.9"
+              stroke="#FFFFFF"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+        <span class="brand-label">MAO Portal</span>
       </div>
 
       <h2>Verify OTP</h2>
@@ -343,7 +362,6 @@ export default {
   overflow: hidden;
 }
 
-/* Faint decorative squares echoing the banner's amber blocks, floating in the backdrop */
 .otp-wrapper::before,
 .otp-wrapper::after {
   content: '';
@@ -382,7 +400,6 @@ export default {
   z-index: 1;
 }
 
-/* Amber corner accents on the card itself, matching the banner's tilted squares */
 .corner-accent {
   position: absolute;
   width: 34px;
@@ -404,17 +421,35 @@ export default {
   background: #0A5232;
 }
 
-.otp-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1.1rem;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #116D3E, #0A5232);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.7rem;
-  margin: 0 auto 1.1rem;
   box-shadow: 0 8px 18px rgba(17, 109, 62, 0.35);
+}
+
+.brand-icon svg path {
+  stroke: #FFFFFF;
+  fill: #FFFFFF;
+  fill-opacity: 0.18;
+}
+
+.brand-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0F212F;
 }
 
 h2 {

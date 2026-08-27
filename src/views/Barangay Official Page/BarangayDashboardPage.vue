@@ -1,7 +1,7 @@
 <template>
-  <div class="dashboard-layout">
+  <div class="layout">
     <div class="main-wrapper">
-      <!-- TOP BAR / HEADER -->
+
       <header class="top-header">
         <div class="header-title-group">
           <h1>Barangay Dashboard</h1>
@@ -19,32 +19,8 @@
           </div>
         </div>
       </header>
-
-      <main class="dashboard-body">
-        <!-- TOP METRICS SUMMARY -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Barangay Farmers</span>
-              <div class="icon-badge green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-            </div>
-            <h3 class="card-value">{{ farmerStats.total_farmers }}</h3>
-            <div class="card-footer">
-              <span class="status-pill neutral">Registered in this barangay</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- FARMER & FARM ANALYTICS ROW -->
+      <main class="body">
         <div class="row-grid-3">
-          <!-- Farmer Analytics -->
           <div class="panel">
             <div class="panel-header">
               <div>
@@ -212,68 +188,6 @@
             <p v-else class="subtext empty-state">No supplies distributed yet.</p>
           </div>
         </div>
-
-        <!-- WEATHER -->
-        <div class="row-grid-weather">
-          <div class="weather-card" :class="`is-${skyState}`">
-            <div class="weather-scene" aria-hidden="true">
-              <div class="sun-disc"></div>
-              <svg class="cloud cloud-back" viewBox="0 0 100 40">
-                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
-              </svg>
-              <svg class="cloud cloud-front" viewBox="0 0 100 40">
-                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
-              </svg>
-              <div class="fog-layer" v-if="skyState === 'fog'"></div>
-              <div class="rain" v-if="skyState === 'rain' || skyState === 'storm'">
-                <span v-for="n in 8" :key="n" class="rain-drop" :style="{ '--i': n }"></span>
-              </div>
-              <div class="lightning" v-if="skyState === 'storm'"></div>
-            </div>
-
-            <div class="weather-content">
-              <div class="weather-top">
-                <div>
-                  <span class="weather-subtitle">Agro-Weather Forecast</span>
-                  <h3 class="weather-temp">
-                    <template v-if="!weatherLoading && !weatherError">{{ weather.temp }}</template>
-                    <template v-else-if="weatherLoading">--&deg;C</template>
-                    <template v-else>N/A</template>
-                  </h3>
-                  <p class="weather-updated" v-if="!weatherLoading && !weatherError">
-                    Updated {{ formatUpdatedAt(weather.updatedAt) }}
-                  </p>
-                </div>
-                <div class="weather-icon-box">
-                  <i :class="weather.icon"></i>
-                </div>
-              </div>
-              <p class="weather-condition">
-                {{ weatherLoading ? 'Loading...' : (weatherError ? 'Unable to load weather' : weather.condition) }}
-              </p>
-            </div>
-
-            <div class="weather-stats-grid">
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-droplet"></i>
-                <span class="stat-label">Humidity</span>
-                <strong>{{ weather.humidity }}</strong>
-              </div>
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-cloud-showers-heavy"></i>
-                <span class="stat-label">Rain Chance</span>
-                <strong>{{ weather.rainChance }}</strong>
-              </div>
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-wind"></i>
-                <span class="stat-label">Wind</span>
-                <strong>{{ weather.wind ?? '--' }}</strong>
-              </div>
-            </div>
-
-            <button v-if="weatherError" class="weather-retry-btn" @click="fetchWeather(lastCoords.lat, lastCoords.lon)">Retry</button>
-          </div>
-        </div>
       </main>
     </div>
   </div>
@@ -392,102 +306,6 @@ async function fetchDistributionStats() {
 }
 
 /* ------------------------------------------------------------------ *
- * Weather State
- * ------------------------------------------------------------------ *
- * Uses Open-Meteo (https://open-meteo.com) — free, no API key needed.
- * Falls back to Manila's coordinates if the barangay has none stored.
- */
-const weather = reactive({
-  temp: '--',
-  condition: '',
-  humidity: '--',
-  rainChance: '--',
-  wind: null,
-  icon: 'fa-solid fa-cloud',
-  updatedAt: null,
-})
-const weatherLoading = ref(false)
-const weatherError = ref(false)
-const lastCoords = reactive({ lat: 14.5995, lon: 120.9842 }) // Manila fallback
-
-const skyState = computed(() => {
-  const c = (weather.condition || '').toLowerCase()
-  if (c.includes('storm') || c.includes('thunder')) return 'storm'
-  if (c.includes('rain') || c.includes('drizzle')) return 'rain'
-  if (c.includes('fog') || c.includes('mist')) return 'fog'
-  if (c.includes('overcast') || c.includes('cloud')) return 'overcast'
-  return 'clear'
-})
-
-function formatUpdatedAt(ts) {
-  if (!ts) return ''
-  const diffMin = Math.round((Date.now() - new Date(ts).getTime()) / 60000)
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  return `${Math.round(diffMin / 60)}h ago`
-}
-
-// WMO weather codes -> condition label + FontAwesome icon
-function mapWeatherCode(code) {
-  const table = {
-    0: ['Clear sky', 'fa-solid fa-sun'],
-    1: ['Mainly clear', 'fa-solid fa-sun'],
-    2: ['Partly cloudy', 'fa-solid fa-cloud-sun'],
-    3: ['Overcast', 'fa-solid fa-cloud'],
-    45: ['Fog', 'fa-solid fa-smog'],
-    48: ['Depositing rime fog', 'fa-solid fa-smog'],
-    51: ['Light drizzle', 'fa-solid fa-cloud-rain'],
-    53: ['Moderate drizzle', 'fa-solid fa-cloud-rain'],
-    55: ['Dense drizzle', 'fa-solid fa-cloud-rain'],
-    61: ['Slight rain', 'fa-solid fa-cloud-rain'],
-    63: ['Moderate rain', 'fa-solid fa-cloud-showers-heavy'],
-    65: ['Heavy rain', 'fa-solid fa-cloud-showers-heavy'],
-    80: ['Rain showers', 'fa-solid fa-cloud-showers-heavy'],
-    81: ['Moderate rain showers', 'fa-solid fa-cloud-showers-heavy'],
-    82: ['Violent rain showers', 'fa-solid fa-cloud-showers-heavy'],
-    95: ['Thunderstorm', 'fa-solid fa-cloud-bolt'],
-    96: ['Thunderstorm with hail', 'fa-solid fa-cloud-bolt'],
-    99: ['Severe thunderstorm with hail', 'fa-solid fa-cloud-bolt'],
-  }
-  return table[code] ? { condition: table[code][0], icon: table[code][1] } : { condition: 'Unknown', icon: 'fa-solid fa-cloud' }
-}
-
-async function fetchWeather(lat = lastCoords.lat, lon = lastCoords.lon) {
-  lastCoords.lat = lat
-  lastCoords.lon = lon
-  weatherLoading.value = true
-  weatherError.value = false
-  try {
-    const res = await axios.get('https://api.open-meteo.com/v1/forecast', {
-      params: {
-        latitude: lat,
-        longitude: lon,
-        current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation_probability',
-        timezone: 'auto',
-      },
-    })
-
-    const current = res.data?.current
-    if (!current) throw new Error('Malformed weather response')
-
-    const { condition, icon } = mapWeatherCode(current.weather_code)
-
-    weather.temp = `${Math.round(current.temperature_2m)}°C`
-    weather.humidity = `${current.relative_humidity_2m}%`
-    weather.rainChance = `${current.precipitation_probability ?? 0}%`
-    weather.wind = `${Math.round(current.wind_speed_10m)} km/h`
-    weather.condition = condition
-    weather.icon = icon
-    weather.updatedAt = new Date().toISOString()
-  } catch (e) {
-    console.error('Weather fetch failed', e)
-    weatherError.value = true
-  } finally {
-    weatherLoading.value = false
-  }
-}
-
-/* ------------------------------------------------------------------ *
  * Mount
  * ------------------------------------------------------------------ */
 onMounted(async () => {
@@ -513,14 +331,10 @@ onMounted(async () => {
     : 'BO'
   barangayName.value = storedUser.barangay?.name || 'Local Barangay'
 
-  const barangayLat = storedUser.barangay?.latitude
-  const barangayLon = storedUser.barangay?.longitude
-
   try {
     await Promise.all([
       fetchFarmerAndFarmStats(barangayId),
       fetchDistributionStats(),
-      fetchWeather(barangayLat ?? lastCoords.lat, barangayLon ?? lastCoords.lon),
     ])
   } catch (e) {
     console.error('Dashboard load failed', e)
@@ -529,103 +343,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-.dashboard-layout {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #F4F7F5;
-  color: #0F212F;
-}
-
-.main-wrapper {
-  flex: 1;
-  min-width: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* TOP HEADER */
-.top-header {
-  background-color: #FFFFFF;
-  border-bottom: 1px solid #E7F0EC;
-  flex-shrink: 0;
-  z-index: 20;
-  padding: 0 1.5rem;
-  min-height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-title-group h1 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0F212F;
-}
-
-.header-title-group p {
-  font-size: 0.75rem;
-  color: #5C6B64;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.v-divider {
-  height: 24px;
-  width: 1px;
-  background-color: #E7F0EC;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.75rem;
-}
-
-.user-name {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #0F212F;
-  line-height: 1.2;
-}
-
-.user-role {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #94A3B8;
-  text-transform: uppercase;
-}
-
-/* DASHBOARD BODY */
-.dashboard-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
 
 /* METRICS GRID */
 .metrics-grid {

@@ -1445,7 +1445,6 @@ async exportFarmers() {
     { width: 12 },
   ]
 
-  // Title
   demographicsWs.mergeCells('A1:D1')
   demographicsWs.getCell('A1').value = 'Farmer Demographics'
   demographicsWs.getCell('A1').font = {
@@ -1462,10 +1461,6 @@ async exportFarmers() {
     size: 10,
     color: { argb: 'FF6B7280' }
   }
-
-  // ------------------------------------------------------------
-  // Sex Distribution
-  // ------------------------------------------------------------
 
   demographicsWs.getCell('A4').value = 'Sex Distribution'
   demographicsWs.getCell('A4').font = {
@@ -1489,10 +1484,6 @@ async exportFarmers() {
     ],
     data: sexRows,
   })
-
-  // ------------------------------------------------------------
-  // Civil Status
-  // ------------------------------------------------------------
 
   const civilStartRow = 10
 
@@ -1519,10 +1510,6 @@ async exportFarmers() {
     data: civilRows,
   })
 
-  // ------------------------------------------------------------
-  // Age Groups
-  // ------------------------------------------------------------
-
   const ageStartRow = 18
 
   demographicsWs.getCell(`A${ageStartRow}`).value = 'Age Group Distribution'
@@ -1547,10 +1534,6 @@ async exportFarmers() {
     ],
     data: ageRows,
   })
-
-  // ============================================================
-  // 3. BARANGAY ANALYSIS
-  // ============================================================
 
   const barangayWs = wb.addWorksheet('Barangay Analysis', {
     views: [{ showGridLines: false }]
@@ -2401,22 +2384,10 @@ async exportFarmers() {
 
 * { box-sizing: border-box; }
 
-/* =====================================================================
-   LAYOUT OVERRIDE
-   Your shared stylesheet defines .main-wrapper as a flex column
-   (header stacked on body). This page adds a sidebar, so it needs a
-   2-column grid instead: the sidebar spans both rows on the left,
-   header + body stack in the right column exactly as before.
-   ===================================================================== */
 .main-wrapper {
   display: grid;
   grid-template-columns: max-content 1fr;
   grid-template-rows: auto 1fr;
-}
-
-.top-header {
-  grid-column: 2;
-  grid-row: 1;
 }
 
 .body {

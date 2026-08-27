@@ -4,8 +4,8 @@
       <!-- TOP BAR / HEADER -->
       <header class="top-header">
         <div class="header-title-group">
-          <h1>Barangay Dashboard</h1>
-          <p>{{ barangayName }} &middot; AgriSure MAO Portal</p>
+          <h1>Barangay Reports</h1>
+          <p>{{ barangayName }} &middot; AgriSure Barangay Portal</p>
         </div>
 
         <div class="header-actions">
@@ -21,276 +21,183 @@
       </header>
 
       <main class="dashboard-body">
-        <!-- TOP METRICS SUMMARY -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="card-header">
-              <span class="card-label">Barangay Farmers</span>
-              <div class="icon-badge green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-            </div>
-            <h3 class="card-value">{{ farmerStats.total_farmers }}</h3>
-            <div class="card-footer">
-              <span class="status-pill neutral">Registered in this barangay</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- FARMER & FARM ANALYTICS ROW -->
-        <div class="row-grid-3">
-          <!-- Farmer Analytics -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Farmer Analytics</h2>
-                <p>Registered farmers in this barangay</p>
-              </div>
-            </div>
-
-            <div class="analytics-stat-grid">
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Total Farmers</span>
-                <strong class="analytics-stat-value">{{ farmerStats.total_farmers }}</strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Rice Farmers</span>
-                <strong class="analytics-stat-value text-green">
-                  {{ farmerStats.rice_farmers }}
-                  <span class="stat-percent">{{ riceFarmerPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Corn Farmers</span>
-                <strong class="analytics-stat-value text-amber">
-                  {{ farmerStats.corn_farmers }}
-                  <span class="stat-percent">{{ cornFarmerPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Avg. Farm Size</span>
-                <strong class="analytics-stat-value">
-                  {{ farmerStats.average_farm_size.toFixed(2) }}
-                  <small>ha</small>
-                </strong>
-              </div>
+        <!-- BARANGAY ANALYTICS (tabbed tables) -->
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Barangay Analytics</h2>
+              <p>Farmer, farm, crop, and distribution records for this barangay</p>
             </div>
           </div>
 
-          <!-- Farm Analytics -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Farm Analytics</h2>
-                <p>Local farm area and crop breakdown</p>
-              </div>
-            </div>
-
-            <div class="analytics-stat-grid">
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Total Farms</span>
-                <strong class="analytics-stat-value">{{ farmStats.total_farms }}</strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Rice Farms</span>
-                <strong class="analytics-stat-value text-green">
-                  {{ farmStats.rice_farms }}
-                  <span class="stat-percent">{{ riceFarmPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Corn Farms</span>
-                <strong class="analytics-stat-value text-amber">
-                  {{ farmStats.corn_farms }}
-                  <span class="stat-percent">{{ cornFarmPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">Avg. Farm Area</span>
-                <strong class="analytics-stat-value">
-                  {{ farmStats.average_farm_area.toFixed(2) }}
-                  <small>ha</small>
-                </strong>
-              </div>
-            </div>
+          <div class="tab-header analytics-tab-header">
+            <button
+              v-for="t in analyticsTabs"
+              :key="t.key"
+              class="tab-btn"
+              :class="{ active: activeAnalyticsTab === t.key }"
+              @click="activeAnalyticsTab = t.key"
+            >
+              {{ t.label }}
+            </button>
           </div>
 
-          <!-- Crop Distribution Chart -->
-          <div class="panel flex-center-panel">
-            <div class="panel-header">
-              <div>
-                <h2>Crop Distribution</h2>
-                <p>Farms by crop type</p>
-              </div>
-            </div>
+          <!-- FARMER ANALYTICS -->
+          <div v-if="activeAnalyticsTab === 'farmers'" class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th class="text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="font-medium">Total Farmers</td>
+                  <td class="text-right num-cell font-medium">{{ farmerStats.total_farmers }}</td>
+                </tr>
+                <tr>
+                  <td>Rice Farmers</td>
+                  <td class="text-right num-cell">
+                    <span class="text-green font-medium">{{ farmerStats.rice_farmers }}</span>
+                    <span class="stat-percent">({{ riceFarmerPct }}%)</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Corn Farmers</td>
+                  <td class="text-right num-cell">
+                    <span class="text-amber font-medium">{{ farmerStats.corn_farmers }}</span>
+                    <span class="stat-percent">({{ cornFarmerPct }}%)</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Average Farm Size</td>
+                  <td class="text-right num-cell">{{ farmerStats.average_farm_size.toFixed(2) }} ha</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-            <div class="chart-wrapper" v-if="cropDistribution.length">
-              <ApexChart
-                type="donut"
-                height="220"
-                :options="cropDistributionChart.options"
-                :series="cropDistributionChart.series"
-              />
-            </div>
+          <!-- FARM ANALYTICS -->
+          <div v-else-if="activeAnalyticsTab === 'farms'" class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th class="text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="font-medium">Total Farms</td>
+                  <td class="text-right num-cell font-medium">{{ farmStats.total_farms }}</td>
+                </tr>
+                <tr>
+                  <td>Rice Farms</td>
+                  <td class="text-right num-cell">
+                    <span class="text-green font-medium">{{ farmStats.rice_farms }}</span>
+                    <span class="stat-percent">({{ riceFarmPct }}%)</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Corn Farms</td>
+                  <td class="text-right num-cell">
+                    <span class="text-amber font-medium">{{ farmStats.corn_farms }}</span>
+                    <span class="stat-percent">({{ cornFarmPct }}%)</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Average Farm Area</td>
+                  <td class="text-right num-cell">{{ farmStats.average_farm_area.toFixed(2) }} ha</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- CROP DISTRIBUTION -->
+          <div v-else-if="activeAnalyticsTab === 'crops'" class="table-wrapper">
+            <table v-if="cropDistribution.length" class="data-table">
+              <thead>
+                <tr>
+                  <th>Crop Type</th>
+                  <th class="text-right">Total Farms</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in cropDistribution" :key="row.crop_type">
+                  <td class="font-medium">{{ row.crop_type }}</td>
+                  <td class="text-right num-cell">{{ row.total }}</td>
+                </tr>
+              </tbody>
+            </table>
             <p v-else class="subtext text-center empty-state">No crop data yet.</p>
           </div>
-        </div>
 
-        <!-- CROP AREA & DISTRIBUTION SUMMARY ROW -->
-        <div class="row-grid-2">
-          <!-- Crop Area Distribution -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Crop Area Distribution</h2>
-                <p>Total agricultural area in barangay</p>
-              </div>
-            </div>
-
-            <div class="summary-grid">
-              <div class="summary-card">
-                <p class="summary-label">Rice Area</p>
-                <p class="summary-value text-green">
-                  {{ farmStats.total_rice_area.toFixed(2) }}
-                  <span class="summary-unit">ha</span>
-                </p>
-                <p class="summary-subtext subtext">{{ riceAreaPct }}% of total area</p>
-              </div>
-
-              <div class="summary-card">
-                <p class="summary-label">Corn Area</p>
-                <p class="summary-value text-amber">
-                  {{ farmStats.total_corn_area.toFixed(2) }}
-                  <span class="summary-unit">ha</span>
-                </p>
-                <p class="summary-subtext subtext">{{ cornAreaPct }}% of total area</p>
-              </div>
-            </div>
+          <!-- CROP AREA DISTRIBUTION -->
+          <div v-else-if="activeAnalyticsTab === 'area'" class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Crop Type</th>
+                  <th class="text-right">Area (ha)</th>
+                  <th class="text-right">% of Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="font-medium text-green">Rice</td>
+                  <td class="text-right num-cell">{{ farmStats.total_rice_area.toFixed(2) }}</td>
+                  <td class="text-right num-cell">{{ riceAreaPct }}%</td>
+                </tr>
+                <tr>
+                  <td class="font-medium text-amber">Corn</td>
+                  <td class="text-right num-cell">{{ farmStats.total_corn_area.toFixed(2) }}</td>
+                  <td class="text-right num-cell">{{ cornAreaPct }}%</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <!-- Barangay Distribution Summary -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Supplies Distributed</h2>
-                <p>Total distribution activity for this barangay</p>
-              </div>
-            </div>
+          <!-- SUPPLIES DISTRIBUTED -->
+          <div v-else-if="activeAnalyticsTab === 'supplies'" class="table-wrapper">
+            <table class="data-table summary-subtable">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th class="text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Total Quantity Distributed</td>
+                  <td class="text-right num-cell font-medium">{{ distributionStats.total_distributed }}</td>
+                </tr>
+                <tr>
+                  <td>Distribution Events</td>
+                  <td class="text-right num-cell font-medium">{{ distributionStats.total_events }}</td>
+                </tr>
+                <tr>
+                  <td>Beneficiaries</td>
+                  <td class="text-right num-cell font-medium">{{ distributionStats.total_beneficiaries }}</td>
+                </tr>
+              </tbody>
+            </table>
 
-            <div class="summary-grid compact">
-              <div class="summary-card">
-                <p class="summary-label">Total Quantity</p>
-                <p class="summary-value text-dark">{{ distributionStats.total_distributed }}</p>
-              </div>
-              <div class="summary-card">
-                <p class="summary-label">Events</p>
-                <p class="summary-value text-dark">{{ distributionStats.total_events }}</p>
-              </div>
-              <div class="summary-card">
-                <p class="summary-label">Beneficiaries</p>
-                <p class="summary-value text-dark">{{ distributionStats.total_beneficiaries }}</p>
-              </div>
-            </div>
-
-            <ul class="supply-breakdown-list" v-if="bySupply.length">
-              <li v-for="item in bySupply" :key="item.id" class="supply-breakdown-item">
-                <span>{{ item.supply_name }}</span>
-                <strong>{{ item.total_quantity }} {{ item.unit }}</strong>
-              </li>
-            </ul>
+            <table v-if="bySupply.length" class="data-table">
+              <thead>
+                <tr>
+                  <th>Supply</th>
+                  <th class="text-right">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in bySupply" :key="item.id">
+                  <td class="font-medium">{{ item.supply_name }}</td>
+                  <td class="text-right num-cell">{{ item.total_quantity }} {{ item.unit }}</td>
+                </tr>
+              </tbody>
+            </table>
             <p v-else class="subtext empty-state">No supplies distributed yet.</p>
-          </div>
-        </div>
-
-        <!-- WEATHER & ACTIONS -->
-        <div class="row-grid-3">
-          <!-- Weather Widget -->
-          <div class="weather-card" :class="`is-${skyState}`">
-            <div class="weather-scene" aria-hidden="true">
-              <div class="sun-disc"></div>
-              <svg class="cloud cloud-back" viewBox="0 0 100 40">
-                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
-              </svg>
-              <svg class="cloud cloud-front" viewBox="0 0 100 40">
-                <path d="M20 30 Q10 30 10 22 Q10 14 18 14 Q20 6 30 6 Q40 6 42 14 Q50 14 50 22 Q50 30 40 30 Z" />
-              </svg>
-              <div class="fog-layer" v-if="skyState === 'fog'"></div>
-              <div class="rain" v-if="skyState === 'rain' || skyState === 'storm'">
-                <span v-for="n in 8" :key="n" class="rain-drop" :style="{ '--i': n }"></span>
-              </div>
-              <div class="lightning" v-if="skyState === 'storm'"></div>
-            </div>
-
-            <div class="weather-content">
-              <div class="weather-top">
-                <div>
-                  <span class="weather-subtitle">Agro-Weather Forecast</span>
-                  <h3 class="weather-temp">
-                    <template v-if="!weatherLoading && !weatherError">{{ weather.temp }}</template>
-                    <template v-else-if="weatherLoading">--&deg;C</template>
-                    <template v-else>N/A</template>
-                  </h3>
-                  <p class="weather-updated" v-if="!weatherLoading && !weatherError">
-                    Updated {{ formatUpdatedAt(weather.updatedAt) }}
-                  </p>
-                </div>
-                <div class="weather-icon-box">
-                  <i :class="weather.icon"></i>
-                </div>
-              </div>
-              <p class="weather-condition">
-                {{ weatherLoading ? 'Loading...' : (weatherError ? 'Unable to load weather' : weather.condition) }}
-              </p>
-            </div>
-
-            <div class="weather-stats-grid">
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-droplet"></i>
-                <span class="stat-label">Humidity</span>
-                <strong>{{ weather.humidity }}</strong>
-              </div>
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-cloud-showers-heavy"></i>
-                <span class="stat-label">Rain Chance</span>
-                <strong>{{ weather.rainChance }}</strong>
-              </div>
-              <div class="weather-stat-cell">
-                <i class="fa-solid fa-wind"></i>
-                <span class="stat-label">Wind</span>
-                <strong>{{ weather.wind ?? '--' }}</strong>
-              </div>
-            </div>
-
-            <button v-if="weatherError" class="weather-retry-btn" @click="fetchWeather">Retry</button>
-          </div>
-
-          <!-- Barangay Actions -->
-          <div class="panel col-span-2">
-            <div class="panel-header">
-              <div>
-                <h2>Barangay Actions</h2>
-                <p>Quick tasks and management shortcuts</p>
-              </div>
-            </div>
-            <div class="actions-grid">
-              <button class="btn-primary">
-                <i class="fa-solid fa-user-check"></i> Verify Barangay Farmer
-              </button>
-              <button class="btn-outline">
-                <i class="fa-solid fa-clipboard-list icon-green"></i> View Distribution Schedule
-              </button>
-            </div>
           </div>
         </div>
       </main>
@@ -312,6 +219,18 @@ const currentUser = reactive({
 })
 
 const barangayName = ref('')
+
+/* ------------------------------------------------------------------ *
+ * Tabs
+ * ------------------------------------------------------------------ */
+const analyticsTabs = [
+  { key: 'farmers', label: 'Farmers' },
+  { key: 'farms', label: 'Farms' },
+  { key: 'crops', label: 'Crop Distribution' },
+  { key: 'area', label: 'Crop Area' },
+  { key: 'supplies', label: 'Supplies Distributed' },
+]
+const activeAnalyticsTab = ref('farmers')
 
 /* ------------------------------------------------------------------ *
  * Report data
@@ -379,17 +298,6 @@ const cornAreaPct = computed(() =>
   totalCropArea.value ? ((farmStats.total_corn_area / totalCropArea.value) * 100).toFixed(1) : '0.0'
 )
 
-const cropDistributionChart = computed(() => ({
-  series: cropDistribution.value.map(c => c.total),
-  options: {
-    labels: cropDistribution.value.map(c => c.crop_type),
-    legend: { position: 'bottom', fontSize: '12px' },
-    colors: ['#116D3E', '#D29539', '#2E6F8E', '#6B5B95'],
-    chart: { toolbar: { show: false } },
-    dataLabels: { enabled: false }
-  },
-}))
-
 /* ------------------------------------------------------------------ *
  * API Calls
  * ------------------------------------------------------------------ */
@@ -410,56 +318,9 @@ async function fetchDistributionStats() {
   bySupply.value = res.data.by_supply ?? []
 }
 
-/* ------------------------------------------------------------------ *
- * Weather State
- * ------------------------------------------------------------------ */
-const weather = reactive({
-  temp: '--',
-  condition: '',
-  humidity: '--',
-  rainChance: '--',
-  wind: null,
-  icon: 'fa-solid fa-cloud',
-  updatedAt: null,
-})
-const weatherLoading = ref(false)
-const weatherError = ref(false)
-
-const skyState = computed(() => {
-  const c = (weather.condition || '').toLowerCase()
-  if (c.includes('storm')) return 'storm'
-  if (c.includes('rain')) return 'rain'
-  if (c.includes('fog') || c.includes('mist')) return 'fog'
-  if (c.includes('overcast') || c.includes('cloud')) return 'overcast'
-  return 'clear'
-})
-
-function formatUpdatedAt(ts) {
-  if (!ts) return ''
-  const diffMin = Math.round((Date.now() - new Date(ts).getTime()) / 60000)
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  return `${Math.round(diffMin / 60)}h ago`
-}
-
-async function fetchWeather() {
-  weatherLoading.value = true
-  weatherError.value = false
-  try {
-    // API Call placeholder
-  } catch (e) {
-    weatherError.value = true
-  } finally {
-    weatherLoading.value = false
-  }
-}
-
-/* ------------------------------------------------------------------ *
- * Mount
- * ------------------------------------------------------------------ */
 onMounted(async () => {
   const rawUser = localStorage.getItem('user') || localStorage.getItem('barangay_user')
-  
+
   if (!rawUser) {
     console.error('No authenticated user found in storage.')
     return
@@ -484,7 +345,6 @@ onMounted(async () => {
     await Promise.all([
       fetchFarmerAndFarmStats(barangayId),
       fetchDistributionStats(),
-      fetchWeather(),
     ])
   } catch (e) {
     console.error('Dashboard load failed', e)
@@ -493,15 +353,15 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
 
+/* ===================== PAGE SHELL ===================== */
 .dashboard-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #F4F7F5;
-  color: #0F212F;
+  background: #F8FAF8;
 }
 
 .main-wrapper {
@@ -512,28 +372,30 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-/* TOP HEADER */
 .top-header {
-  background-color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid #E7F0EC;
   flex-shrink: 0;
   z-index: 20;
-  padding: 0 1.5rem;
-  min-height: 60px;
+  padding: 0 1.75rem;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .header-title-group h1 {
-  font-size: 1.15rem;
+  font-size: 18px;
   font-weight: 700;
   color: #0F212F;
+  letter-spacing: -0.01em;
 }
 
 .header-title-group p {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: #5C6B64;
+  margin-top: 2px;
 }
 
 .header-actions {
@@ -551,394 +413,157 @@ onMounted(async () => {
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  cursor: pointer;
 }
 
 .user-avatar {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #116D3E, #0A5232);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 12px;
+  box-shadow: 0 0 0 2px rgba(17, 109, 62, 0.2);
 }
 
-.user-name {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #0F212F;
-  line-height: 1.2;
-}
+.user-name { font-size: 12px; font-weight: 700; color: #0F212F; line-height: 1.2; }
+.user-role { font-size: 10px; font-weight: 500; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; }
 
-.user-role {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #94A3B8;
-  text-transform: uppercase;
-}
-
-/* DASHBOARD BODY */
+/* ===================== BODY ===================== */
 .dashboard-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-/* METRICS GRID */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-}
-
-.metric-card {
-  background: #FFFFFF;
-  border: 1px solid #EAF1EC;
-  border-radius: 12px;
-  padding: 1rem 1.2rem;
-  box-shadow: 0 4px 12px rgba(15, 33, 47, 0.03);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.card-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #5C6B64;
-}
-
-.icon-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-badge svg {
-  width: 18px;
-  height: 18px;
-}
-
-.icon-badge.green { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
-
-.card-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #0F212F;
-  margin-bottom: 0.4rem;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.status-pill.neutral { background: #F1F6F2; color: #5C6B64; }
-
-/* PANELS & GRIDS */
-.row-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-.row-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.col-span-2 { grid-column: span 2; }
-
+/* ===================== PANEL ===================== */
 .panel {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 4px 12px rgba(15, 33, 47, 0.03);
+  border-radius: 16px;
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
   display: flex;
   flex-direction: column;
 }
 
-.panel-header {
-  margin-bottom: 1rem;
-}
+.panel-header { margin-bottom: 0.2rem; }
+.panel-header h2 { font-size: 1rem; font-weight: 700; color: #0F212F; }
+.panel-header p, .subtext { font-size: 0.78rem; color: #5C6B64; margin-top: 3px; }
 
-.panel-header h2 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #0F212F;
-}
+.empty-state { padding: 2.5rem 0; color: #94A3B8; text-align: center; }
 
-.panel-header p, .subtext {
-  font-size: 0.75rem;
-  color: #5C6B64;
-  margin-top: 2px;
-}
-
-.empty-state {
-  padding: 2rem 0;
-  color: #94A3B8;
-}
-
-/* ANALYTICS STAT GRID */
-.analytics-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.analytics-stat-card {
-  padding: 12px;
-  border: 1px solid #EAF1EC;
-  border-radius: 8px;
-  background: #FAFCFB;
-}
-
-.analytics-stat-label {
-  display: block;
-  font-size: 0.7rem;
-  color: #6B7972;
-  margin-bottom: 4px;
-}
-
-.analytics-stat-value {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0F212F;
-}
-
-.stat-percent {
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.analytics-stat-value small {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6B7972;
-}
-
-.chart-wrapper {
-  flex: 1;
+/* ===================== TAB NAVIGATION ===================== */
+.tab-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  background: #F1F6F2;
+  border-radius: 10px;
+  padding: 4px;
+  flex-wrap: wrap;
+  width: fit-content;
 }
 
-/* SUMMARY CARDS */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
+.analytics-tab-header { margin: 1rem 0 1.2rem; }
 
-.summary-grid.compact {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.summary-card {
-  background: #FAFCFB;
-  border: 1px solid #EAF1EC;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-}
-
-.summary-label { font-size: 0.7rem; color: #5C6B64; margin-bottom: 2px; }
-.summary-value { font-size: 1.1rem; font-weight: 700; }
-.summary-unit { font-size: 0.7rem; font-weight: 500; color: #5C6B64; }
-.summary-subtext { margin-top: 2px; }
-
-/* SUPPLY BREAKDOWN */
-.supply-breakdown-list {
-  list-style: none;
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.supply-breakdown-item {
-  display: flex;
+.tab-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: #FAFCFB;
-  border: 1px solid #EAF1EC;
-  border-radius: 6px;
-  font-size: 0.78rem;
-}
-
-.supply-breakdown-item strong {
-  color: #116D3E;
-
-}
-
-/* COLOR UTILITIES */
-.text-green { color: #116D3E; }
-.text-amber { color: #AC7A2F; }
-.text-dark { color: #0F212F; }
-.icon-green { color: #116D3E; }
-.text-center { text-align: center; }
-
-/* BUTTONS */
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-.btn-primary, .btn-outline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
+  gap: 7px;
+  border: none;
+  background: transparent; 
   font-size: 0.8rem;
   font-weight: 600;
+  padding: 8px 15px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
-
-.btn-primary {
+.tab-btn:hover { color: #0F212F; transform: translateY(-1px); }
+.tab-btn.active {
   background: linear-gradient(135deg, #116D3E, #0A5232);
   color: #FFFFFF;
-  border: none;
-  box-shadow: 0 4px 12px rgba(17, 109, 62, 0.2);
+  box-shadow: 0 4px 12px rgba(17, 109, 62, 0.28);
+}
+.tab-btn.active .tab-icon { color: #FFFFFF; }
+
+.tab-icon { width: 15px; height: 15px; flex-shrink: 0; color: #94A3B8; }
+
+/* ===================== TAB CONTENT TRANSITION ===================== */
+.fade-slide-enter-active, .fade-slide-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fade-slide-enter-from { opacity: 0; transform: translateY(6px); }
+.fade-slide-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* ===================== DATA TABLE ===================== */
+.table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.btn-outline {
-  background: #FFFFFF;
-  color: #0F212F;
-  border: 1px solid #E0EAE3;
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.btn-outline:hover {
-  border-color: #116D3E;
+.data-table thead th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #5C6B64;
+  padding: 10px 14px;
   background: #F1F6F2;
 }
 
-/* WEATHER CARD */
-.weather-card {
-  position: relative;
-  background: linear-gradient(150deg, #116D3E 0%, #0A5232 55%, #0F212F 100%);
-  border-radius: 12px;
-  padding: 1.25rem;
-  color: #FFFFFF;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
+.data-table thead tr th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.data-table thead tr th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 
-.weather-scene {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  z-index: 0;
-}
-
-.sun-disc {
-  position: absolute;
-  top: -18px;
-  right: -18px;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #D29539 0%, rgba(210, 149, 57, 0.3) 60%, transparent 72%);
-}
-
-.cloud { position: absolute; fill: rgba(255, 255, 255, 0.14); }
-.cloud-back { top: 14px; left: -40px; width: 100px; }
-.cloud-front { top: 34px; left: -60px; width: 130px; fill: rgba(255, 255, 255, 0.22); }
-
-.weather-content { position: relative; z-index: 1; }
-.weather-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.weather-subtitle { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); }
-.weather-temp { font-size: 1.8rem; font-weight: 700; margin-top: 2px; }
-.weather-updated { font-size: 0.65rem; color: rgba(255, 255, 255, 0.6); }
-
-.weather-icon-box {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(210, 149, 57, 0.22);
-  color: #D29539;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-
-.weather-condition { font-size: 0.78rem; color: rgba(255, 255, 255, 0.85); margin-top: 4px; }
-
-.weather-stats-grid {
-  position: relative;
-  z-index: 1;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-
-.weather-stat-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.weather-stat-cell i { color: #D29539; font-size: 0.85rem; }
-.stat-label { font-size: 0.6rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
-.weather-stat-cell strong { font-size: 0.8rem; }
-
-.weather-retry-btn {
-  position: relative;
-  z-index: 1;
-  margin-top: 0.75rem;
-  background: #D29539;
+.data-table tbody td {
+  font-size: 0.84rem;
   color: #0F212F;
-  border: none;
-  border-radius: 6px;
-  padding: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
+  padding: 11px 14px;
+  border-bottom: 1px solid #F1F6F2;
+}
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: #FAFCFB; }
+
+.summary-subtable { margin-bottom: 0.25rem; }
+
+.text-right { text-align: right; }
+.num-cell { font-variant-numeric: tabular-nums; }
+.font-medium { font-weight: 700; }
+.text-center { text-align: center; }
+
+.stat-percent {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #5C6B64;
+  margin-left: 4px;
 }
 
-/* RESPONSIVE LAYOUT */
-@media (max-width: 1024px) {
-  .row-grid-3 { grid-template-columns: 1fr; }
-  .col-span-2 { grid-column: span 1; }
-}
+/* ===================== COLOR UTILITIES ===================== */
+.text-green { color: #116D3E; }
+.text-amber { color: #AC7A2F; }
+.text-dark { color: #0F212F; }
 
+/* ===================== RESPONSIVE ===================== */
 @media (max-width: 640px) {
-  .row-grid-2 { grid-template-columns: 1fr; }
-  .actions-grid { grid-template-columns: 1fr; }
-  .summary-grid.compact { grid-template-columns: 1fr; }
+  .panel { padding: 1.1rem; }
+  .top-header { padding: 0 1.1rem; }
 }
 </style>
