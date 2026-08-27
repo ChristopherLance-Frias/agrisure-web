@@ -95,9 +95,16 @@
               <div class="field field-action">
                 <button class="btn btn-secondary" @click="clearFilters">Clear Filters</button>
               </div>
+              <div class="field field-action">
+                <button class="btn btn-primary" @click="exportActiveTab" :disabled="loading[activeTab]">
+                  <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m-9 6h12a2 2 0 002-2V7a2 2 0 00-2-2h-4l-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Export {{ activeTabLabel }} to Excel
+                </button>
+              </div>
             </div>
           </div>
-
           <!-- Loading / Error States -->
           <div v-if="loading[activeTab]" class="status-card status-loading" aria-live="polite">
             <div class="spinner"></div>
@@ -511,8 +518,791 @@
 <script>
 import axios from 'axios'
 import VueApexCharts from 'vue3-apexcharts'
+import ExcelJS from 'exceljs'
+import Chart from 'chart.js/auto'
 
 const API_BASE = 'https://sanagustinagrisure.com'
+
+// ---------------------------------------------------------------------------
+// THEME — matches your dashboard palette
+// ---------------------------------------------------------------------------
+const THEME = {
+  primary:      'FF2F5D3A', // deep green (brand)
+  primaryDark:  'FF1F3F27',
+  primaryLight: 'FFEAF1EA',
+  accentGold:   'FFC99A2E',
+  accentBlue:   'FF3E7CA6',
+  danger:       'FFB1472E',
+  warning:      'FFC99A2E',
+  headerText:   'FFFFFFFF',
+  bodyText:     'FF1F2937',
+  border:       'FFD9D9D9',
+  bandEven:     'FFF7F9F7',
+  white:        'FFFFFFFF',
+}
+
+const CHART_PALETTE = ['#2F5D3A', '#5B8C5A', '#C99A2E', '#3E7CA6', '#B1472E', '#4E6E81', '#9C6B30', '#7A5C3E']
+
+// ---------------------------------------------------------------------------
+// LOW-LEVEL STYLE HELPERS (module scope — not Vue methods, called with args)
+// ---------------------------------------------------------------------------
+
+/** Style a header row: brand fill, white bold text, freeze + autofilter-ready. */
+function styleHeaderRow(ws, rowIndex = 1) {
+  const row = ws.getRow(rowIndex)
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: THEME.headerText }, size: 11 }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.primary } }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    cell.border = {
+      top: { style: 'thin', color: { argb: THEME.primaryDark } },
+      bottom: { style: 'thin', color: { argb: THEME.primaryDark } },
+    }
+  })
+  row.height = 24
+}
+
+/** Zebra-stripe body rows + hairline borders. */
+function bandRows(ws, startRow = 2, endRow = ws.rowCount) {
+  for (let i = startRow; i <= endRow; i++) {
+    const row = ws.getRow(i)
+    const isEven = (i - startRow) % 2 === 1
+    row.eachCell((cell) => {
+      if (isEven) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.bandEven } }
+      }
+      cell.border = { bottom: { style: 'hair', color: { argb: THEME.border } } }
+      cell.font = { ...(cell.font || {}), color: { argb: THEME.bodyText }, size: 10.5 }
+      if (!cell.alignment) cell.alignment = { vertical: 'middle' }
+    })
+  }
+}
+
+/** Auto-fit column widths based on content length. */
+function autoWidth(ws, { min = 12, max = 42 } = {}) {
+  ws.columns.forEach((col) => {
+    let widest = min
+    col.eachCell({ includeEmpty: true }, (cell) => {
+      const len = cell.value != null ? String(cell.value).length : 0
+      if (len + 3 > widest) widest = len + 3
+    })
+    col.width = Math.min(widest, max)
+  })
+}
+
+/**
+ * Writes a header + data table starting at a given row, with per-column
+ * number formats and optional row-level conditional fill.
+ *
+ * columns: [{ header, key, format?: 'number'|'currency'|'text', width? }]
+ * rowStyler?: (row, rawDataItem) => void   // for conditional highlighting
+ */
+function writeTable(ws, { startRow = 1, columns, data, rowStyler }) {
+  const headerRow = ws.getRow(startRow)
+  columns.forEach((col, i) => { headerRow.getCell(i + 1).value = col.header })
+  styleHeaderRow(ws, startRow)
+
+  const numFmt = { number: '#,##0', currency: '"₱"#,##0.00', text: undefined }
+
+  ;(data || []).forEach((item, rIdx) => {
+    const row = ws.getRow(startRow + 1 + rIdx)
+    columns.forEach((col, cIdx) => {
+      const cell = row.getCell(cIdx + 1)
+      cell.value = item[col.key] ?? ''
+      const fmt = numFmt[col.format]
+      if (fmt) cell.numFmt = fmt
+      cell.alignment = { vertical: 'middle', horizontal: col.format ? 'right' : 'left' }
+    })
+    if (rowStyler) rowStyler(row, item)
+  })
+
+  bandRows(ws, startRow + 1, startRow + (data || []).length)
+  ws.autoFilter = {
+    from: { row: startRow, column: 1 },
+    to: { row: startRow, column: columns.length },
+  }
+  autoWidth(ws)
+  return startRow + (data || []).length // last written row
+}
+
+/**
+ * Normalizes a data source into an array of rows, whether the API sent
+ * an array already (e.g. [{ group: '18-25', total: 12 }]) or a plain
+ * object map (e.g. { '18-25': 12 }). Prevents ".map is not a function"
+ * crashes when a backend endpoint returns one shape instead of the other.
+ */
+function toRows(source, labelKey, valueKey) {
+  if (Array.isArray(source)) return source
+  if (source && typeof source === 'object') {
+    return Object.entries(source).map(([k, v]) => ({ [labelKey]: k, [valueKey]: v }))
+  }
+  return []
+}
+
+/** Adds a red/amber fill to a row's first N cells — for low-stock, denied, etc. */
+function highlightRow(row, colCount, argb) {
+  for (let c = 1; c <= colCount; c++) {
+    row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// COVER / SUMMARY SHEET — KPI "cards" as merged, colored cells
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// COVER / SUMMARY SHEET
+// Clean 2-column × 2-row KPI layout
+// ---------------------------------------------------------------------------
+function buildCoverSheet(wb, { title, subtitle, kpis, barangayLabel, dateStr }) {
+  const ws = wb.addWorksheet('Summary', {
+    views: [{ showGridLines: false }]
+  })
+
+  // Layout:
+  // A = left margin
+  // B-C = KPI 1
+  // D-E = KPI 2
+  // F = right margin
+  ws.columns = [
+    { width: 3 },
+    { width: 22 },
+    { width: 22 },
+    { width: 22 },
+    { width: 22 },
+    { width: 3 },
+  ]
+
+  // ============================================================
+  // REPORT HEADER
+  // ============================================================
+
+  ws.mergeCells('B2:E2')
+
+  const titleCell = ws.getCell('B2')
+  titleCell.value = title
+
+  titleCell.font = {
+    bold: true,
+    size: 18,
+    color: { argb: THEME.primaryDark }
+  }
+
+  titleCell.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(2).height = 26
+
+  // Subtitle
+  ws.mergeCells('B3:E3')
+
+  const subCell = ws.getCell('B3')
+  subCell.value =
+    subtitle || 'Municipal Agriculture Office — Field Records'
+
+  subCell.font = {
+    italic: true,
+    size: 10.5,
+    color: { argb: 'FF6B7280' }
+  }
+
+  subCell.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(3).height = 20
+
+  ws.mergeCells('B4:E4')
+
+  const infoCell = ws.getCell('B4')
+
+  infoCell.value =
+    `Barangay: ${barangayLabel}   |   Generated: ${dateStr}`
+
+  infoCell.font = {
+    size: 10,
+    color: { argb: 'FF6B7280' }
+  }
+
+  infoCell.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(4).height = 20
+
+  // ============================================================
+  // KEY INDICATORS SECTION
+  // ============================================================
+
+  ws.mergeCells('B6:E6')
+
+  const sectionTitle = ws.getCell('B6')
+
+  sectionTitle.value = 'KEY INDICATORS'
+
+  sectionTitle.font = {
+    bold: true,
+    size: 11,
+    color: { argb: THEME.primaryDark }
+  }
+
+  sectionTitle.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(6).height = 22
+
+  const kpiPositions = [
+    {
+      labelRange: 'B8:C8',
+      valueRange: 'B9:C9',
+      startCell: 'B8',
+      valueCell: 'B9'
+    },
+    {
+      labelRange: 'D8:E8',
+      valueRange: 'D9:E9',
+      startCell: 'D8',
+      valueCell: 'D9'
+    },
+    {
+      labelRange: 'B11:C11',
+      valueRange: 'B12:C12',
+      startCell: 'B11',
+      valueCell: 'B12'
+    },
+    {
+      labelRange: 'D11:E11',
+      valueRange: 'D12:E12',
+      startCell: 'D11',
+      valueCell: 'D12'
+    },
+  ]
+
+  kpis.slice(0, 4).forEach((kpi, index) => {
+    const position = kpiPositions[index]
+
+    if (!position) return
+
+    ws.mergeCells(position.labelRange)
+    ws.mergeCells(position.valueRange)
+
+    const labelCell = ws.getCell(position.startCell)
+    const valueCell = ws.getCell(position.valueCell)
+
+    labelCell.value = String(kpi.label || '').toUpperCase()
+
+    labelCell.font = {
+      bold: true,
+      size: 10,
+      color: { argb: THEME.headerText }
+    }
+
+    labelCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: {
+        argb: THEME.primary
+      }
+    }
+
+    labelCell.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+      wrapText: true
+    }
+
+    // ----------------------------------------------------------
+    // Value
+    // ----------------------------------------------------------
+
+    valueCell.value = kpi.value ?? '—'
+
+    valueCell.font = {
+      bold: true,
+      size: 18,
+      color: { argb: THEME.primaryDark }
+    }
+
+    valueCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: {
+        argb: 'FFF4F8F5'
+      }
+    }
+
+    valueCell.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+      wrapText: true
+    }
+
+    // ----------------------------------------------------------
+    // Borders
+    // ----------------------------------------------------------
+
+    const labelStart = ws.getCell(position.startCell)
+    const valueStart = ws.getCell(position.valueCell)
+
+    labelStart.border = {
+      top: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      },
+      left: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      },
+      right: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      }
+      // no bottom border between label and value
+    }
+
+    valueStart.border = {
+      bottom: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      },
+      left: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      },
+      right: {
+        style: 'thin',
+        color: { argb: 'FFD8E5DC' }
+      }
+    }
+  })
+
+  // Row heights
+  ws.getRow(8).height = 22
+  ws.getRow(9).height = 34
+
+  ws.getRow(11).height = 22
+  ws.getRow(12).height = 34
+
+  // ============================================================
+  // REPORT CONTENT
+  // ============================================================
+
+  ws.mergeCells('B15:E15')
+
+  const contentTitle = ws.getCell('B15')
+
+  contentTitle.value = 'REPORT CONTENT'
+
+  contentTitle.font = {
+    bold: true,
+    size: 11,
+    color: { argb: THEME.primaryDark }
+  }
+
+  contentTitle.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(15).height = 22
+
+  const contentItems = [
+    'Farmer demographics',
+    'Farmer distribution by barangay',
+    'Ranked analytical data',
+    'Key analytical insights',
+  ]
+
+  contentItems.forEach((item, index) => {
+    const row = 16 + index
+
+    ws.mergeCells(`B${row}:E${row}`)
+
+    const cell = ws.getCell(`B${row}`)
+
+    cell.value = `•  ${item}`
+
+    cell.font = {
+      size: 10.5,
+      color: { argb: THEME.bodyText }
+    }
+
+    cell.alignment = {
+      vertical: 'middle'
+    }
+
+    ws.getRow(row).height = 19
+  })
+
+  // ============================================================
+  // FOOTER
+  // ============================================================
+
+  ws.mergeCells('B22:E22')
+
+  const footer = ws.getCell('B22')
+
+  footer.value =
+    'Generated from AgriSure Municipal Agriculture Office analytics.'
+
+  footer.font = {
+    italic: true,
+    size: 9,
+    color: { argb: 'FF94A3B8' }
+  }
+
+  footer.alignment = {
+    vertical: 'middle'
+  }
+
+  ws.getRow(22).height = 20
+
+  // ============================================================
+  // PAGE SETUP
+  // ============================================================
+
+  ws.pageSetup = {
+    orientation: 'portrait',
+    paperSize: 9, // A4
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1,
+    margins: {
+      left: 0.3,
+      right: 0.3,
+      top: 0.5,
+      bottom: 0.5,
+      header: 0.2,
+      footer: 0.2,
+    }
+  }
+
+  return ws
+}
+
+// ---------------------------------------------------------------------------
+// ANALYTICS HELPERS
+// ---------------------------------------------------------------------------
+
+/** Adds % of total + rank to a flat [{name/label, total}] array. */
+function withShareAndRank(rows, valueKey) {
+  const list = rows || []
+  const total = list.reduce((sum, r) => sum + (Number(r[valueKey]) || 0), 0)
+  const ranked = [...list]
+    .sort((a, b) => (b[valueKey] || 0) - (a[valueKey] || 0))
+    .map((r, i) => ({ ...r, rank: i + 1 }))
+  return ranked.map((r) => ({
+    ...r,
+    share: total ? `${((r[valueKey] / total) * 100).toFixed(1)}%` : '0.0%',
+  }))
+}
+
+/** Simple insights text block: top performer, biggest MoM swing, concentration. */
+function buildInsights(ws, startRow, lines) {
+  const header = ws.getCell(`A${startRow}`)
+  header.value = 'Key Insights'
+  header.font = { bold: true, size: 12, color: { argb: THEME.primaryDark } }
+  lines.forEach((line, i) => {
+    const cell = ws.getCell(`A${startRow + 1 + i}`)
+    cell.value = `•  ${line}`
+    cell.font = { size: 10.5, color: { argb: THEME.bodyText } }
+  })
+  return startRow + 1 + lines.length
+}
+
+/** Ordered month labels shared by every monthly-trend export. */
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * Normalizes any monthly source (array of {month, value} OR an object map
+ * keyed 1–12) into a full Jan–Dec array, filling gaps with 0 so charts and
+ * MoM tables never skip a month just because the API omitted it.
+ */
+function monthlyRows(source, valueKey = 'total') {
+  const rows = toRows(source, 'month', valueKey)
+  const map = {}
+  rows.forEach((r) => { map[Number(r.month)] = Number(r[valueKey]) || 0 })
+  return MONTH_LABELS.map((monthLabel, i) => ({
+    month: i + 1,
+    monthLabel,
+    [valueKey]: map[i + 1] || 0,
+  }))
+}
+
+/** Month-over-month % change for monthly trend arrays [{month, total|amount}]. */
+function withMoMChange(rows, valueKey) {
+  const list = rows || []
+  return list.map((r, i) => {
+    if (i === 0) return { ...r, momChange: '—' }
+    const prev = Number(list[i - 1][valueKey]) || 0
+    const curr = Number(r[valueKey]) || 0
+    if (prev === 0) return { ...r, momChange: curr > 0 ? '+100.0%' : '0.0%' }
+    const pct = ((curr - prev) / prev) * 100
+    return { ...r, momChange: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` }
+  })
+}
+
+const FONT_FAMILY = '"Segoe UI", Arial, sans-serif'
+
+function renderChartToPNG({
+  type,
+  labels,
+  values,
+  label,
+  colors = CHART_PALETTE,
+  width = 520,
+  height = 300,
+}) {
+  return new Promise((resolve) => {
+    const scale = 2
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
+
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+
+    const ctx = canvas.getContext('2d')
+
+    ctx.scale(scale, scale)
+
+    const isHorizontalBar = type === 'bar'
+
+    const chartConfig = {
+      type,
+      data: {
+        labels,
+        datasets: [
+          {
+            label,
+            data: values,
+
+            backgroundColor:
+              type === 'doughnut'
+                ? colors.slice(0, values.length)
+                : colors[0],
+
+            borderColor:
+              type === 'doughnut'
+                ? '#FFFFFF'
+                : colors[0],
+
+            borderWidth:
+              type === 'doughnut'
+                ? 2
+                : 0,
+
+            borderRadius:
+              type === 'bar'
+                ? 5
+                : 0,
+
+            barThickness:
+              type === 'bar'
+                ? 18
+                : undefined,
+
+            maxBarThickness:
+              type === 'bar'
+                ? 22
+                : undefined,
+
+            hoverOffset:
+              type === 'doughnut'
+                ? 4
+                : 0,
+          },
+        ],
+      },
+
+      options: {
+        responsive: false,
+        animation: false,
+
+        maintainAspectRatio: false,
+
+        layout: {
+          padding: {
+            top: 12,
+            right: 18,
+            bottom: 12,
+            left: 18,
+          },
+        },
+
+        plugins: {
+          legend: {
+            display: type === 'doughnut',
+
+            position: 'bottom',
+
+            labels: {
+              font: {
+                family: FONT_FAMILY,
+                size: 10,
+              },
+
+              padding: 14,
+
+              usePointStyle: true,
+
+              pointStyle: 'circle',
+            },
+          },
+
+          title: {
+            display: true,
+
+            text: label,
+
+            color: '#173B2A',
+
+            font: {
+              family: FONT_FAMILY,
+              size: 14,
+              weight: '600',
+            },
+
+            padding: {
+              top: 4,
+              bottom: 18,
+            },
+          },
+
+          tooltip: {
+            enabled: false,
+          },
+        },
+
+        scales:
+          type === 'doughnut'
+            ? {}
+            : {
+                x: {
+                  beginAtZero: true,
+
+                  grid: {
+                    display: false,
+                    drawBorder: false,
+                  },
+
+                  border: {
+                    display: false,
+                  },
+
+                  ticks: {
+                    font: {
+                      family: FONT_FAMILY,
+                      size: 9,
+                    },
+
+                    color: '#64748B',
+
+                    precision: 0,
+                  },
+                },
+
+                y: {
+                  beginAtZero: true,
+
+                  grid: {
+                    color: '#E5E7EB',
+                    drawBorder: false,
+                  },
+
+                  border: {
+                    display: false,
+                  },
+
+                  ticks: {
+                    font: {
+                      family: FONT_FAMILY,
+                      size: 9,
+                    },
+
+                    color: '#475569',
+
+                    padding: 8,
+                  },
+                },
+              },
+
+        indexAxis:
+          isHorizontalBar
+            ? 'y'
+            : 'x',
+      },
+    }
+
+    const chart = new Chart(ctx, chartConfig)
+
+    requestAnimationFrame(() => {
+      const base64 = canvas.toDataURL('image/png', 1.0)
+
+      chart.destroy()
+
+      resolve(base64)
+    })
+  })
+}
+
+async function embedChart(
+  wb,
+  ws,
+  {
+    anchorCell,
+    type,
+    labels,
+    values,
+    label,
+    width = 520,
+    height = 300,
+    colors = CHART_PALETTE,
+  }
+) {
+  const base64 = await renderChartToPNG({
+    type,
+    labels,
+    values,
+    label,
+    width,
+    height,
+    colors,
+  })
+
+  const imageId = wb.addImage({
+    base64,
+    extension: 'png',
+  })
+
+  ws.addImage(imageId, {
+    tl: {
+      col: anchorCell.col,
+      row: anchorCell.row,
+    },
+
+    ext: {
+      width,
+      height,
+    },
+  })
+}
+
+async function saveWorkbook(wb, filenameBase, barangayLabel) {
+  const dateStr = new Date().toISOString().split('T')[0]
+  const buffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/octet-stream' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filenameBase}_${barangayLabel}_${dateStr}.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 export default {
   name: 'ReportsPage',
@@ -557,7 +1347,6 @@ export default {
       loadedOnce: {},
       debounceHandle: null,
       currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
-      // Harvest-themed data palette: paddy greens, palay gold, soil rust, sky, clay
       palette: ['#2F5D3A', '#C99A2E', '#3E7CA6', '#B1472E', '#7A5C3E', '#5B8C5A', '#9C6B30', '#4E6E81', '#8E3B46', '#6B7166']
     }
   },
@@ -570,7 +1359,11 @@ export default {
     cl() { return this.data.claims },
     dist() { return this.data.distribution },
     inv() { return this.data.inventory },
-    ex() { return this.data.executive }
+    ex() { return this.data.executive },
+    activeTabLabel() {
+      const t = this.tabs.find(t => t.key === this.activeTab)
+      return t ? t.label : ''
+    }
   },
   watch: {
     activeTab(newKey) {
@@ -601,6 +1394,819 @@ export default {
     clearTimeout(this.debounceHandle)
   },
   methods: {
+
+    _barangayLabel() {
+      return this.filters.barangay_id
+        ? (this.barangayOptions.find((b) => b.id === this.filters.barangay_id)?.name || 'AllBarangays')
+        : 'AllBarangays'
+    },
+    _dateStr() {
+      return new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+    },
+
+    async exportOverview() {
+      if (!this.ov) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Overview Report',
+        kpis: this.summaryEntries(this.ov.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      await saveWorkbook(wb, 'Overview_Report', this._barangayLabel())
+    },
+
+async exportFarmers() {
+  if (!this.fa) return
+
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'AgriSure - Municipal Agriculture Office'
+  wb.created = new Date()
+
+  buildCoverSheet(wb, {
+    title: 'Farmers Analytical Report',
+    subtitle: 'Farmer registration, demographics, and barangay distribution',
+    kpis: this.summaryEntries(this.fa.summary),
+    barangayLabel: this._barangayLabel(),
+    dateStr: this._dateStr(),
+  })
+
+  const demographicsWs = wb.addWorksheet('Demographics', {
+    views: [{ showGridLines: false }]
+  })
+
+  demographicsWs.columns = [
+    { width: 24 },
+    { width: 16 },
+    { width: 18 },
+    { width: 12 },
+  ]
+
+  // Title
+  demographicsWs.mergeCells('A1:D1')
+  demographicsWs.getCell('A1').value = 'Farmer Demographics'
+  demographicsWs.getCell('A1').font = {
+    bold: true,
+    size: 16,
+    color: { argb: THEME.primaryDark }
+  }
+
+  demographicsWs.mergeCells('A2:D2')
+  demographicsWs.getCell('A2').value =
+    `Barangay: ${this._barangayLabel()}  |  Year: ${this.filters.year || 'All Years'}`
+
+  demographicsWs.getCell('A2').font = {
+    size: 10,
+    color: { argb: 'FF6B7280' }
+  }
+
+  // ------------------------------------------------------------
+  // Sex Distribution
+  // ------------------------------------------------------------
+
+  demographicsWs.getCell('A4').value = 'Sex Distribution'
+  demographicsWs.getCell('A4').font = {
+    bold: true,
+    size: 12,
+    color: { argb: THEME.primaryDark }
+  }
+
+  const sexRows = withShareAndRank(
+    toRows(this.fa.sex_distribution, 'sex', 'total'),
+    'total'
+  )
+
+  writeTable(demographicsWs, {
+    startRow: 5,
+    columns: [
+      { header: 'Rank', key: 'rank', format: 'number' },
+      { header: 'Sex', key: 'sex' },
+      { header: 'Farmers', key: 'total', format: 'number' },
+      { header: 'Share', key: 'share' },
+    ],
+    data: sexRows,
+  })
+
+  // ------------------------------------------------------------
+  // Civil Status
+  // ------------------------------------------------------------
+
+  const civilStartRow = 10
+
+  demographicsWs.getCell(`A${civilStartRow}`).value = 'Civil Status Distribution'
+  demographicsWs.getCell(`A${civilStartRow}`).font = {
+    bold: true,
+    size: 12,
+    color: { argb: THEME.primaryDark }
+  }
+
+  const civilRows = withShareAndRank(
+    toRows(this.fa.civil_status_distribution, 'civil_status', 'total'),
+    'total'
+  )
+
+  writeTable(demographicsWs, {
+    startRow: civilStartRow + 1,
+    columns: [
+      { header: 'Rank', key: 'rank', format: 'number' },
+      { header: 'Civil Status', key: 'civil_status' },
+      { header: 'Farmers', key: 'total', format: 'number' },
+      { header: 'Share', key: 'share' },
+    ],
+    data: civilRows,
+  })
+
+  // ------------------------------------------------------------
+  // Age Groups
+  // ------------------------------------------------------------
+
+  const ageStartRow = 18
+
+  demographicsWs.getCell(`A${ageStartRow}`).value = 'Age Group Distribution'
+  demographicsWs.getCell(`A${ageStartRow}`).font = {
+    bold: true,
+    size: 12,
+    color: { argb: THEME.primaryDark }
+  }
+
+  const ageRows = withShareAndRank(
+    toRows(this.fa.age_groups, 'group', 'total'),
+    'total'
+  )
+
+  writeTable(demographicsWs, {
+    startRow: ageStartRow + 1,
+    columns: [
+      { header: 'Rank', key: 'rank', format: 'number' },
+      { header: 'Age Group', key: 'group' },
+      { header: 'Farmers', key: 'total', format: 'number' },
+      { header: 'Share', key: 'share' },
+    ],
+    data: ageRows,
+  })
+
+  // ============================================================
+  // 3. BARANGAY ANALYSIS
+  // ============================================================
+
+  const barangayWs = wb.addWorksheet('Barangay Analysis', {
+    views: [{ showGridLines: false }]
+  })
+
+  barangayWs.columns = [
+    { width: 10 },
+    { width: 30 },
+    { width: 24 },
+    { width: 20 },
+  ]
+
+  barangayWs.mergeCells('A1:D1')
+  barangayWs.getCell('A1').value = 'Farmers by Barangay'
+  barangayWs.getCell('A1').font = {
+    bold: true,
+    size: 16,
+    color: { argb: THEME.primaryDark }
+  }
+
+  barangayWs.mergeCells('A2:D2')
+  barangayWs.getCell('A2').value =
+    'Ranked distribution of registered farmers across barangays'
+
+  barangayWs.getCell('A2').font = {
+    size: 10,
+    color: { argb: 'FF6B7280' }
+  }
+
+  const barangayRows = withShareAndRank(
+    toRows(this.fa.farmers_per_barangay, 'name', 'total'),
+    'total'
+  )
+
+  const barangayLastRow = writeTable(barangayWs, {
+    startRow: 4,
+    columns: [
+      { header: 'Rank', key: 'rank', format: 'number' },
+      { header: 'Barangay', key: 'name' },
+      { header: 'Registered Farmers', key: 'total', format: 'number' },
+      { header: 'Municipal Share', key: 'share' },
+    ],
+    data: barangayRows,
+  })
+
+  const topBarangay = barangayRows[0]
+  const secondBarangay = barangayRows[1]
+
+  const topThreeShare = barangayRows
+    .slice(0, 3)
+    .reduce((sum, row) => {
+      return sum + Number(String(row.share).replace('%', '')) || 0
+    }, 0)
+
+  buildInsights(barangayWs, barangayLastRow + 3, [
+    topBarangay
+      ? `${topBarangay.name} has the highest number of registered farmers with ${topBarangay.total} (${topBarangay.share}).`
+      : 'No barangay farmer data available.',
+
+    secondBarangay
+      ? `${secondBarangay.name} ranks second with ${secondBarangay.total} registered farmers.`
+      : 'No second-ranked barangay is available.',
+
+    barangayRows.length
+      ? `The top three barangays account for ${topThreeShare.toFixed(1)}% of the registered farmer population.`
+      : 'No barangay distribution data available.',
+  ])
+
+  // ============================================================
+  // 4. CHARTS
+  // ============================================================
+
+  const chartWs = wb.addWorksheet('Charts', {
+    views: [{ showGridLines: false }]
+  })
+
+  // Make the chart sheet look intentional instead of empty.
+  chartWs.columns = [
+    { width: 4 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 4 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 4 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+  ]
+
+  chartWs.mergeCells('B2:J2')
+  chartWs.getCell('B2').value = 'Farmer Analytics'
+  chartWs.getCell('B2').font = {
+    bold: true,
+    size: 18,
+    color: { argb: THEME.primaryDark }
+  }
+
+  chartWs.mergeCells('B3:J3')
+  chartWs.getCell('B3').value =
+    `Visual summary | ${this._barangayLabel()} | ${this.filters.year || 'All Years'}`
+
+  chartWs.getCell('B3').font = {
+    size: 10,
+    color: { argb: 'FF6B7280' }
+  }
+
+  // ------------------------------------------------------------
+  // Chart 1 — Sex
+  // ------------------------------------------------------------
+
+  await embedChart(wb, chartWs, {
+    anchorCell: { col: 1, row: 5 },
+    type: 'doughnut',
+    labels: sexRows.map(r => r.sex),
+    values: sexRows.map(r => Number(r.total) || 0),
+    label: 'Farmers by Sex',
+    width: 460,
+    height: 290,
+  })
+
+  // ------------------------------------------------------------
+  // Chart 2 — Barangay
+  // ------------------------------------------------------------
+
+  const chartBarangays = barangayRows.slice(0, 10)
+
+  await embedChart(wb, chartWs, {
+    anchorCell: { col: 8, row: 5 },
+    type: 'bar',
+    labels: chartBarangays.map(r => r.name),
+    values: chartBarangays.map(r => Number(r.total) || 0),
+    label: 'Top 10 Barangays by Farmer Count',
+    width: 520,
+    height: 290,
+  })
+
+  // ============================================================
+  // 5. FINAL FORMATTING
+  // ============================================================
+
+  // Keep the chart sheet visually clean.
+  chartWs.getRow(1).height = 8
+  chartWs.getRow(2).height = 26
+  chartWs.getRow(3).height = 20
+
+  // Freeze useful areas.
+  demographicsWs.views = [
+    {
+      state: 'frozen',
+      ySplit: 5,
+      showGridLines: false
+    }
+  ]
+
+  barangayWs.views = [
+    {
+      state: 'frozen',
+      ySplit: 4,
+      showGridLines: false
+    }
+  ]
+
+  // Make the Summary sheet active when the workbook opens.
+  wb.views = [
+    {
+      activeTab: 0,
+      firstSheet: 0
+    }
+  ]
+
+  // ============================================================
+  // 6. SAVE
+  // ============================================================
+
+  await saveWorkbook(
+    wb,
+    'Farmers_Analytical_Report',
+    this._barangayLabel()
+  )
+},
+
+    // -----------------------------------------------------------------------
+    // INVENTORY — conditional formatting for reorder / stockout risk
+    // -----------------------------------------------------------------------
+    async exportInventory() {
+      if (!this.inv) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Inventory Report',
+        kpis: this.summaryEntries(this.inv.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const categoryRows = toRows(this.inv.category_distribution, 'category', 'total_quantity')
+      const mostDistributedRows = toRows(this.inv.most_distributed, 'supply_name', 'distributed')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'doughnut',
+        labels: categoryRows.map((r) => r.category),
+        values: categoryRows.map((r) => r.total_quantity),
+        label: 'Stock by Category',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: mostDistributedRows.map((r) => r.supply_name),
+        values: mostDistributedRows.map((r) => r.distributed),
+        label: 'Most Distributed Items',
+      })
+
+      const ws = wb.addWorksheet('Current Inventory')
+      const lastRow = writeTable(ws, {
+        columns: [
+          { header: 'Supply Item', key: 'supply_name' },
+          { header: 'Category', key: 'category' },
+          { header: 'Available Qty', key: 'quantity', format: 'number' },
+          { header: 'Unit', key: 'unit' },
+          { header: 'Reorder Threshold', key: 'reorder_level', format: 'number' },
+        ],
+        data: Array.isArray(this.inv.current_inventory) ? this.inv.current_inventory : [],
+        rowStyler: (row, item) => {
+          if (Number(item.quantity) <= 0) {
+            highlightRow(row, 5, THEME.danger)
+            row.eachCell((c) => { c.font = { color: { argb: THEME.white }, bold: true } })
+          } else if (Number(item.quantity) <= Number(item.reorder_level)) {
+            highlightRow(row, 5, THEME.warning)
+          }
+        },
+      })
+
+      buildInsights(ws, lastRow + 3, [
+        `${(this.inv.out_of_stock_items || []).length} item(s) are fully depleted and need immediate restock.`,
+        `${(this.inv.low_stock || []).length} item(s) are at or below reorder threshold.`,
+      ])
+
+      await saveWorkbook(wb, 'Inventory_Report', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // FARMS & CROPS
+    // -----------------------------------------------------------------------
+    async exportFarms() {
+      if (!this.fr) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Farms & Crops Report',
+        kpis: this.summaryEntries(this.fr.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const cropRows = toRows(this.fr.crop_distribution, 'crop_type', 'total')
+      const cropAreaRows = toRows(this.fr.crop_area_distribution, 'crop_type', 'total_area')
+      const largestRows = toRows(this.fr.largest_agricultural_barangays, 'name', 'total_area')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'doughnut',
+        labels: cropRows.map((r) => r.crop_type),
+        values: cropRows.map((r) => r.total),
+        label: 'Crop Type Distribution',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: cropAreaRows.map((r) => r.crop_type),
+        values: cropAreaRows.map((r) => r.total_area),
+        label: 'Farm Land Area per Crop (ha)',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'bar',
+        labels: largestRows.map((r) => r.name),
+        values: largestRows.map((r) => r.total_area),
+        label: 'Largest Agricultural Areas (ha)',
+      })
+
+      const dataWs = wb.addWorksheet('Farms per Barangay')
+      const enriched = withShareAndRank(toRows(this.fr.farms_per_barangay, 'name', 'total_farms'), 'total_farms')
+      const lastRow = writeTable(dataWs, {
+        columns: [
+          { header: 'Rank', key: 'rank', format: 'number' },
+          { header: 'Barangay', key: 'name' },
+          { header: 'Total Active Farms', key: 'total_farms', format: 'number' },
+          { header: '% Share of Municipality', key: 'share' },
+        ],
+        data: enriched,
+      })
+
+      const top = enriched[0]
+      buildInsights(dataWs, lastRow + 3, [
+        `${top?.name || '—'} has the most active farms (${top?.total_farms ?? 0}, ${top?.share || '0%'} of the municipal total).`,
+        `${enriched.length} barangay(s) reported active farm data for this period.`,
+      ])
+
+      await saveWorkbook(wb, 'Farms_Report', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // INSURANCE
+    // -----------------------------------------------------------------------
+    async exportInsurance() {
+      if (!this.ins) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Insurance Report',
+        kpis: this.summaryEntries(this.ins.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const statusRows = toRows(this.ins.status_distribution, 'status', 'total')
+      const cropRows = toRows(this.ins.crop_distribution, 'crop_type', 'total')
+      const topRows = toRows(this.ins.top_barangays, 'name', 'total')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'doughnut',
+        labels: statusRows.map((r) => r.status),
+        values: statusRows.map((r) => r.total),
+        label: 'Application Status',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'doughnut',
+        labels: cropRows.map((r) => r.crop_type),
+        values: cropRows.map((r) => r.total),
+        label: 'Insured Crop Breakdown',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'bar',
+        labels: topRows.map((r) => r.name),
+        values: topRows.map((r) => r.total),
+        label: 'Top Barangay Application Volumes',
+      })
+
+      const trendWs = wb.addWorksheet('Monthly Applications')
+      const monthly = withMoMChange(monthlyRows(this.ins.monthly_applications, 'total'), 'total')
+      const lastRow = writeTable(trendWs, {
+        columns: [
+          { header: 'Month', key: 'monthLabel' },
+          { header: 'Applications', key: 'total', format: 'number' },
+          { header: 'MoM Change', key: 'momChange' },
+        ],
+        data: monthly,
+      })
+
+      const peak = [...monthly].sort((a, b) => b.total - a.total)[0]
+      buildInsights(trendWs, lastRow + 3, [
+        `${peak?.monthLabel || '—'} had the highest application volume this period (${peak?.total ?? 0}).`,
+      ])
+
+      await saveWorkbook(wb, 'Insurance_Report', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // DAMAGE REPORTS
+    // -----------------------------------------------------------------------
+    async exportDamageReports() {
+      if (!this.dr) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Damage Reports',
+        kpis: this.summaryEntries(this.dr.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const causeRows = toRows(this.dr.damage_causes, 'damage_cause', 'total')
+      const cropRows = toRows(this.dr.crop_damage, 'crop_type', 'total')
+      const topRows = toRows(this.dr.top_barangays, 'name', 'total_reports')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'doughnut',
+        labels: causeRows.map((r) => r.damage_cause),
+        values: causeRows.map((r) => r.total),
+        label: 'Primary Damage Causes',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: cropRows.map((r) => r.crop_type),
+        values: cropRows.map((r) => r.total),
+        label: 'Rice vs Corn Crop Damage',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'line',
+        labels: MONTH_LABELS,
+        values: monthlyRows(this.dr.monthly_damage, 'total').map((r) => r.total),
+        label: 'Monthly Damage Incident Trend',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 20 },
+        type: 'bar',
+        labels: topRows.map((r) => r.name),
+        values: topRows.map((r) => r.total_reports),
+        label: 'Top Affected Barangays',
+      })
+
+      const dataWs = wb.addWorksheet('Top Barangays')
+      const enriched = withShareAndRank(topRows, 'total_reports')
+      const lastRow = writeTable(dataWs, {
+        columns: [
+          { header: 'Rank', key: 'rank', format: 'number' },
+          { header: 'Barangay', key: 'name' },
+          { header: 'Damage Reports', key: 'total_reports', format: 'number' },
+          { header: '% Share of Reports', key: 'share' },
+        ],
+        data: enriched,
+      })
+
+      const top = enriched[0]
+      buildInsights(dataWs, lastRow + 3, [
+        `${top?.name || '—'} recorded the most damage reports (${top?.total_reports ?? 0}, ${top?.share || '0%'} of the total).`,
+      ])
+
+      await saveWorkbook(wb, 'Damage_Reports', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // CLAIMS
+    // -----------------------------------------------------------------------
+    async exportClaims() {
+      if (!this.cl) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Claims Report',
+        kpis: this.summaryEntries(this.cl.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const statusRows = toRows(this.cl.status_distribution, 'status', 'total')
+      const cropRows = toRows(this.cl.crop_claims, 'crop_type', 'amount')
+      const topRows = toRows(this.cl.top_barangays, 'name', 'total_amount')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'doughnut',
+        labels: statusRows.map((r) => r.status),
+        values: statusRows.map((r) => r.total),
+        label: 'Claim Status Distribution',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: cropRows.map((r) => r.crop_type),
+        values: cropRows.map((r) => r.amount),
+        label: 'Claim Amount by Crop (₱)',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'line',
+        labels: MONTH_LABELS,
+        values: monthlyRows(this.cl.monthly_claims, 'amount').map((r) => r.amount),
+        label: 'Monthly Claim Disbursed Trend (₱)',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 20 },
+        type: 'bar',
+        labels: topRows.map((r) => r.name),
+        values: topRows.map((r) => r.total_amount),
+        label: 'Top Barangays by Claim Amount',
+      })
+
+      const dataWs = wb.addWorksheet('Claims per Barangay')
+      const barangayRows = toRows(this.cl.barangays, 'name', 'total_claims')
+      const lastRow = writeTable(dataWs, {
+        columns: [
+          { header: 'Barangay', key: 'name' },
+          { header: 'Total Claims', key: 'total_claims', format: 'number' },
+          { header: 'Total Amount Disbursed', key: 'total_amount', format: 'currency' },
+        ],
+        data: barangayRows,
+      })
+
+      const topByAmount = [...barangayRows].sort((a, b) => (Number(b.total_amount) || 0) - (Number(a.total_amount) || 0))[0]
+      buildInsights(dataWs, lastRow + 3, [
+        `${topByAmount?.name || '—'} received the highest total claim disbursement.`,
+      ])
+
+      await saveWorkbook(wb, 'Claims_Report', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // DISTRIBUTION
+    // -----------------------------------------------------------------------
+    async exportDistribution() {
+      if (!this.dist) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Distribution Report',
+        kpis: this.summaryEntries(this.dist.summary),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const suppliesRows = toRows(this.dist.supplies, 'supply_name', 'total_quantity')
+      const topRows = toRows(this.dist.top_barangays, 'name', 'total')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'line',
+        labels: MONTH_LABELS,
+        values: monthlyRows(this.dist.monthly_distribution, 'total_events').map((r) => r.total_events),
+        label: 'Monthly Distribution Activity',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: suppliesRows.map((r) => r.supply_name),
+        values: suppliesRows.map((r) => r.total_quantity),
+        label: 'Most Distributed Supplies',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'bar',
+        labels: topRows.map((r) => r.name),
+        values: topRows.map((r) => r.total),
+        label: 'Top Served Barangays',
+      })
+
+      const dataWs = wb.addWorksheet('Beneficiaries')
+      const enriched = withShareAndRank(toRows(this.dist.beneficiaries, 'name', 'total'), 'total')
+      const lastRow = writeTable(dataWs, {
+        columns: [
+          { header: 'Rank', key: 'rank', format: 'number' },
+          { header: 'Barangay', key: 'name' },
+          { header: 'Beneficiaries Count', key: 'total', format: 'number' },
+          { header: '% Share', key: 'share' },
+        ],
+        data: enriched,
+      })
+
+      const top = enriched[0]
+      buildInsights(dataWs, lastRow + 3, [
+        `${top?.name || '—'} has the most beneficiaries served (${top?.total ?? 0}, ${top?.share || '0%'} of the total).`,
+      ])
+
+      await saveWorkbook(wb, 'Distribution_Report', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // EXECUTIVE INSIGHTS
+    // -----------------------------------------------------------------------
+    async exportExecutive() {
+      if (!this.ex) return
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'MAO Field Records'
+
+      buildCoverSheet(wb, {
+        title: 'Executive Insights',
+        subtitle: 'Cross-program summary for municipal leadership',
+        kpis: this.summaryEntries(this.ex.kpis),
+        barangayLabel: this._barangayLabel(),
+        dateStr: this._dateStr(),
+      })
+
+      const farmerRows = toRows(this.ex.top_barangays_by_farmers, 'name', 'total')
+      const damageRows = toRows(this.ex.top_damage_barangays, 'name', 'total')
+      const claimRows = toRows(this.ex.top_claim_barangays, 'name', 'amount')
+
+      const chartWs = wb.addWorksheet('Charts')
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 1 },
+        type: 'bar',
+        labels: farmerRows.map((r) => r.name),
+        values: farmerRows.map((r) => r.total),
+        label: 'Top Farmers Concentration',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 10, row: 1 },
+        type: 'bar',
+        labels: damageRows.map((r) => r.name),
+        values: damageRows.map((r) => r.total),
+        label: 'Highest Damage Reports',
+      })
+      await embedChart(wb, chartWs, {
+        anchorCell: { col: 0, row: 20 },
+        type: 'bar',
+        labels: claimRows.map((r) => r.name),
+        values: claimRows.map((r) => r.amount),
+        label: 'Highest Insurance Claims (₱)',
+      })
+
+      const ws = wb.addWorksheet('Critical Low Stock')
+      const lowStockRows = toRows(this.ex.low_stock_supplies, 'supply_name', 'quantity')
+      const lastRow = writeTable(ws, {
+        columns: [
+          { header: 'Supply Item', key: 'supply_name' },
+          { header: 'Available Qty', key: 'quantity', format: 'number' },
+          { header: 'Unit', key: 'unit' },
+          { header: 'Reorder Threshold', key: 'reorder_level', format: 'number' },
+        ],
+        data: Array.isArray(this.ex.low_stock_supplies) ? this.ex.low_stock_supplies : [],
+        rowStyler: (row) => highlightRow(row, 4, THEME.warning),
+      })
+
+      buildInsights(ws, lastRow + 3, [
+        `${lowStockRows.length} supply item(s) currently sit at or below reorder threshold municipality-wide.`,
+      ])
+
+      await saveWorkbook(wb, 'Executive_Insights', this._barangayLabel())
+    },
+
+    // -----------------------------------------------------------------------
+    // Router
+    // -----------------------------------------------------------------------
+    exportActiveTab() {
+      const exporters = {
+        overview: this.exportOverview,
+        farmers: this.exportFarmers,
+        farms: this.exportFarms,
+        insurance: this.exportInsurance,
+        damageReports: this.exportDamageReports,
+        claims: this.exportClaims,
+        distribution: this.exportDistribution,
+        inventory: this.exportInventory,
+        executive: this.exportExecutive,
+      }
+      const fn = exporters[this.activeTab]
+      if (fn) fn.call(this)
+    },
+
+    // -----------------------------------------------------------------------
+    // Data fetching / auth
+    // -----------------------------------------------------------------------
     authHeaders() {
       const token = localStorage.getItem('mao_token') || localStorage.getItem('token')
       return {
@@ -685,7 +2291,7 @@ export default {
       return Object.entries(obj || {}).map(([k, v]) => ({ [labelKey]: k, [valueKey]: v }))
     },
 
-    /* ApexCharts Generator Options */
+    /* ApexCharts Generator Options (unchanged — still used for the on-screen dashboard) */
     donutOptions(rows = [], labelKey) {
       const labels = (rows || []).map(r => r[labelKey] ?? 'Unspecified')
       return {
