@@ -213,8 +213,9 @@
           </div>
         </div>
 
-        <!-- WEATHER ROW (Expanded) -->
-        <div class="row-grid-full">
+        <!-- WEATHER & ACTIONS -->
+        <div class="row-grid-3">
+          <!-- Weather Widget -->
           <div class="weather-card" :class="`is-${skyState}`">
             <div class="weather-scene" aria-hidden="true">
               <div class="sun-disc"></div>
@@ -236,7 +237,7 @@
                 <div>
                   <span class="weather-subtitle">Agro-Weather Forecast</span>
                   <h3 class="weather-temp">
-                    <template v-if="!weatherLoading && !weatherError">{{ weather.temp }}&deg;C</template>
+                    <template v-if="!weatherLoading && !weatherError">{{ weather.temp }}</template>
                     <template v-else-if="weatherLoading">--&deg;C</template>
                     <template v-else>N/A</template>
                   </h3>
@@ -249,7 +250,7 @@
                 </div>
               </div>
               <p class="weather-condition">
-                {{ weatherLoading ? 'Loading weather...' : (weatherError ? 'Unable to load weather forecast' : weather.condition) }}
+                {{ weatherLoading ? 'Loading...' : (weatherError ? 'Unable to load weather' : weather.condition) }}
               </p>
             </div>
 
@@ -272,6 +273,24 @@
             </div>
 
             <button v-if="weatherError" class="weather-retry-btn" @click="fetchWeather">Retry</button>
+          </div>
+
+          <!-- Barangay Actions -->
+          <div class="panel col-span-2">
+            <div class="panel-header">
+              <div>
+                <h2>Barangay Actions</h2>
+                <p>Quick tasks and management shortcuts</p>
+              </div>
+            </div>
+            <div class="actions-grid">
+              <button class="btn-primary">
+                <i class="fa-solid fa-user-check"></i> Verify Barangay Farmer
+              </button>
+              <button class="btn-outline">
+                <i class="fa-solid fa-clipboard-list icon-green"></i> View Distribution Schedule
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -392,7 +411,7 @@ async function fetchDistributionStats() {
 }
 
 /* ------------------------------------------------------------------ *
- * Weather State & Working Fetch Logic (Open-Meteo Integration)
+ * Weather State
  * ------------------------------------------------------------------ */
 const weather = reactive({
   temp: '--',
@@ -423,38 +442,12 @@ function formatUpdatedAt(ts) {
   return `${Math.round(diffMin / 60)}h ago`
 }
 
-// Maps WMO Weather Interpretation Codes to conditions and FontAwesome icons
-function parseWmoCode(code) {
-  if (code === 0) return { condition: 'Clear Sky', icon: 'fa-solid fa-sun' }
-  if (code >= 1 && code <= 3) return { condition: 'Partly Cloudy', icon: 'fa-solid fa-cloud-sun' }
-  if (code >= 45 && code <= 48) return { condition: 'Foggy / Misty', icon: 'fa-solid fa-smog' }
-  if (code >= 51 && code <= 67) return { condition: 'Light / Moderate Rain', icon: 'fa-solid fa-cloud-rain' }
-  if (code >= 80 && code <= 82) return { condition: 'Heavy Rain Showers', icon: 'fa-solid fa-cloud-showers-heavy' }
-  if (code >= 95) return { condition: 'Thunderstorm', icon: 'fa-solid fa-cloud-bolt' }
-  return { condition: 'Cloudy', icon: 'fa-solid fa-cloud' }
-}
-
-async function fetchWeather(lat = 16.73, lon = 121.70) { // Default coordinates (Echague, Isabela)
+async function fetchWeather() {
   weatherLoading.value = true
   weatherError.value = false
   try {
-    const res = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=precipitation_probability&forecast_days=1`
-    )
-
-    const current = res.data.current
-    const hourly = res.data.hourly
-    const parsed = parseWmoCode(current.weather_code)
-
-    weather.temp = Math.round(current.temperature_2m)
-    weather.condition = parsed.condition
-    weather.icon = parsed.icon
-    weather.humidity = `${current.relative_humidity_2m}%`
-    weather.wind = `${Math.round(current.wind_speed_10m)} km/h`
-    weather.rainChance = hourly?.precipitation_probability?.[0] ? `${hourly.precipitation_probability[0]}%` : '0%'
-    weather.updatedAt = new Date().toISOString()
+    // API Call placeholder
   } catch (e) {
-    console.error('Weather Fetch Error:', e)
     weatherError.value = true
   } finally {
     weatherLoading.value = false
@@ -673,11 +666,7 @@ onMounted(async () => {
   gap: 1rem;
 }
 
-.row-grid-full {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
+.col-span-2 { grid-column: span 2; }
 
 .panel {
   background: #FFFFFF;
@@ -803,13 +792,53 @@ onMounted(async () => {
 
 .supply-breakdown-item strong {
   color: #116D3E;
+
 }
 
 /* COLOR UTILITIES */
 .text-green { color: #116D3E; }
 .text-amber { color: #AC7A2F; }
 .text-dark { color: #0F212F; }
+.icon-green { color: #116D3E; }
 .text-center { text-align: center; }
+
+/* BUTTONS */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.btn-primary, .btn-outline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #116D3E, #0A5232);
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 4px 12px rgba(17, 109, 62, 0.2);
+}
+
+.btn-outline {
+  background: #FFFFFF;
+  color: #0F212F;
+  border: 1px solid #E0EAE3;
+}
+
+.btn-outline:hover {
+  border-color: #116D3E;
+  background: #F1F6F2;
+}
 
 /* WEATHER CARD */
 .weather-card {
@@ -904,10 +933,12 @@ onMounted(async () => {
 /* RESPONSIVE LAYOUT */
 @media (max-width: 1024px) {
   .row-grid-3 { grid-template-columns: 1fr; }
+  .col-span-2 { grid-column: span 1; }
 }
 
 @media (max-width: 640px) {
   .row-grid-2 { grid-template-columns: 1fr; }
+  .actions-grid { grid-template-columns: 1fr; }
   .summary-grid.compact { grid-template-columns: 1fr; }
 }
 </style>

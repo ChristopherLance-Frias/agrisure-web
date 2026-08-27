@@ -108,6 +108,14 @@
               </svg>
               {{ farmer.phone_number }}
             </span>
+            <span v-if="farmsCount(farmer) > 0" class="farm-summary-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h18v18H3z" opacity="0"/>
+                <path d="M4 21V9l8-6 8 6v12"/>
+                <path d="M9 21v-8h6v8"/>
+              </svg>
+              {{ farmsCount(farmer) }} farm{{ farmsCount(farmer) === 1 ? '' : 's' }} &middot; {{ formatHectares(totalHectares(farmer)) }} ha
+            </span>
             <span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -173,25 +181,29 @@
               <span class="detail-label">Phone Number</span>
               <span class="detail-value">{{ detail.farmer?.phone_number || '—' }}</span>
             </div>
-            <div class="detail-field" v-if="detail.farmer?.barangay">
-              <span class="detail-label">Barangay</span>
-              <span class="detail-value">{{ detail.farmer?.barangay }}</span>
-            </div>
-            <div class="detail-field" v-if="detail.farmer?.address">
+            <div class="detail-field" v-if="detail.farmer?.farmer_profile?.address">
               <span class="detail-label">Address</span>
-              <span class="detail-value">{{ detail.farmer?.address }}</span>
+              <span class="detail-value">{{ detail.farmer?.farmer_profile?.address }}</span>
             </div>
-            <div class="detail-field" v-if="detail.farmer?.rsbsa_reference">
+            <div class="detail-field" v-if="barangayName(detail.farmer?.barangay_id)">
+              <span class="detail-label">Barangay</span>
+              <span class="detail-value">{{ barangayName(detail.farmer?.barangay_id) }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.farmer_profile?.birthdate">
+              <span class="detail-label">Birthdate</span>
+              <span class="detail-value">{{ formatDate(detail.farmer?.farmer_profile?.birthdate) }}</span>
+            </div>
+            <div class="detail-field" v-if="detail.farmer?.farmer_profile?.rsbsa_reference">
               <span class="detail-label">RSBSA Number</span>
-              <span class="detail-value">{{ detail.farmer?.rsbsa_reference }}</span>
+              <span class="detail-value">{{ detail.farmer?.farmer_profile?.rsbsa_reference }}</span>
             </div>
-            <div class="detail-field" v-if="detail.farmer?.farm_size">
-              <span class="detail-label">Farm Size</span>
-              <span class="detail-value">{{ detail.farmer?.farm_size }} ha</span>
+            <div class="detail-field">
+              <span class="detail-label">Number of Farms</span>
+              <span class="detail-value">{{ farmsCount(detail.farmer) }}</span>
             </div>
-            <div class="detail-field" v-if="detail.farmer?.crop_type">
-              <span class="detail-label">Primary Crop</span>
-              <span class="detail-value">{{ detail.farmer?.crop_type }}</span>
+            <div class="detail-field">
+              <span class="detail-label">Total Farm Area</span>
+              <span class="detail-value">{{ formatHectares(totalHectares(detail.farmer)) }} ha</span>
             </div>
             <div class="detail-field">
               <span class="detail-label">Registered</span>
@@ -199,9 +211,39 @@
             </div>
           </div>
 
-          <div v-if="detail.farmer?.remarks" class="detail-remarks">
+          <!-- Farm parcels breakdown -->
+          <div v-if="detail.farmsLoading" class="detail-farms">
+            <span class="detail-label">Farm Parcels</span>
+            <p class="farms-loading">Loading farm parcels…</p>
+          </div>
+          <div v-else-if="farmsCount(detail.farmer) > 0" class="detail-farms">
+            <span class="detail-label">Farm Parcels</span>
+            <div class="farm-list">
+              <div v-for="(farm, idx) in farmerFarms(detail.farmer)" :key="farm.id ?? idx" class="farm-item">
+                <div class="farm-item-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 21V9l8-6 8 6v12"/>
+                    <path d="M9 21v-8h6v8"/>
+                  </svg>
+                </div>
+                <div class="farm-item-info">
+                  <p class="farm-item-name">
+                    {{ farm.farm_name || ('Farm ' + (idx + 1)) }}
+                    <span v-if="farm.crop_type" class="farm-item-crop">{{ farm.crop_type }}</span>
+                  </p>
+                  <p class="farm-item-meta">
+                    <span v-if="farm.insurance_status">Insurance: {{ farm.insurance_status }}</span>
+                    <span v-if="farm.latitude && farm.longitude"> &middot; {{ farm.latitude }}, {{ farm.longitude }}</span>
+                  </p>
+                </div>
+                <div class="farm-item-hectares">{{ formatHectares(farm.farm_area) }} ha</div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="detail.farmer?.farmer_profile?.remarks || detail.farmer?.remarks" class="detail-remarks">
             <span class="detail-label">Remarks</span>
-            <p>{{ detail.farmer?.remarks }}</p>
+            <p>{{ detail.farmer?.farmer_profile?.remarks || detail.farmer?.remarks }}</p>
           </div>
         </div>
 
@@ -297,6 +339,7 @@ export default {
     return {
       activeTab: 'pending',
       farmers: [],
+      barangays: [],
       counts: { pending: 0, verified: 0, rejected: 0 },
       isLoading: false,
       fetchError: '',
@@ -320,6 +363,7 @@ export default {
       detail: {
         show: false,
         farmer: null,
+        farmsLoading: false,
       },
 
       currentUser: { name: 'Christopher', role: 'MAO Officer', initials: 'CP' },
@@ -329,12 +373,13 @@ export default {
   mounted() {
     this.fetchFarmers()
     this.fetchCounts()
+    this.fetchBarangays()
   },
 
   methods: {
     authHeaders() {
       const token = localStorage.getItem('mao_token')
-      return { Authorization: `Bearer ${token}` }
+      return { Authorization: 'Bearer ' + token }
     },
 
     async fetchFarmers() {
@@ -342,7 +387,7 @@ export default {
       this.fetchError = ''
       this.farmers = []
       try {
-        const res = await axios.get(`${API_BASE}/api/farmers/${this.activeTab}`, {
+        const res = await axios.get(API_BASE + '/api/farmers/' + this.activeTab, {
           headers: this.authHeaders(),
         })
         this.farmers = res.data.data ?? res.data
@@ -356,9 +401,9 @@ export default {
     async fetchCounts() {
       try {
         const [p, v, r] = await Promise.all([
-          axios.get(`${API_BASE}/api/farmers/pending`,  { headers: this.authHeaders() }),
-          axios.get(`${API_BASE}/api/farmers/verified`, { headers: this.authHeaders() }),
-          axios.get(`${API_BASE}/api/farmers/rejected`, { headers: this.authHeaders() }),
+          axios.get(API_BASE + '/api/farmers/pending',  { headers: this.authHeaders() }),
+          axios.get(API_BASE + '/api/farmers/verified', { headers: this.authHeaders() }),
+          axios.get(API_BASE + '/api/farmers/rejected', { headers: this.authHeaders() }),
         ])
         const len = res => (res.data.data ?? res.data).length
         this.counts = { pending: len(p), verified: len(v), rejected: len(r) }
@@ -370,6 +415,22 @@ export default {
       this.fetchFarmers()
     },
 
+    // Barangay id -> name lookup, since the farmer record only carries barangay_id.
+    async fetchBarangays() {
+      try {
+        const res = await axios.get(API_BASE + '/api/barangays/list', {
+          headers: this.authHeaders(),
+        })
+        this.barangays = res.data.data ?? res.data
+      } catch (_) { /* barangay names are non-critical */ }
+    },
+
+    barangayName(barangayId) {
+      if (!barangayId) return ''
+      const match = this.barangays.find(b => b.id === barangayId)
+      return match ? (match.name ?? match.barangay_name ?? '') : ''
+    },
+
     initials(farmer) {
       return `${farmer.first_name?.[0] ?? ''}${farmer.last_name?.[0] ?? ''}`.toUpperCase()
     },
@@ -377,6 +438,28 @@ export default {
     formatDate(d) {
       if (!d) return '—'
       return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+    },
+
+    // Farm parcels belonging to a given farmer, embedded on
+    // farmer.farmer_profile.farms (see BarangayFarmerController).
+    farmerFarms(farmer) {
+      return farmer?.farmer_profile?.farms || []
+    },
+
+    // Number of farm parcels linked to a farmer.
+    farmsCount(farmer) {
+      return this.farmerFarms(farmer).length
+    },
+
+    // Sum of hectares across all of a farmer's farm parcels.
+    totalHectares(farmer) {
+      return this.farmerFarms(farmer).reduce((sum, farm) => sum + Number(farm.farm_area || 0), 0)
+    },
+
+    // Trim trailing zeros so "2.00" reads as "2" but "1.50" reads as "1.5".
+    formatHectares(value) {
+      const num = Number(value) || 0
+      return num % 1 === 0 ? String(num) : num.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
     },
 
     openModal(farmer, action) {
@@ -408,8 +491,8 @@ export default {
       this.modal.error = ''
 
       const endpoint = action === 'approve'
-        ? `${API_BASE}/api/farmers/${farmer.id}/verify`
-        : `${API_BASE}/api/farmers/${farmer.id}/reject`
+        ? API_BASE + '/api/farmers/' + farmer.id + '/verify'
+        : API_BASE + '/api/farmers/' + farmer.id + '/reject'
 
       try {
         const payload = action === 'approve'
@@ -436,6 +519,29 @@ export default {
     openDetail(farmer) {
       this.detail.farmer = farmer
       this.detail.show = true
+
+      // The pending/verified/rejected endpoints don't currently eager-load
+      // farms the way the barangay endpoint does, so fall back to fetching
+      // them directly when they're missing. Remove this once the backend
+      // eager-loads farmer_profile.farms on those endpoints too.
+      if (this.farmerFarms(farmer).length === 0 && farmer.id) {
+        this.fetchFarmerFarms(farmer)
+      }
+    },
+
+    async fetchFarmerFarms(farmer) {
+      this.detail.farmsLoading = true
+      try {
+        const res = await axios.get(API_BASE + '/api/farms/' + farmer.id, {
+          headers: this.authHeaders(),
+        })
+        const farms = res.data.data ?? res.data
+        if (!farmer.farmer_profile) farmer.farmer_profile = {}
+        farmer.farmer_profile.farms = farms
+      } catch (_) { /* leave farms empty, non-critical */ }
+      finally {
+        this.detail.farmsLoading = false
+      }
     },
 
     closeDetail() {
@@ -714,6 +820,11 @@ export default {
   color: #5c6b64;
 }
 
+.farm-summary-pill {
+  color: #116D3E !important;
+  font-weight: 600;
+}
+
 .status-badge {
   font-size: 0.7rem;
   font-weight: 700;
@@ -725,7 +836,7 @@ export default {
 }
 
 .status-pending   { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
-.status-approved  { background: rgba(17, 109, 62, 0.1);   color: #116D3E; }
+.status-verified  { background: rgba(17, 109, 62, 0.1);   color: #116D3E; }
 .status-rejected  { background: rgba(193, 71, 61, 0.1);   color: #C1473D; }
 .status-suspended { background: rgba(107, 91, 149, 0.1);  color: #6B5B95; }
 
@@ -957,6 +1068,83 @@ export default {
   font-weight: 600;
   color: #0F212F;
   word-break: break-word;
+}
+
+/* FARM PARCELS */
+.detail-farms {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #EAF1EC;
+}
+
+.farm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.farms-loading {
+  font-size: 0.8rem;
+  color: #8a9791;
+  margin-top: 8px;
+}
+
+.farm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F8FAF8;
+  border: 1px solid #EAF1EC;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+}
+
+.farm-item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(17, 109, 62, 0.1);
+  color: #116D3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.farm-item-info { flex: 1; min-width: 0; }
+
+.farm-item-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0F212F;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.farm-item-crop {
+  font-size: 0.66rem;
+  font-weight: 700;
+  background: rgba(210, 149, 57, 0.16);
+  color: #AC7A2F;
+  padding: 1px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.farm-item-meta {
+  font-size: 0.74rem;
+  color: #8a9791;
+  margin-top: 2px;
+}
+
+.farm-item-hectares {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #116D3E;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .detail-remarks {

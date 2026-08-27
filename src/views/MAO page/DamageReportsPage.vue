@@ -1,5 +1,5 @@
 <template>
-  <div class =layout>
+  <div class="layout">
     <div class="main-wrapper">
       <!-- Page header -->
       <header class="top-header">
@@ -50,7 +50,7 @@
         </div>
       </header>
       
-      <main class =body>
+      <main class="body">
         <!-- Metrics -->
         <div class="metrics-grid">
           <div class="metric-card">
@@ -561,10 +561,31 @@ export default {
       });
     },
 
+    /**
+     * FIX: Previously this just returned `this.reports` or `this.historyReports`
+     * wholesale — `historyReports` is every non-current-season report combined,
+     * with no further narrowing to the single previous season chosen in the
+     * dropdown. Only the table (`filtered`) applied that extra narrowing, so
+     * everything else derived from `activeReports` — the 5 metric cards,
+     * the status-tab counts, and the Cause filter options — stayed identical
+     * no matter which previous season you picked. Now the season-specific
+     * narrowing happens here, once, so every computed value built on top of
+     * `activeReports` is consistent with the selected season.
+     */
     activeReports() {
-      return this.activeSeasonView === 'current'
-        ? this.reports
-        : this.historyReports
+      const base = this.activeSeasonView === 'current' ? this.reports : this.historyReports
+
+      if (this.activeSeasonView === 'history' && this.historySeasonId) {
+        const targetId = String(this.historySeasonId)
+        return base.filter((report) => {
+          const appSeasonId = report.insurance_application?.insurance_season_id
+                            ?? report.insurance_season_id
+                            ?? null
+          return appSeasonId !== null && String(appSeasonId) === targetId
+        })
+      }
+
+      return base
     },
 
     canBulkAct() {
@@ -585,6 +606,8 @@ export default {
     },
 
     filtered() {
+      // Season scoping now happens in `activeReports`, so this only needs
+      // to apply the search/cause/status/suspicious filters on top of it.
       return this.activeReports.filter((report) => {
         const name = this.farmerName(report).toLowerCase()
 
@@ -602,14 +625,7 @@ export default {
           !this.suspiciousOnly ||
           report.is_suspicious
 
-        const appSeasonId = report.insurance_application?.insurance_season_id || null;
-
-        const matchSeason =
-          this.activeSeasonView === 'current' ||
-          !this.historySeasonId ||
-          appSeasonId == this.historySeasonId
-
-        return matchName && matchCause && matchStatus && matchSuspicious && matchSeason
+        return matchName && matchCause && matchStatus && matchSuspicious
       })
     },
 

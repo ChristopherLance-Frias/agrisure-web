@@ -839,7 +839,7 @@
                   <td class="text-center signature-cell">
                     <img
                       v-if="app?.signature_path"
-                      :src="assetUrl(app.signature_path)"
+                      :src="signatureDataUrls[app.signature_path] || assetUrl(app.signature_path)"
                       alt="Signature"
                       class="pdf-signature-img"
                     />
@@ -914,6 +914,15 @@ export default {
       isGeneratingPdf: false,
       pcicBatchList: [],
       currentSeason: null,
+
+      // Maps a raw signature_path -> preloaded base64 data URI, populated by
+      // preloadSignatureImages() just before PDF generation. html2canvas
+      // (used by html2pdf) needs to read image pixel data cross-origin to
+      // draw it into the PDF canvas; the live CDN in front of the API
+      // strips/withholds CORS headers on image responses, so fetching
+      // signatures as base64 JSON instead (which passes through the same
+      // CORS pipeline as the rest of the API) sidesteps that entirely.
+      signatureDataUrls: {},
 
       showSeasonModal: false,
       seasonModalError: '',
@@ -1456,18 +1465,60 @@ export default {
       }
     },
 
-    downloadSelectedPcicBatch() {
+    // Fetches every unique signature image used in this batch as a base64
+    // data URI, ahead of PDF generation. This exists because the live CDN
+    // sitting in front of the API strips CORS headers on plain image
+    // responses, which blocks html2canvas from reading the pixels needed
+    // to draw the signature into the PDF (the image still displays fine as
+    // a normal <img> on the page — CORS only matters for canvas reads).
+    // Routing the same bytes through a JSON endpoint sidesteps that, since
+    // JSON API responses already pass CORS correctly here.
+async preloadSignatureImages(apps) {
+  const uniquePaths = Array.from(
+    new Set(apps.map((a) => a.signature_path).filter(Boolean))
+  );
+
+  const results = await Promise.allSettled(
+    uniquePaths.map(async (path) => {
+      const filename = path.split('/').pop();
+      // Ensure it hits the /api/ route
+      const res = await axios.get(`/api/storage/signatures/${filename}`);
+      return { path, dataUrl: res.data.data };
+    })
+  );
+
+  const map = {};
+  results.forEach((r) => {
+    if (r.status === 'fulfilled') {
+      map[r.value.path] = r.value.dataUrl;
+    } else {
+      console.error('Failed to preload signature image:', r.reason);
+    }
+  });
+
+  this.signatureDataUrls = map;
+},
+    async downloadSelectedPcicBatch() {
       if (this.selectedPcicReady.length === 0) {
         alert('Select applications with "To be submitted to PCIC" status only.')
         return
       }
       this.pcicBatchList = this.selectedPcicReady
+
+      this.isGeneratingPdf = true
+      try {
+        await this.preloadSignatureImages(this.pcicBatchList)
+      } catch (err) {
+        console.error('Failed to preload signature images', err)
+      }
+
       this.generatePDF('PCIC_Selected_Batch.pdf')
     },
 
     async generatePDF(filename) {
       if (!this.pcicBatchList || this.pcicBatchList.length === 0) {
         alert('No applications found to export.')
+        this.isGeneratingPdf = false
         return
       }
 

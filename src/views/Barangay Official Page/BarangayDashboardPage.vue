@@ -213,9 +213,8 @@
           </div>
         </div>
 
-        <!-- WEATHER & ACTIONS -->
-        <div class="row-grid-3">
-          <!-- Weather Widget -->
+        <!-- WEATHER -->
+        <div class="row-grid-weather">
           <div class="weather-card" :class="`is-${skyState}`">
             <div class="weather-scene" aria-hidden="true">
               <div class="sun-disc"></div>
@@ -272,25 +271,7 @@
               </div>
             </div>
 
-            <button v-if="weatherError" class="weather-retry-btn" @click="fetchWeather">Retry</button>
-          </div>
-
-          <!-- Barangay Actions -->
-          <div class="panel col-span-2">
-            <div class="panel-header">
-              <div>
-                <h2>Barangay Actions</h2>
-                <p>Quick tasks and management shortcuts</p>
-              </div>
-            </div>
-            <div class="actions-grid">
-              <button class="btn-primary">
-                <i class="fa-solid fa-user-check"></i> Verify Barangay Farmer
-              </button>
-              <button class="btn-outline">
-                <i class="fa-solid fa-clipboard-list icon-green"></i> View Distribution Schedule
-              </button>
-            </div>
+            <button v-if="weatherError" class="weather-retry-btn" @click="fetchWeather(lastCoords.lat, lastCoords.lon)">Retry</button>
           </div>
         </div>
       </main>
@@ -412,7 +393,10 @@ async function fetchDistributionStats() {
 
 /* ------------------------------------------------------------------ *
  * Weather State
- * ------------------------------------------------------------------ */
+ * ------------------------------------------------------------------ *
+ * Uses Open-Meteo (https://open-meteo.com) — free, no API key needed.
+ * Falls back to Manila's coordinates if the barangay has none stored.
+ */
 const weather = reactive({
   temp: '--',
   condition: '',
@@ -424,11 +408,12 @@ const weather = reactive({
 })
 const weatherLoading = ref(false)
 const weatherError = ref(false)
+const lastCoords = reactive({ lat: 14.5995, lon: 120.9842 }) // Manila fallback
 
 const skyState = computed(() => {
   const c = (weather.condition || '').toLowerCase()
-  if (c.includes('storm')) return 'storm'
-  if (c.includes('rain')) return 'rain'
+  if (c.includes('storm') || c.includes('thunder')) return 'storm'
+  if (c.includes('rain') || c.includes('drizzle')) return 'rain'
   if (c.includes('fog') || c.includes('mist')) return 'fog'
   if (c.includes('overcast') || c.includes('cloud')) return 'overcast'
   return 'clear'
@@ -442,12 +427,60 @@ function formatUpdatedAt(ts) {
   return `${Math.round(diffMin / 60)}h ago`
 }
 
-async function fetchWeather() {
+// WMO weather codes -> condition label + FontAwesome icon
+function mapWeatherCode(code) {
+  const table = {
+    0: ['Clear sky', 'fa-solid fa-sun'],
+    1: ['Mainly clear', 'fa-solid fa-sun'],
+    2: ['Partly cloudy', 'fa-solid fa-cloud-sun'],
+    3: ['Overcast', 'fa-solid fa-cloud'],
+    45: ['Fog', 'fa-solid fa-smog'],
+    48: ['Depositing rime fog', 'fa-solid fa-smog'],
+    51: ['Light drizzle', 'fa-solid fa-cloud-rain'],
+    53: ['Moderate drizzle', 'fa-solid fa-cloud-rain'],
+    55: ['Dense drizzle', 'fa-solid fa-cloud-rain'],
+    61: ['Slight rain', 'fa-solid fa-cloud-rain'],
+    63: ['Moderate rain', 'fa-solid fa-cloud-showers-heavy'],
+    65: ['Heavy rain', 'fa-solid fa-cloud-showers-heavy'],
+    80: ['Rain showers', 'fa-solid fa-cloud-showers-heavy'],
+    81: ['Moderate rain showers', 'fa-solid fa-cloud-showers-heavy'],
+    82: ['Violent rain showers', 'fa-solid fa-cloud-showers-heavy'],
+    95: ['Thunderstorm', 'fa-solid fa-cloud-bolt'],
+    96: ['Thunderstorm with hail', 'fa-solid fa-cloud-bolt'],
+    99: ['Severe thunderstorm with hail', 'fa-solid fa-cloud-bolt'],
+  }
+  return table[code] ? { condition: table[code][0], icon: table[code][1] } : { condition: 'Unknown', icon: 'fa-solid fa-cloud' }
+}
+
+async function fetchWeather(lat = lastCoords.lat, lon = lastCoords.lon) {
+  lastCoords.lat = lat
+  lastCoords.lon = lon
   weatherLoading.value = true
   weatherError.value = false
   try {
-    // API Call placeholder
+    const res = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation_probability',
+        timezone: 'auto',
+      },
+    })
+
+    const current = res.data?.current
+    if (!current) throw new Error('Malformed weather response')
+
+    const { condition, icon } = mapWeatherCode(current.weather_code)
+
+    weather.temp = `${Math.round(current.temperature_2m)}°C`
+    weather.humidity = `${current.relative_humidity_2m}%`
+    weather.rainChance = `${current.precipitation_probability ?? 0}%`
+    weather.wind = `${Math.round(current.wind_speed_10m)} km/h`
+    weather.condition = condition
+    weather.icon = icon
+    weather.updatedAt = new Date().toISOString()
   } catch (e) {
+    console.error('Weather fetch failed', e)
     weatherError.value = true
   } finally {
     weatherLoading.value = false
@@ -459,7 +492,7 @@ async function fetchWeather() {
  * ------------------------------------------------------------------ */
 onMounted(async () => {
   const rawUser = localStorage.getItem('user') || localStorage.getItem('barangay_user')
-  
+
   if (!rawUser) {
     console.error('No authenticated user found in storage.')
     return
@@ -480,11 +513,14 @@ onMounted(async () => {
     : 'BO'
   barangayName.value = storedUser.barangay?.name || 'Local Barangay'
 
+  const barangayLat = storedUser.barangay?.latitude
+  const barangayLon = storedUser.barangay?.longitude
+
   try {
     await Promise.all([
       fetchFarmerAndFarmStats(barangayId),
       fetchDistributionStats(),
-      fetchWeather(),
+      fetchWeather(barangayLat ?? lastCoords.lat, barangayLon ?? lastCoords.lon),
     ])
   } catch (e) {
     console.error('Dashboard load failed', e)
@@ -666,6 +702,11 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+.row-grid-weather {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px);
+}
+
 .col-span-2 { grid-column: span 2; }
 
 .panel {
@@ -792,7 +833,6 @@ onMounted(async () => {
 
 .supply-breakdown-item strong {
   color: #116D3E;
-
 }
 
 /* COLOR UTILITIES */
@@ -801,44 +841,6 @@ onMounted(async () => {
 .text-dark { color: #0F212F; }
 .icon-green { color: #116D3E; }
 .text-center { text-align: center; }
-
-/* BUTTONS */
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-.btn-primary, .btn-outline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  border: none;
-  box-shadow: 0 4px 12px rgba(17, 109, 62, 0.2);
-}
-
-.btn-outline {
-  background: #FFFFFF;
-  color: #0F212F;
-  border: 1px solid #E0EAE3;
-}
-
-.btn-outline:hover {
-  border-color: #116D3E;
-  background: #F1F6F2;
-}
 
 /* WEATHER CARD */
 .weather-card {
@@ -938,7 +940,7 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .row-grid-2 { grid-template-columns: 1fr; }
-  .actions-grid { grid-template-columns: 1fr; }
   .summary-grid.compact { grid-template-columns: 1fr; }
+  .row-grid-weather { grid-template-columns: 1fr; }
 }
 </style>
