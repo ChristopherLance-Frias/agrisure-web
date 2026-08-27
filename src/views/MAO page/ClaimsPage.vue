@@ -1,7 +1,7 @@
 <template>
   <div class="layout">
-    <div class = main-wrapper>
-      <header class = top-header>
+    <div class="main-wrapper">
+      <header class="top-header">
         <div class="header-title-group">
           <h1>Claims &amp; Indemnity</h1>
           <p>Manage validated damage claims, PCIC results, and claiming schedules</p>
@@ -555,34 +555,52 @@ export default {
       });
     },
 
+    /**
+     * NOTE ON THE FIX:
+     * Previously this filtered by `season.status` ('application_open' /
+     * 'application_closed' for current, 'completed' for previous). That is
+     * inconsistent with `previousSeasons` above, which classifies seasons by
+     * ID (anything that isn't the current season's ID and isn't the default
+     * season) — not by status. A season sitting at 'application_closed'
+     * (closed, but not yet flagged 'completed') would pass the "current"
+     * status check above AND fail the "previous" status check, so it landed
+     * permanently under Current and could never be reached from the
+     * Previous Seasons dropdown, no matter which season you picked.
+     *
+     * Fix: classify claims by the SAME rule used to build the dropdown —
+     * season ID vs. currentSeason.id — not by status string.
+     */
     activeClaims() {
-      var self = this
-      var list = this.claims || []
+      const list = this.claims || []
+      const currentId = this.currentSeason ? String(this.currentSeason.id) : null
+
+      const getSeasonId = (claim) => {
+        const id =
+          claim.damage_report?.insurance_application?.season?.id ??
+          claim.damage_report?.insurance_application?.insurance_season_id ??
+          null
+        return id === null ? null : String(id)
+      }
 
       if (this.activeTab === 'current') {
-        return list.filter(function(claim) {
-          var season = claim.damage_report?.insurance_application?.season
-          if (!season) return false
-          return season.status === 'application_open' || season.status === 'application_closed'
-        })
+        if (!currentId) return []
+        return list.filter((claim) => getSeasonId(claim) === currentId)
       }
 
-      list = list.filter(function(claim) {
-        var season = claim.damage_report?.insurance_application?.season
-        if (!season) return false
-        return season.status === 'completed'
+      // Previous: any claim whose season is not the current season
+      let result = list.filter((claim) => {
+        const seasonId = getSeasonId(claim)
+        if (seasonId === null) return false
+        return currentId === null || seasonId !== currentId
       })
 
+      // Narrow further to the specific previous season chosen in the dropdown
       if (this.historySeasonId) {
-        list = list.filter(function(claim) {
-          var seasonId = claim.damage_report?.insurance_application?.season?.id
-            || claim.damage_report?.insurance_application?.insurance_season_id
-            || null
-          return String(seasonId) === String(self.historySeasonId)
-        })
+        const targetId = String(this.historySeasonId)
+        result = result.filter((claim) => getSeasonId(claim) === targetId)
       }
 
-      return list
+      return result
     },
 
     canBulkAct() {
@@ -682,7 +700,7 @@ export default {
 
       try {
         var response = await axios.get(
-          API_BASE + '/api/claims?season_type=' + this.activeTab,
+          API_BASE + '/api/claims',
           this.authHeaders()
         )
         this.claims = Array.isArray(response.data)
@@ -705,14 +723,12 @@ export default {
       this.historySeasonId = ''
       this.expandedId = null
       this.clearSelection()
-      this.fetchClaims()
     },
 
     selectPreviousSeason() {
       this.activeTab = 'previous'
       this.expandedId = null
       this.clearSelection()
-      this.fetchClaims()
     },
 
     switchStatusTab(status) {
@@ -848,17 +864,18 @@ export default {
       if (!this.pcicClaimId) return
 
       this.updatingId = this.pcicClaimId
+      var targetId = this.pcicClaimId
 
       try {
         await axios.patch(
-          API_BASE + '/api/claims/' + this.pcicClaimId + '/pcic-result',
+          API_BASE + '/api/claims/' + targetId + '/pcic-result',
           this.pcicForm,
           this.authHeaders()
         )
 
         var claim = this.claims.find(function(c) {
-          return c.id === this.pcicClaimId
-        }, this)
+          return c.id === targetId
+        })
 
         if (claim) {
           claim.status = this.pcicForm.result === 'approved' ? 'ready_for_claiming' : 'pcic_rejected'
@@ -866,8 +883,8 @@ export default {
         }
 
         this.showPcicModal = false
-        this.updateSuccessId = this.pcicClaimId
-        this.flashSuccess(this.pcicClaimId)
+        this.updateSuccessId = targetId
+        this.flashSuccess(targetId)
       } catch (err) {
         console.error(err)
         alert(err.response?.data?.message || 'Failed to save PCIC result.')
@@ -893,54 +910,54 @@ export default {
     },
 
     async saveClaimSchedule() {
-  if (!this.scheduleForm.claim_schedule || !this.scheduleForm.claim_venue) {
-    alert('Please provide both a claiming date and venue.')
-    return
-  }
-
-  this.bulkUpdating = true
-
-  try {
-    var response = await axios.post(
-      API_BASE + '/api/claims/bulk-schedule',
-      {
-        claim_ids: this.scheduleTargetIds,
-        claim_schedule: this.scheduleForm.claim_schedule,
-        claim_venue: this.scheduleForm.claim_venue,
-      },
-      this.authHeaders()
-    )
-
-    var updatedIds = response.data.updated_claim_ids || []
-    var self = this
-
-    updatedIds.forEach(function(id) {
-      var claim = self.claims.find(function(c) {
-        return c.id === id
-      })
-      if (claim) {
-        claim.claim_schedule = self.scheduleForm.claim_schedule
-        claim.claim_venue = self.scheduleForm.claim_venue
-        claim.status = 'ready_for_claiming' // <--- ADD THIS LINE TO UPDATE LOCAL VUE STATE
+      if (!this.scheduleForm.claim_schedule || !this.scheduleForm.claim_venue) {
+        alert('Please provide both a claiming date and venue.')
+        return
       }
-    })
 
-    if (response.data.skipped_claim_ids && response.data.skipped_claim_ids.length > 0) {
-      alert(
-        response.data.skipped_claim_ids.length +
-        ' claim(s) were skipped (not eligible for scheduling).'
-      )
-    }
+      this.bulkUpdating = true
 
-    this.closeScheduleModal()
-    this.clearSelection()
-  } catch (err) {
-    console.error(err)
-    alert(err.response?.data?.message || 'Failed to set claiming schedule.')
-  } finally {
-    this.bulkUpdating = false
-  }
-},
+      try {
+        var response = await axios.post(
+          API_BASE + '/api/claims/bulk-schedule',
+          {
+            claim_ids: this.scheduleTargetIds,
+            claim_schedule: this.scheduleForm.claim_schedule,
+            claim_venue: this.scheduleForm.claim_venue,
+          },
+          this.authHeaders()
+        )
+
+        var updatedIds = response.data.updated_claim_ids || []
+        var self = this
+
+        updatedIds.forEach(function(id) {
+          var claim = self.claims.find(function(c) {
+            return c.id === id
+          })
+          if (claim) {
+            claim.claim_schedule = self.scheduleForm.claim_schedule
+            claim.claim_venue = self.scheduleForm.claim_venue
+            claim.status = 'ready_for_claiming'
+          }
+        })
+
+        if (response.data.skipped_claim_ids && response.data.skipped_claim_ids.length > 0) {
+          alert(
+            response.data.skipped_claim_ids.length +
+            ' claim(s) were skipped (not eligible for scheduling).'
+          )
+        }
+
+        this.closeScheduleModal()
+        this.clearSelection()
+      } catch (err) {
+        console.error(err)
+        alert(err.response?.data?.message || 'Failed to set claiming schedule.')
+      } finally {
+        this.bulkUpdating = false
+      }
+    },
 
     async bulkSubmitToPcic() {
       if (this.selectedIds.length === 0) return

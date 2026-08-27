@@ -75,6 +75,8 @@ const routes = [
   },
 
   // ── Barangay Official ────────────────────────────────────────
+ // ── Barangay Official ────────────────────────────────────────
+ // ── Barangay Official ────────────────────────────────────────
   {
     path: '/barangay/login',
     name: 'barangay-login',
@@ -87,13 +89,15 @@ const routes = [
   },
   {
     path: '/barangay/dashboard',
-    name: 'barangay-dashboard', 
-    component: () => import('../views/Barangay Official Page/BarangayDashboardPage.vue'),
+    // 1. Parent MUST be the Sidebar layout component
+    component: () => import('../views/Barangay Official Page/BarangaySidebar.vue'),
     meta: { role: 'barangay' },
     children: [
       {
         path: '',
-        redirect: { name: 'barangay-farmers' },
+        name: 'barangay-dashboard',
+        // 2. Child is the actual Dashboard Page content component
+        component: () => import('../views/Barangay Official Page/BarangayDashboardPage.vue'),
       },
       {
         path: 'farmers',
@@ -104,12 +108,12 @@ const routes = [
         path: 'reports',
         name: 'barangay-reports',
         component: () => import('../views/Barangay Official Page/BarangayReportsPage.vue'),
-      },      {
+      },
+      {
         path: 'distribution-lists',
         name: 'barangay-distribution-lists',
-        component: () => import('../views/Barangay Official Page/DistributionListPage.vue')
+        component: () => import('../views/Barangay Official Page/DistributionListPage.vue'),
       },
-
     ],
   },
 ]
