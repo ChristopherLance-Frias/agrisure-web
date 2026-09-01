@@ -97,9 +97,6 @@
                 <span class="status-pill amber">
                   {{ stats.claims.inspecting }}
                 </span>
-                <span v-if="claimsApprovalRate !== null" class="trend-badge neutral">
-                  {{ claimsApprovalRate }}% Claimed
-                </span>
                 <span v-if="averageClaimAmount" class="trend-badge neutral">
                   Avg &#8369;{{ Math.round(averageClaimAmount).toLocaleString() }}
                 </span>
@@ -122,9 +119,6 @@
               <div class="card-footer red">
                 <span class="status-pill red">
                   {{ stats.damage.critical }}
-                </span>
-                <span v-if="damageRatePer100Farmers !== null" class="trend-badge neutral">
-                  {{ damageRatePer100Farmers }} / 100 farmers
                 </span>
               </div>
             </div>
@@ -152,131 +146,62 @@
             </div>
         </div>
         <!-- FARMER & FARM ANALYTICS -->
-        <div class="row-grid-3">
-
-          <!-- Farmer Statistics -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Farmer Analytics</h2>
-                <p>Registered farmers by agricultural profile</p>
-              </div>
-            </div>
-
-            <div class="analytics-stat-grid">
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Registered Farmers
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmerAnalytics.totalFarmers }}
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Rice Farmers
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmerAnalytics.riceFarmers }}
-                  <span class="stat-percent text-green">{{ riceFarmerPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Corn Farmers
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmerAnalytics.cornFarmers }}
-                  <span class="stat-percent text-amber">{{ cornFarmerPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Avg. Farm Size
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmerAnalytics.averageFarmSize.toFixed(2) }}
-                  <small>ha</small>
-                </strong>
-              </div>
-
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Farmer & Farm Analytics</h2>
+              <p>Registered farmers, farms, and crop mix</p>
             </div>
           </div>
 
-          <!-- Farm Statistics -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Farm Analytics</h2>
-                <p>Farm area and crop distribution</p>
+          <div class="analytics-split-row">
+            <div class="analytics-split-left">
+              <div class="analytics-stat-grid">
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Farmers</span>
+                  <strong class="analytics-stat-value">{{ farmerAnalytics.totalFarmers }}</strong>
+                </div>
+
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Farms</span>
+                  <strong class="analytics-stat-value">{{ farmAnalytics.totalFarms }}</strong>
+                </div>
+
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Farm Area</span>
+                  <strong class="analytics-stat-value">
+                    {{ totalFarmArea.toFixed(2) }}
+                    <small>ha</small>
+                  </strong>
+                </div>
+
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Rice Farm Area</span>
+                  <strong class="analytics-stat-value">
+                    {{ farmAnalytics.riceArea.toFixed(2) }}
+                    <small>ha</small>
+                  </strong>
+                </div>
+
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Corn Farm Area</span>
+                  <strong class="analytics-stat-value">
+                    {{ farmAnalytics.cornArea.toFixed(2) }}
+                    <small>ha</small>
+                  </strong>
+                </div>
               </div>
             </div>
 
-            <div class="analytics-stat-grid">
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Total Farms
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmAnalytics.totalFarms }}
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Rice Farms
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmAnalytics.riceFarms }}
-                  <span class="stat-percent text-green">{{ riceFarmPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Corn Farms
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmAnalytics.cornFarms }}
-                  <span class="stat-percent text-amber">{{ cornFarmPct }}%</span>
-                </strong>
-              </div>
-
-              <div class="analytics-stat-card">
-                <span class="analytics-stat-label">
-                  Average Farm Area
-                </span>
-                <strong class="analytics-stat-value">
-                  {{ farmAnalytics.averageFarmArea.toFixed(2) }}
-                  <small>ha</small>
-                </strong>
-              </div>
-
+            <div class="analytics-split-right">
+              <ApexChart
+                type="donut"
+                height="220"
+                :options="chartConfigs.cropDistribution.options"
+                :series="chartConfigs.cropDistribution.series"
+              />
             </div>
           </div>
-
-          <!-- Crop Distribution -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>Crop Distribution</h2>
-                <p>Farms by crop type</p>
-              </div>
-            </div>
-
-            <ApexChart
-              type="donut"
-              height="250"
-              :options="chartConfigs.cropDistribution.options"
-              :series="chartConfigs.cropDistribution.series"
-            />
-          </div>
-
         </div>
 
         <!-- FARMERS BY BARANGAY -->
@@ -422,10 +347,16 @@
             <div>
               <div class="panel-header">
                 <h2>Urgent Pending Tasks</h2>
-                <span class="count-pill">5 Actionable</span>
+                <span class="count-pill">{{ actionableTasksCount }} Actionable</span>
               </div>
               <ul class="task-list">
-                <li v-for="task in pendingTasks" :key="task.id" class="task-item">
+                <li
+                  v-for="task in pendingTasks"
+                  :key="task.id"
+                  class="task-item"
+                  style="cursor: pointer;"
+                  @click="goTo(task.route)"
+                >
                   <div class="task-info">
                     <span :class="['dot', task.dotColor]"></span>
                     <span class="task-title">{{ task.title }}</span>
@@ -434,50 +365,51 @@
                 </li>
               </ul>
             </div>
-            <button class="btn-block">Manage Task Queue</button>
           </div>
         </div>
 
         <!-- ANALYTICS DUAL ROW -->
-        <div class="row-grid-2">
-          <div class="panel">
-            <div class="panel-header">
-              <h2>Damage Analytics by Cause</h2>
-              <span class="subtext">Total Incidents Reported</span>
-            </div>
-            <ApexChart type="bar" height="210" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Damage Analytics by Cause</h2>
+            <span class="subtext">
+              {{ currentSeason?.season_name || 'Current Season' }}
+              — {{ damageReportsTotal }} Total {{ damageReportsTotal === 1 ? 'Incident' : 'Incidents' }} Reported
+            </span>
           </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <h2>Insurance Application Status</h2>
-              <span class="subtext">Current Season Approval Rate</span>
-            </div>
-            <ApexChart type="donut" height="210" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
-          </div>
+          <ApexChart type="bar" height="210" :options="chartConfigs.damageAnalytics.options" :series="chartConfigs.damageAnalytics.series" />
         </div>
 
         <!-- INVENTORY & DISTRIBUTION ROW -->
-        <div class="row-grid-2">
-          <div class="panel">
-            <div class="panel-header">
-              <h2>Inventory Stock Levels</h2>
-              <button class="link-btn">Restock Alert Log</button>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Inventory Stock Levels</h2>
+                <button class="link-btn" @click="goToInventory">Restock Alert Log</button>
+              </div>
+              <ApexChart type="bar" height="210" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
             </div>
-            <ApexChart type="bar" height="210" :options="chartConfigs.inventoryStatus.options" :series="chartConfigs.inventoryStatus.series" />
-          </div>
 
-          <div class="panel">
-            <h2 class="panel-title-spaced">Distribution Summary</h2>
-            <div class="summary-grid">
-              <div v-for="item in distributionSummary" :key="item.label" class="summary-card">
-                <p class="summary-label">{{ item.label }}</p>
-                <p :class="['summary-value', item.colorClass]">
-                  {{ item.value }}
-                  <span v-if="item.unit" class="summary-unit">{{ item.unit }}</span>
-                </p>
+          <div class="row-grid-2">
+            <div class="panel">
+              <h2 class="panel-title-spaced">Distribution Summary</h2>
+              <div class="summary-grid">
+                <div v-for="item in distributionSummary" :key="item.label" class="summary-card">
+                  <p class="summary-label">{{ item.label }}</p>
+                  <p :class="['summary-value', item.colorClass]">
+                    {{ item.value }}
+                    <span v-if="item.unit" class="summary-unit">{{ item.unit }}</span>
+                  </p>
+                </div>
               </div>
             </div>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Insurance Application Status</h2>
+                <span class="subtext">
+                  {{ currentSeason?.season_name ? `${currentSeason.season_name} — Registered vs. Applied` : 'Registered vs. Applied' }}
+                </span>
+              </div>
+            <ApexChart type="donut" height="210" :options="chartConfigs.insuranceStatus.options" :series="chartConfigs.insuranceStatus.series" />
           </div>
         </div>
 
@@ -487,7 +419,6 @@
           <div class="panel col-span-2">
             <div class="panel-header">
               <h2>Barangay Performance Summary</h2>
-              <button class="link-btn-muted">Export CSV</button>
             </div>
             <div class="table-responsive">
               <table class="data-table">
@@ -497,7 +428,6 @@
                     <th>Active Farmers</th>
                     <th>Total Farms</th>
                     <th>Damage Reports</th>
-                    <th>Claims Value</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -513,7 +443,6 @@
                         {{ bg.damageReports }} Incidents
                       </span>
                     </td>
-                    <td>&#8369;{{ Math.round(bg.claimAmount).toLocaleString() }}</td>
                   </tr>
                   <tr v-if="!barangayData.length">
                     <td colspan="5" class="text-center">No barangay data available.</td>
@@ -597,22 +526,6 @@
               </li>
             </ul>
           </div>
-
-          <!-- Quick Actions Grid -->
-          <div class="panel">
-            <h2 class="panel-title-spaced">Quick Action Shortcuts</h2>
-            <div class="actions-grid">
-              <button class="btn-primary col-span-full">
-                <i class="fa-solid fa-user-check"></i> Verify New Farmer
-              </button>
-              <button class="btn-outline">
-                <i class="fa-solid fa-truck-ramp-box icon-green"></i> Schedule Distribution
-              </button>
-              <button class="btn-outline">
-                <i class="fa-solid fa-box icon-green"></i> Add Supplies
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- MUNICIPAL FARM MAP PREVIEW -->
@@ -631,19 +544,58 @@
             <div class="map-bg-icon">
               <i class="fa-solid fa-map-location-dot"></i>
             </div>
+          <div class="map-grid">
+            <button
+              v-for="bgy in barangayData"
+              :key="bgy.name"
+              class="map-card"
+              @click="openBarangayModal(bgy)"
+            >
+              <div class="map-card-top">
+                <span class="map-card-title">{{ bgy.name }}</span>
+                <span :class="['status-dot', bgy.statusBg]"></span>
+              </div>
+              <p class="map-card-desc">{{ bgy.farmers }} Active Farmers &middot; {{ bgy.totalArea.toFixed(1) }} ha</p>
+            </button>
+          </div>
+          </div>
 
-            <div class="map-grid">
-              <button
-                v-for="bgy in barangayData"
-                :key="bgy.name"
-                class="map-card"
-              >
-                <div class="map-card-top">
-                  <span class="map-card-title">{{ bgy.name }}</span>
-                  <span :class="['status-dot', bgy.statusBg]"></span>
+          <!-- Barangay detail modal -->
+          <div v-if="selectedBarangay" class="modal-overlay" @click.self="closeBarangayModal">
+            <div class="modal-panel">
+              <div class="modal-header">
+                <h3>{{ selectedBarangay.name }}</h3>
+                <button class="modal-close" @click="closeBarangayModal">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <div class="modal-body analytics-stat-grid">
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Active Farmers</span>
+                  <strong class="analytics-stat-value">{{ selectedBarangay.farmers }}</strong>
                 </div>
-                <p class="map-card-desc">{{ bgy.farmers }} Active Farmers &middot; {{ bgy.totalArea.toFixed(1) }} ha</p>
-              </button>
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Farms</span>
+                  <strong class="analytics-stat-value">{{ selectedBarangay.totalFarms }}</strong>
+                </div>
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Total Farm Area</span>
+                  <strong class="analytics-stat-value">{{ selectedBarangay.totalArea.toFixed(2) }} <small>ha</small></strong>
+                </div>
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Avg. Farm Size</span>
+                  <strong class="analytics-stat-value">{{ selectedBarangay.avgFarmSize.toFixed(2) }} <small>ha</small></strong>
+                </div>
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Damage Reports</span>
+                  <strong class="analytics-stat-value">{{ selectedBarangay.damageReports }}</strong>
+                </div>
+                <div class="analytics-stat-card">
+                  <span class="analytics-stat-label">Claim Amount</span>
+                  <strong class="analytics-stat-value">&#8369;{{ Number(selectedBarangay.claimAmount).toLocaleString() }}</strong>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -656,7 +608,15 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ApexChart from 'vue3-apexcharts'
+import { useRouter } from 'vue-router'
+// ...
+const router = useRouter()
 
+const goTo = (routeName) => router.push({ name: routeName })
+
+const goToInventory = () => {
+  router.push({ name: 'inventory' }) // or router.push('/inventory')
+}
 const LAT = 15.48
 const LON = 120.60
 
@@ -668,7 +628,31 @@ const palette = {
   amberDark: '#AC7A2F',
   blue: '#2E6F8E',
   red: '#C1473D',
-  purple: '#6B5B95'
+  purple: '#6B5B95',
+  teal: '#0E8A7D'
+}
+
+// Cycling palette used for distributed/categorical bar charts (damage causes,
+// inventory items, etc.) so each bar reads as its own category at a glance
+// instead of a wall of one color.
+const categoricalColors = [
+  palette.green, palette.blue, palette.amber, palette.purple, palette.teal, palette.red
+]
+
+// Shared visual defaults so every chart in this dashboard reads as one
+// family — same font, same grid treatment, same tooltip chrome — instead of
+// each chart carrying its own one-off styling.
+const baseChartTheme = {
+  fontFamily: 'DM Sans, sans-serif',
+  grid: {
+    borderColor: '#EAF1EC',
+    strokeDashArray: 4,
+    padding: { left: 8, right: 8 }
+  },
+  tooltip: {
+    theme: 'light',
+    style: { fontFamily: 'DM Sans, sans-serif', fontSize: '12px' }
+  }
 }
 
 const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' })
@@ -719,6 +703,9 @@ const insuranceApprovalRate = ref(null)
 const claimsApprovalRate = ref(null)
 const averageClaimAmount = ref(null)
 const damageRatePer100Farmers = ref(null)
+const currentSeason = ref(null)
+const damageReportsTotal = ref(0)
+const selectedBarangay = ref(null)
 
 const farmerAnalytics = ref({
   totalFarmers: 0,
@@ -751,26 +738,6 @@ const farmReport = ref({
   largest_agricultural_barangays: []
 })
 
-// Farmer crop-mix percentages
-const riceFarmerPct = computed(() => {
-  const total = farmerAnalytics.value.totalFarmers
-  return total ? Math.round((farmerAnalytics.value.riceFarmers / total) * 100) : 0
-})
-const cornFarmerPct = computed(() => {
-  const total = farmerAnalytics.value.totalFarmers
-  return total ? Math.round((farmerAnalytics.value.cornFarmers / total) * 100) : 0
-})
-
-// Farm crop-mix percentages
-const riceFarmPct = computed(() => {
-  const total = farmAnalytics.value.totalFarms
-  return total ? Math.round((farmAnalytics.value.riceFarms / total) * 100) : 0
-})
-const cornFarmPct = computed(() => {
-  const total = farmAnalytics.value.totalFarms
-  return total ? Math.round((farmAnalytics.value.cornFarms / total) * 100) : 0
-})
-
 // Area-mix percentages
 const riceAreaPct = computed(() => {
   const total = farmAnalytics.value.riceArea + farmAnalytics.value.cornArea
@@ -780,32 +747,66 @@ const cornAreaPct = computed(() => {
   const total = farmAnalytics.value.riceArea + farmAnalytics.value.cornArea
   return total ? Math.round((farmAnalytics.value.cornArea / total) * 100) : 0
 })
+const actionableTasksCount = computed(() =>
+  pendingTasks.value.filter(t => Number(t.badgeText) > 0).length
+)
 
 const chartConfigs = reactive({
   applicationTrend: {
     series: [{ name: 'Applications', data: [] }],
     options: {
-      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      chart: {
+        toolbar: { show: false },
+        fontFamily: baseChartTheme.fontFamily,
+        animations: { easing: 'easeinout', speed: 400 },
+        dropShadow: { enabled: true, top: 3, left: 0, blur: 4, color: palette.green, opacity: 0.15 }
+      },
       colors: [palette.green],
-      plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light',
+          type: 'vertical',
+          shadeIntensity: 0.35,
+          gradientToColors: [palette.greenDark],
+          opacityFrom: 0.95,
+          opacityTo: 0.75,
+          stops: [0, 100]
+        }
+      },
+      plotOptions: {
+        bar: { borderRadius: 8, borderRadiusApplication: 'end', columnWidth: '42%' }
+      },
       dataLabels: { enabled: false },
       xaxis: {
         categories: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
       },
       yaxis: { labels: { style: { colors: '#5c6b64', fontSize: '11px' } } },
-      grid: { borderColor: '#EAF1EC' }
+      grid: baseChartTheme.grid,
+      tooltip: baseChartTheme.tooltip
     }
   },
   damageAnalytics: {
     series: [{ name: 'Incidents', data: [] }],
     options: {
-      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
-      colors: [palette.red],
-      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
+      chart: { toolbar: { show: false }, fontFamily: baseChartTheme.fontFamily },
+      colors: categoricalColors,
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          borderRadius: 6,
+          borderRadiusApplication: 'end',
+          distributed: true,
+          barHeight: '65%'
+        }
+      },
+      legend: { show: false },
       dataLabels: {
         enabled: true,
-        style: { colors: ['#3a3a3a'], fontSize: '11px', fontWeight: 600 },
+        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 },
         formatter: (val, opts) => {
           const total = opts.w.globals.series[opts.seriesIndex].reduce((a, b) => a + b, 0)
           const pct = total ? Math.round((val / total) * 100) : 0
@@ -814,52 +815,81 @@ const chartConfigs = reactive({
       },
       xaxis: {
         categories: [],
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
       },
-      grid: { borderColor: '#EAF1EC' }
+      grid: baseChartTheme.grid,
+      tooltip: baseChartTheme.tooltip
     }
   },
   insuranceStatus: {
     series: [],
     options: {
-      chart: { fontFamily: 'DM Sans, sans-serif' },
+      chart: { fontFamily: baseChartTheme.fontFamily },
       labels: [],
       colors: [palette.green, palette.amber, palette.blue, palette.purple, palette.red],
-      legend: { position: 'bottom', labels: { colors: '#5c6b64' }, fontSize: '12px' },
+      fill: {
+        type: 'gradient',
+        gradient: { shade: 'light', type: 'diagonal1', shadeIntensity: 0.25, opacityFrom: 1, opacityTo: 0.85, stops: [0, 100] }
+      },
+      stroke: { width: 2, colors: ['#FFFFFF'] },
+      legend: {
+        position: 'bottom',
+        labels: { colors: '#5c6b64' },
+        fontSize: '12px',
+        markers: { size: 6, shape: 'circle', offsetX: -2 },
+        itemMargin: { horizontal: 8, vertical: 4 }
+      },
       dataLabels: {
         enabled: true,
+        style: { fontSize: '11px', fontWeight: 700 },
+        dropShadow: { enabled: false },
         formatter: (val) => `${Math.round(val)}%`
       },
-      stroke: { width: 0 },
       plotOptions: {
         pie: {
           donut: {
+            size: '68%',
             labels: {
               show: true,
+              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
               total: {
                 show: true,
                 label: 'Total',
+                color: '#5c6b64',
+                fontSize: '12px',
                 formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
               }
             }
           }
         }
-      }
+      },
+      tooltip: baseChartTheme.tooltip
     }
   },
   inventoryStatus: {
     series: [{ name: 'Stock', data: [] }],
     options: {
-      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
-      colors: [palette.amber],
-      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
-      dataLabels: { enabled: false },
+      chart: { toolbar: { show: false }, fontFamily: baseChartTheme.fontFamily },
+      colors: categoricalColors,
+      plotOptions: {
+        bar: { horizontal: true, borderRadius: 6, borderRadiusApplication: 'end', distributed: true, barHeight: '65%' }
+      },
+      legend: { show: false },
+      dataLabels: {
+        enabled: true,
+        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 }
+      },
       xaxis: {
         categories: [],
         max: 100,
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
       },
-      grid: { borderColor: '#EAF1EC' }
+      grid: baseChartTheme.grid,
+      tooltip: baseChartTheme.tooltip
     }
   },
   farmerBarangay: {
@@ -870,17 +900,25 @@ const chartConfigs = reactive({
     options: {
       chart: {
         toolbar: { show: false },
-        fontFamily: 'DM Sans, sans-serif'
+        fontFamily: baseChartTheme.fontFamily
       },
       colors: [palette.green],
+      fill: {
+        type: 'gradient',
+        gradient: { shade: 'light', type: 'horizontal', shadeIntensity: 0.3, gradientToColors: [palette.teal], opacityFrom: 0.95, opacityTo: 0.8, stops: [0, 100] }
+      },
       plotOptions: {
         bar: {
           horizontal: true,
-          borderRadius: 6
+          borderRadius: 6,
+          borderRadiusApplication: 'end',
+          barHeight: '55%'
         }
       },
       dataLabels: {
-        enabled: false
+        enabled: true,
+        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 },
+        offsetX: 4
       },
       xaxis: {
         categories: [],
@@ -889,18 +927,19 @@ const chartConfigs = reactive({
             colors: '#5c6b64',
             fontSize: '11px'
           }
-        }
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
       },
-      grid: {
-        borderColor: '#EAF1EC'
-      }
+      grid: baseChartTheme.grid,
+      tooltip: baseChartTheme.tooltip
     }
   },
   cropDistribution: {
     series: [],
     options: {
       chart: {
-        fontFamily: 'DM Sans, sans-serif'
+        fontFamily: baseChartTheme.fontFamily
       },
       labels: [],
       colors: [
@@ -910,40 +949,64 @@ const chartConfigs = reactive({
         palette.purple,
         palette.red
       ],
+      fill: {
+        type: 'gradient',
+        gradient: { shade: 'light', type: 'diagonal1', shadeIntensity: 0.25, opacityFrom: 1, opacityTo: 0.85, stops: [0, 100] }
+      },
+      stroke: { width: 2, colors: ['#FFFFFF'] },
       legend: {
         position: 'bottom',
         labels: {
           colors: '#5c6b64'
         },
-        fontSize: '12px'
+        fontSize: '12px',
+        markers: { size: 6, shape: 'circle', offsetX: -2 },
+        itemMargin: { horizontal: 8, vertical: 4 }
       },
       dataLabels: {
         enabled: true,
+        style: { fontSize: '11px', fontWeight: 700 },
         formatter: (val) => `${Math.round(val)}%`
-      },
-      stroke: {
-        width: 0
       },
       plotOptions: {
         pie: {
           donut: {
+            size: '68%',
             labels: {
               show: true,
+              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
               total: {
                 show: true,
                 label: 'Total Farms',
+                color: '#5c6b64',
+                fontSize: '12px',
                 formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
               }
             }
           }
         }
-      }
+      },
+      tooltip: baseChartTheme.tooltip
     }
   },
 })
 
+const openBarangayModal = (bgy) => {
+  selectedBarangay.value = bgy
+}
+
+const closeBarangayModal = () => {
+  selectedBarangay.value = null
+}
+
+const totalFarmArea = computed(() => farmAnalytics.value.riceArea + farmAnalytics.value.cornArea)
+
 const loadDashboard = async () => {
   try {
+    const seasonRes = await axios.get('/api/insurance-seasons/current')
+    currentSeason.value = seasonRes.data.season
+    const seasonId = currentSeason.value?.id
+
     const [
       overview,
       farmers,
@@ -958,14 +1021,13 @@ const loadDashboard = async () => {
       axios.get('/api/reports/overview'),
       axios.get('/api/reports/farmers'),
       axios.get('/api/reports/farms'),
-      axios.get('/api/reports/insurance'),
-      axios.get('/api/reports/damage-reports'),
-      axios.get('/api/reports/claims'),
+      axios.get('/api/reports/insurance', { params: { season_id: seasonId } }),
+      axios.get('/api/reports/damage-reports', { params: { season_id: seasonId } }),
+      axios.get('/api/reports/claims', { params: { season_id: seasonId } }),
       axios.get('/api/reports/distribution'),
       axios.get('/api/reports/inventory'),
-      axios.get('/api/reports/executive')
+      axios.get('/api/reports/executive', { params: { season_id: seasonId } })
     ])
-
     const ov = overview.data.summary
     const frm = farmers.data
     const ins = insurance.data
@@ -984,6 +1046,30 @@ const loadDashboard = async () => {
       averageFarmSize: Number(frm.summary.average_farm_size || 0)
     }
 
+    if (frm.top_barangays?.length) {
+      chartConfigs.farmerBarangay.series = [{
+        name: 'Farmers',
+        data: frm.top_barangays.map(i => Number(i.total))
+      }]
+
+      chartConfigs.farmerBarangay.options = {
+        ...chartConfigs.farmerBarangay.options,
+        xaxis: {
+          ...chartConfigs.farmerBarangay.options.xaxis,
+          categories: frm.top_barangays.map(i => i.name)
+        }
+      }
+    } else {
+      chartConfigs.farmerBarangay.series = [{ name: 'Farmers', data: [] }]
+      chartConfigs.farmerBarangay.options = {
+        ...chartConfigs.farmerBarangay.options,
+        xaxis: {
+          ...chartConfigs.farmerBarangay.options.xaxis,
+          categories: []
+        }
+      }
+    }
+
     farmAnalytics.value = {
       totalFarms: Number(farm.summary.total_farms || 0),
       riceFarms: Number(farm.summary.rice_farms || 0),
@@ -999,15 +1085,15 @@ const loadDashboard = async () => {
         change: `${ov.total_farms} Farms`
       },
       applications: {
-        count: ov.insurance_applications,
+        count: ins.summary.total_applications,  
         pending: `${ins.summary.submitted_to_mao} Pending`
       },
       claims: {
-        count: ov.claims,
+        count: clm.summary.total_claims, 
         inspecting: `\u20b1${Number(clm.summary.total_claim_amount || 0).toLocaleString()}`
       },
       damage: {
-        count: ov.damage_reports,
+        count: dmg.summary.total_damage_reports,
         critical: `${dmg.summary.validated_by_mao} Validated`
       },
       inventory: {
@@ -1040,15 +1126,49 @@ const loadDashboard = async () => {
     }
 
     /* ---- Damage causes, with % of total baked into the chart labels ---- */
+    damageReportsTotal.value = Number(dmg.summary.total_damage_reports || 0)
+
     chartConfigs.damageAnalytics.series = [{
       name: 'Incidents',
       data: dmg.damage_causes.map(i => i.total)
     }]
-    chartConfigs.damageAnalytics.options.xaxis.categories = dmg.damage_causes.map(i => i.damage_cause)
+
+    chartConfigs.damageAnalytics.options = {
+      ...chartConfigs.damageAnalytics.options,
+      xaxis: {
+        ...chartConfigs.damageAnalytics.options.xaxis,
+        categories: dmg.damage_causes.map(i => i.damage_cause)
+      }
+    }
 
     /* ---- Insurance status + approval rate ---- */
-    chartConfigs.insuranceStatus.series = ins.status_distribution.map(i => i.total)
-    chartConfigs.insuranceStatus.options.labels = ins.status_distribution.map(i => i.status)
+    const notApplied = Math.max(farmAnalytics.value.totalFarms - stats.value.applications.count, 0)
+
+    chartConfigs.insuranceStatus.series = [stats.value.applications.count, notApplied]
+
+    chartConfigs.insuranceStatus.options = {
+      ...chartConfigs.insuranceStatus.options,
+      labels: ['Applied for Insurance', 'Not Applied'],
+      colors: [palette.green, palette.red],
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '68%',
+            labels: {
+              show: true,
+              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
+              total: {
+                show: true,
+                label: 'Total Farms',
+                color: '#5c6b64',
+                fontSize: '12px',
+                formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+              }
+            }
+          }
+        }
+      }
+    }  
 
     // The controller's insurance status values are:
     // submitted_to_mao, approved_for_pcic, submitted_to_pcic, insured, rejected.
@@ -1057,7 +1177,7 @@ const loadDashboard = async () => {
       ? Math.round((Number(ins.summary.insured || 0) / ins.summary.total_applications) * 100)
       : null
 
-    /* ---- Claims approval rate + average payout, from the claims report's own summary ---- */
+    /* ---- Claims approval rate + average payout,   the claims report's own summary ---- */
     claimsApprovalRate.value = clm.summary.total_claims
       ? Math.round((Number(clm.summary.claimed || 0) / clm.summary.total_claims) * 100)
       : null
@@ -1077,40 +1197,65 @@ const loadDashboard = async () => {
     /* ---- Barangay table: merge farmer counts, farm/area data, and the executive
        report's own top_damage_barangays / top_claim_barangays — these are real
        per-barangay damage counts and claim amounts, not estimates. ---- */
-    const farmsByBarangay = new Map(
-      (farm.farms_per_barangay || []).map(b => [b.name, b])
-    )
-    const damageByBarangay = new Map(
-      (exe.top_damage_barangays || []).map(b => [b.name, Number(b.total || 0)])
-    )
-    const claimsByBarangay = new Map(
-      (exe.top_claim_barangays || []).map(b => [b.name, Number(b.amount || 0)])
-    )
 
-    barangayData.value = exe.top_barangays_by_farmers
-      .map(i => {
-        const farmInfo = farmsByBarangay.get(i.name) || {}
-        const totalFarms = Number(farmInfo.total_farms || 0)
-        const totalArea = Number(farmInfo.total_area || 0)
-        return {
-          name: i.name,
-          farmers: i.total,
-          totalFarms,
-          totalArea,
-          avgFarmSize: totalFarms ? totalArea / totalFarms : 0,
-          damageReports: damageByBarangay.get(i.name) ?? 0,
-          claimAmount: claimsByBarangay.get(i.name) ?? 0,
-          statusBg: 'status-green'
-        }
-      })
-      .sort((a, b) => b.farmers - a.farmers)
+const farmsByBarangay = new Map(
+  (farm.farms_per_barangay || []).map(b => [b.name, b])
+)
+const damageByBarangay = new Map(
+  (exe.top_damage_barangays || []).map(b => [b.name, Number(b.total || 0)])
+)
+const claimsByBarangay = new Map(
+  (exe.top_claim_barangays || []).map(b => [b.name, Number(b.amount || 0)])
+)
+
+barangayData.value = exe.top_barangays_by_farmers
+  .map(i => {
+    const farmInfo = farmsByBarangay.get(i.name) || {}
+    const totalFarms = Number(farmInfo.total_farms || 0)
+    const totalArea = Number(farmInfo.total_area || 0)
+    return {
+      name: i.name,
+      farmers: i.total,
+      totalFarms,
+      totalArea,
+      avgFarmSize: totalFarms ? totalArea / totalFarms : 0,
+      damageReports: damageByBarangay.get(i.name) ?? 0,
+      claimAmount: claimsByBarangay.get(i.name) ?? 0,
+      statusBg: 'status-green'
+    }
+  })
+  .sort((a, b) => b.farmers - a.farmers)
 
     /* ---- Crop distribution donut ---- */
     if (farm.crop_distribution?.length) {
-      chartConfigs.cropDistribution.series = farm.crop_distribution.map(i => Number(i.total))
-      chartConfigs.cropDistribution.options.labels = farm.crop_distribution.map(i => i.crop_type)
-    }
+      chartConfigs.cropDistribution.series = [
+      farmerAnalytics.value.riceFarmers,
+      farmerAnalytics.value.cornFarmers
+     ]
 
+      chartConfigs.cropDistribution.options = {
+        ...chartConfigs.cropDistribution.options,
+        labels: ['Rice', 'Corn'],
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '68%',
+              labels: {
+                show: true,
+                value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
+                total: {
+                  show: true,
+                  label: 'Total Farmers',
+                  color: '#5c6b64',
+                  fontSize: '12px',
+                  formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     distributionSummary.value = [
       { label: 'Distribution Events', value: dist.summary.distribution_events, colorClass: 'text-green' },
       { label: 'Beneficiaries', value: dist.summary.beneficiary_farmers, colorClass: 'text-dark' },
@@ -1119,10 +1264,46 @@ const loadDashboard = async () => {
     ]
 
     pendingTasks.value = [
-      { id: 1, title: 'Applications Pending', badgeText: ins.summary.submitted_to_mao, dotColor: 'dot-amber', badgeColor: 'badge-amber' },
-      { id: 2, title: 'Validated Damage Reports', badgeText: dmg.summary.validated_by_mao, dotColor: 'dot-red', badgeColor: 'badge-red' },
-      { id: 3, title: 'Low Stock Supplies', badgeText: inv.summary.low_stock_items, dotColor: 'dot-red', badgeColor: 'badge-red' },
-      { id: 4, title: 'Claims Ready', badgeText: exe.kpis.claims_processed, dotColor: 'dot-green', badgeColor: 'badge-green' }
+      {
+        id: 1,
+        title: 'Farmer Verification Pending',
+        badgeText: /* still needs a data source — see below */ 0,
+        dotColor: 'dot-amber',
+        badgeColor: 'badge-amber',
+        route: 'farmer-verification'
+      },
+      {
+        id: 2,
+        title: 'Insurance Application Pending',
+        badgeText: ins.summary.submitted_to_mao,
+        dotColor: 'dot-amber',
+        badgeColor: 'badge-amber',
+        route: 'insurance-applications'
+      },
+      {
+        id: 3,
+        title: 'Validate Damage Report Pending',
+        badgeText: dmg.summary.submitted_to_mao,
+        dotColor: 'dot-red',
+        badgeColor: 'badge-red',
+        route: 'damage-reports'
+      },
+      {
+        id: 4,
+        title: 'Inventory Low Stock Supplies',
+        badgeText: inv.summary.low_stock_items,
+        dotColor: 'dot-red',
+        badgeColor: 'badge-red',
+        route: 'inventory'
+      },
+      {
+        id: 5,
+        title: 'Claims Ready',
+        badgeText: clm.summary.ready_for_claiming,
+        dotColor: 'dot-green',
+        badgeColor: 'badge-green',
+        route: 'mao-claims'
+      }
     ]
 
     recentActivities.value = [
@@ -1216,17 +1397,16 @@ onUnmounted(() => {
 onMounted(loadDashboard)
 </script>
 <style scoped>
- 
+
 * { box-sizing: border-box; }
 
- 
 /* METRICS GRID */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
 }
- 
+
 .metric-card {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -1234,19 +1414,16 @@ onMounted(loadDashboard)
   padding: 1.2rem;
   box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
- 
+
 .card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 0.9rem;
 }
- 
-.card-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #5c6b64;
-}
+
+.card-label { font-size: 0.78rem; font-weight: 600; color: #5c6b64; }
+
 .icon-badge {
   width: 36px;
   height: 36px;
@@ -1256,28 +1433,30 @@ onMounted(loadDashboard)
   justify-content: center;
   flex-shrink: 0;
 }
-
-.icon-badge svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
+.icon-badge svg { width: 18px; height: 18px; display: block; }
 
 .icon-badge.green  { background: rgba(17, 109, 62, 0.12); color: #116D3E; }
 .icon-badge.blue   { background: rgba(46, 111, 142, 0.12); color: #2E6F8E; }
 .icon-badge.amber  { background: rgba(210, 149, 57, 0.16); color: #AC7A2F; }
 .icon-badge.red    { background: rgba(193, 71, 61, 0.12); color: #C1473D; }
 .icon-badge.purple { background: rgba(107, 91, 149, 0.12); color: #6B5B95; }
- 
-.card-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #0F212F;
-  margin-bottom: 0.6rem;
+
+.card-value { font-size: 1.6rem; font-weight: 700; color: #0F212F; margin-bottom: 0.6rem; }
+
+.unit-text { font-size: 0.85rem; color: #5c6b64; }
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 0.7rem;
+  border-top: 1px solid #F1F6F2;
 }
- 
-.unit-text { font-size: 0.85rem; color: #5c6b64; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
- 
+.card-footer.green { border-top-color: rgba(17, 109, 62, 0.15); }
+.card-footer.amber { border-top-color: rgba(210, 149, 57, 0.2); }
+.card-footer.red   { border-top-color: rgba(193, 71, 61, 0.15); }
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -1286,27 +1465,35 @@ onMounted(loadDashboard)
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 600;
+  white-space: nowrap;
 }
- 
 .status-pill.green { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
 .status-pill.amber { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
 .status-pill.red   { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
- 
+
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.trend-badge.up      { color: #116D3E; }
+.trend-badge.down    { color: #C1473D; }
+.trend-badge.neutral { color: #5c6b64; }
+.trend-badge i { font-size: 0.68rem; }
+
 /* PANEL GRIDS */
-.row-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
- 
-.row-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
- 
+.row-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.row-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 .col-span-2 { grid-column: span 2; }
- 
+
+/* When a row-grid-3 has only one child (the col-span-2 panel with no
+   sibling — e.g. the activity log row after Quick Actions was removed),
+   let it take the full row instead of leaving a dead 1/3 gap. */
+.row-grid-3 > .col-span-2:only-child { grid-column: 1 / -1; }
+
 .panel {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -1314,13 +1501,9 @@ onMounted(loadDashboard)
   padding: 1.25rem 1.35rem;
   box-shadow: 0 8px 22px rgba(15, 33, 47, 0.05);
 }
- 
-.flex-column-between {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
- 
+
+.flex-column-between { display: flex; flex-direction: column; justify-content: space-between; }
+
 .panel-header {
   display: flex;
   align-items: flex-start;
@@ -1328,26 +1511,20 @@ onMounted(loadDashboard)
   margin-bottom: 1rem;
   gap: 12px;
 }
- 
-.panel-header h2 {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0F212F;
+
+.panel-header h2 { font-size: 1rem; font-weight: 700; color: #0F212F; }
+.panel-header p, .subtext { font-size: 0.76rem; color: #5c6b64; margin-top: 2px; }
+
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
- 
-.panel-header p, .subtext {
-  font-size: 0.76rem;
-  color: #5c6b64;
-  margin-top: 2px;
-}
- 
-.panel-title-spaced {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0F212F;
-  margin-bottom: 1rem;
-}
- 
+
+.panel-title-spaced { font-size: 1rem; font-weight: 700; color: #0F212F; margin-bottom: 1rem; }
+
 .count-pill {
   font-size: 0.7rem;
   font-weight: 700;
@@ -1357,7 +1534,25 @@ onMounted(loadDashboard)
   border-radius: 999px;
   white-space: nowrap;
 }
- 
+
+/* ANALYTICS SPLIT ROW — new: stat grid + donut chart side by side,
+   used in the merged "Farmer & Farm Analytics" panel */
+.analytics-split-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.analytics-split-left { flex: 1 1 380px; min-width: 0; }
+.analytics-split-right {
+  flex: 0 1 280px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* BUTTONS */
 .btn-secondary {
   background: #F1F6F2;
@@ -1372,56 +1567,7 @@ onMounted(loadDashboard)
   transition: background 0.15s ease;
 }
 .btn-secondary:hover { background: #E7F0EC; }
- 
-.btn-block {
-  width: 100%;
-  padding: 10px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 9px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 1rem;
-  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
-}
- 
-.btn-primary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 11px;
-  background: linear-gradient(135deg, #116D3E, #0A5232);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 9px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(17, 109, 62, 0.28);
-}
- 
-.btn-outline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: #FFFFFF;
-  color: #0F212F;
-  border: 1.5px solid #E0EAE3;
-  border-radius: 9px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.btn-outline:hover { border-color: #116D3E; background: #F1F6F2; }
- 
-.icon-green { color: #116D3E; }
- 
+
 .link-btn {
   background: none;
   border: none;
@@ -1431,31 +1577,25 @@ onMounted(loadDashboard)
   cursor: pointer;
 }
 .link-btn:hover { text-decoration: underline; }
- 
-.link-btn-muted {
-  background: none;
-  border: none;
-  color: #5c6b64;
-  font-size: 0.76rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.link-btn-muted:hover { color: #116D3E; }
- 
+
 /* TASK LIST */
 .task-list { display: flex; flex-direction: column; gap: 10px; }
- 
+
 .task-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 0;
+  padding: 8px 6px;
   border-bottom: 1px solid #F1F6F2;
+  border-radius: 8px;
+  transition: background 0.12s ease;
 }
- 
+.task-item:hover { background: #F8FAF8; }
+.task-item:last-child { border-bottom: none; }
+
 .task-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
- 
+
 .task-title {
   font-size: 0.8rem;
   color: #0F212F;
@@ -1463,14 +1603,14 @@ onMounted(loadDashboard)
   overflow: hidden;
   text-overflow: ellipsis;
 }
- 
+
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-green  { background: #116D3E; }
 .dot-amber  { background: #D29539; }
 .dot-red    { background: #C1473D; }
 .dot-blue   { background: #2E6F8E; }
 .dot-purple { background: #6B5B95; }
- 
+
 .task-badge {
   font-size: 0.66rem;
   font-weight: 700;
@@ -1479,42 +1619,39 @@ onMounted(loadDashboard)
   white-space: nowrap;
   flex-shrink: 0;
 }
- 
 .badge-green  { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
 .badge-amber  { background: rgba(210, 149, 57, 0.14); color: #AC7A2F; }
 .badge-red    { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
 .badge-blue   { background: rgba(46, 111, 142, 0.1); color: #2E6F8E; }
 .badge-purple { background: rgba(107, 91, 149, 0.1); color: #6B5B95; }
- 
+
 /* SUMMARY GRID */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.9rem;
-}
- 
+.summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+
 .summary-card {
   background: #F8FAF8;
   border: 1px solid #EAF1EC;
   border-radius: 12px;
   padding: 0.9rem;
 }
- 
+
 .summary-label { font-size: 0.72rem; color: #5c6b64; margin-bottom: 4px; }
 .summary-value { font-size: 1.15rem; font-weight: 700; }
 .summary-unit { font-size: 0.72rem; font-weight: 500; color: #5c6b64; }
- 
+.summary-subtext { font-size: 0.72rem; color: #5c6b64; margin-top: 4px; }
+
 .text-green  { color: #116D3E; }
 .text-amber  { color: #AC7A2F; }
 .text-blue   { color: #2E6F8E; }
 .text-purple { color: #6B5B95; }
 .text-dark   { color: #0F212F; }
- 
+
+.stat-percent { font-size: 0.7rem; font-weight: 700; margin-left: 4px; }
+
 /* TABLE */
 .table-responsive { overflow-x: auto; }
- 
 .data-table { width: 100%; border-collapse: collapse; }
- 
+
 .data-table thead th {
   text-align: left;
   font-size: 0.72rem;
@@ -1525,29 +1662,57 @@ onMounted(loadDashboard)
   padding: 8px 10px;
   background: #F1F6F2;
 }
- 
+
 .data-table tbody td {
   font-size: 0.82rem;
   color: #0F212F;
   padding: 10px;
   border-bottom: 1px solid #F1F6F2;
 }
- 
+
 .font-bold { font-weight: 700; }
- 
+.text-center { text-align: center; color: #5c6b64; }
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(210, 149, 57, 0.16);
+  color: #AC7A2F;
+}
+
 .severity-badge {
   font-size: 0.7rem;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
+  white-space: nowrap;
 }
- 
 .severity-badge.warning { background: rgba(193, 71, 61, 0.1); color: #C1473D; }
 .severity-badge.success { background: rgba(17, 109, 62, 0.1); color: #116D3E; }
- 
-/* WEATHER CARD */
-/* ============ Weather Card ============ */
 
+/* ANALYTICS STAT GRID (also reused inside the barangay modal) */
+.analytics-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+.analytics-stat-card {
+  padding: 16px;
+  border: 1px solid #EAF1EC;
+  border-radius: 10px;
+  background: #FAFCFB;
+}
+
+.analytics-stat-label { display: block; font-size: 11px; color: #6B7972; margin-bottom: 6px; }
+
+.analytics-stat-value { display: block; font-size: 24px; font-weight: 700; color: #116D3E; }
+.analytics-stat-value small { font-size: 12px; font-weight: 500; color: #6B7972; }
+
+/* WEATHER CARD */
 .weather-card {
   position: relative;
   isolation: isolate;
@@ -1561,211 +1726,88 @@ onMounted(loadDashboard)
   justify-content: space-between;
 }
 
-/* ---------- animated sky scene ---------- */
-.weather-scene {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  z-index: 0;
-}
+.weather-scene { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
 
 .sun-disc {
   position: absolute;
-  top: -18px;
-  right: -18px;
-  width: 90px;
-  height: 90px;
+  top: -18px; right: -18px;
+  width: 90px; height: 90px;
   border-radius: 50%;
   background: radial-gradient(circle, #D29539 0%, rgba(210, 149, 57, 0.3) 60%, transparent 72%);
   animation: sun-pulse 4s ease-in-out infinite;
   transition: opacity 0.4s ease;
 }
 
-.is-rain .sun-disc,
-.is-storm .sun-disc,
-.is-overcast .sun-disc,
-.is-fog .sun-disc {
-  opacity: 0.15;
-}
+.is-rain .sun-disc, .is-storm .sun-disc, .is-overcast .sun-disc, .is-fog .sun-disc { opacity: 0.15; }
 
-.cloud {
-  position: absolute;
-  fill: rgba(255, 255, 255, 0.14);
-}
+.cloud { position: absolute; fill: rgba(255, 255, 255, 0.14); }
+.cloud-back { top: 14px; left: -40px; width: 100px; animation: drift 22s linear infinite; }
+.cloud-front { top: 34px; left: -60px; width: 130px; fill: rgba(255, 255, 255, 0.22); animation: drift 15s linear infinite; }
 
-.cloud-back {
-  top: 14px;
-  left: -40px;
-  width: 100px;
-  animation: drift 22s linear infinite;
-}
+.is-overcast .cloud, .is-rain .cloud, .is-storm .cloud { fill: rgba(255, 255, 255, 0.3); }
 
-.cloud-front {
-  top: 34px;
-  left: -60px;
-  width: 130px;
-  fill: rgba(255, 255, 255, 0.22);
-  animation: drift 15s linear infinite;
-}
-
-.is-overcast .cloud,
-.is-rain .cloud,
-.is-storm .cloud {
-  fill: rgba(255, 255, 255, 0.3);
-}
-
-@keyframes drift {
-  from { transform: translateX(0); }
-  to { transform: translateX(340px); }
-}
-
-@keyframes sun-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
+@keyframes drift { from { transform: translateX(0); } to { transform: translateX(340px); } }
+@keyframes sun-pulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
 
 .fog-layer {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 50%, transparent);
   animation: fog-drift 8s ease-in-out infinite;
 }
+@keyframes fog-drift { 0%, 100% { opacity: 0.5; transform: translateX(0); } 50% { opacity: 0.9; transform: translateX(12px); } }
 
-@keyframes fog-drift {
-  0%, 100% { opacity: 0.5; transform: translateX(0); }
-  50% { opacity: 0.9; transform: translateX(12px); }
-}
-
-.rain {
-  position: absolute;
-  inset: 0;
-}
-
+.rain { position: absolute; inset: 0; }
 .rain-drop {
-  position: absolute;
-  top: -10%;
+  position: absolute; top: -10%;
   left: calc(var(--i) * 12.5%);
-  width: 2px;
-  height: 14px;
+  width: 2px; height: 14px;
   background: rgba(255, 255, 255, 0.4);
   border-radius: 2px;
   animation: fall 1.1s linear infinite;
   animation-delay: calc(var(--i) * 0.13s);
 }
-
-@keyframes fall {
-  from { transform: translateY(0); opacity: 0; }
-  10% { opacity: 1; }
-  to { transform: translateY(160px); opacity: 0; }
-}
+@keyframes fall { from { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } to { transform: translateY(160px); opacity: 0; } }
 
 .lightning {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   background: rgba(255, 255, 255, 0.5);
   opacity: 0;
   animation: flash 5s ease-in-out infinite;
 }
+@keyframes flash { 0%, 92%, 100% { opacity: 0; } 93% { opacity: 0.7; } 94% { opacity: 0; } 95% { opacity: 0.4; } 96% { opacity: 0; } }
 
-@keyframes flash {
-  0%, 92%, 100% { opacity: 0; }
-  93% { opacity: 0.7; }
-  94% { opacity: 0; }
-  95% { opacity: 0.4; }
-  96% { opacity: 0; }
-}
-
-/* ---------- content, sits above the scene ---------- */
-.weather-content {
-  position: relative;
-  z-index: 1;
-}
-
-.weather-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.weather-subtitle {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.weather-temp {
-  font-size: 1.9rem;
-  font-weight: 700;
-  margin-top: 4px;
-}
-
-.weather-updated {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.55);
-  margin: 2px 0 0;
-}
+.weather-content { position: relative; z-index: 1; }
+.weather-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.weather-subtitle { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255, 255, 255, 0.65); }
+.weather-temp { font-size: 1.9rem; font-weight: 700; margin-top: 4px; }
+.weather-updated { font-size: 0.7rem; color: rgba(255, 255, 255, 0.55); margin: 2px 0 0; }
 
 .weather-icon-box {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 42px; height: 42px; border-radius: 12px;
   background: rgba(210, 149, 57, 0.22);
   color: #D29539;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem;
 }
 
-.weather-condition {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
-  margin-top: 6px;
-}
+.weather-condition { font-size: 0.8rem; color: rgba(255, 255, 255, 0.75); margin-top: 6px; }
 
-/* ---------- stats grid (replaces old .weather-stats / .weather-stat-row) ---------- */
 .weather-stats-grid {
-  position: relative;
-  z-index: 1;
-  margin-top: 1rem;
-  padding-top: 0.9rem;
+  position: relative; z-index: 1;
+  margin-top: 1rem; padding-top: 0.9rem;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
 }
 
-.weather-stat-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 4px;
-  padding: 4px 2px;
-}
+.weather-stat-cell { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 4px 2px; }
+.weather-stat-cell i { color: #D29539; font-size: 0.95rem; }
+.stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255, 255, 255, 0.6); }
+.weather-stat-cell strong { font-size: 0.85rem; color: #FFFFFF; }
 
-.weather-stat-cell i {
-  color: #D29539;
-  font-size: 0.95rem;
-}
-
-.stat-label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.weather-stat-cell strong {
-  font-size: 0.85rem;
-  color: #FFFFFF;
-}
-
-/* ---------- retry button ---------- */
 .weather-retry-btn {
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
   margin-top: 0.9rem;
   background: #D29539;
   color: #0F212F;
@@ -1776,56 +1818,19 @@ onMounted(loadDashboard)
   font-weight: 700;
   cursor: pointer;
 }
+.weather-retry-btn:hover { background: #AC7A2F; }
 
-.weather-retry-btn:hover {
-  background: #AC7A2F;
-}
-
-/* ---------- accessibility ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .sun-disc,
-  .cloud,
-  .rain-drop,
-  .fog-layer,
-  .lightning {
-    animation: none;
-  }
+  .sun-disc, .cloud, .rain-drop, .fog-layer, .lightning { animation: none; }
 }
- 
+
 /* ACTIVITY LIST */
 .activity-list { display: flex; flex-direction: column; gap: 12px; }
- 
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
- 
+.activity-item { display: flex; align-items: center; gap: 10px; }
 .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
- 
-.activity-text {
-  flex: 1;
-  font-size: 0.8rem;
-  color: #3f4a45;
-  line-height: 1.4;
-}
- 
-.activity-time {
-  font-size: 0.72rem;
-  color: #8a9791;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
- 
-/* ACTIONS GRID */
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.7rem;
-}
- 
-.col-span-full { grid-column: span 2; }
- 
+.activity-text { flex: 1; font-size: 0.8rem; color: #3f4a45; line-height: 1.4; }
+.activity-time { font-size: 0.72rem; color: #8a9791; white-space: nowrap; flex-shrink: 0; }
+
 /* GIS / MAP */
 .gis-badge {
   font-size: 0.7rem;
@@ -1836,7 +1841,7 @@ onMounted(loadDashboard)
   border-radius: 999px;
   white-space: nowrap;
 }
- 
+
 .map-placeholder {
   position: relative;
   background: #F8FAF8;
@@ -1845,24 +1850,11 @@ onMounted(loadDashboard)
   padding: 1.5rem;
   overflow: hidden;
 }
- 
-.map-bg-icon {
-  position: absolute;
-  right: 1rem;
-  top: 1rem;
-  font-size: 3rem;
-  color: #116D3E;
-  opacity: 0.06;
-}
- 
-.map-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.8rem;
-}
- 
+
+.map-bg-icon { position: absolute; right: 1rem; top: 1rem; font-size: 3rem; color: #116D3E; opacity: 0.06; }
+
+.map-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+
 .map-card {
   background: #FFFFFF;
   border: 1px solid #EAF1EC;
@@ -1872,74 +1864,92 @@ onMounted(loadDashboard)
   cursor: pointer;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
- 
 .map-card:hover { border-color: #116D3E; transform: translateY(-2px); }
- 
-.map-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
- 
+
+.map-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .map-card-title { font-size: 0.82rem; font-weight: 700; color: #0F212F; }
- 
+
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .status-green { background: #116D3E; }
 .status-amber { background: #D29539; }
 .status-red   { background: #C1473D; }
- 
+
 .map-card-desc { font-size: 0.72rem; color: #5c6b64; }
 
-.analytics-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* BARANGAY DETAIL MODAL — new */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 33, 47, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 33, 47, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 1.25rem 1.4rem;
+  border-bottom: 1px solid #F1F6F2;
+  flex-shrink: 0;
 }
 
-.analytics-stat-card {
-  padding: 16px;
-  border: 1px solid #EAF1EC;
-  border-radius: 10px;
-  background: #FAFCFB;
-}
+.modal-header h3 { font-size: 1.05rem; font-weight: 700; color: #0F212F; }
 
-.analytics-stat-label {
-  display: block;
-  font-size: 11px;
-  color: #6B7972;
-  margin-bottom: 6px;
+.modal-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: #F1F6F2;
+  color: #5c6b64;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
 }
+.modal-close:hover { background: #E7F0EC; color: #0F212F; }
 
-.analytics-stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  color: #116D3E;
-}
+.modal-body { padding: 1.4rem; }
 
-.analytics-stat-value small {
-  font-size: 12px;
-  font-weight: 500;
-  color: #6B7972;
-}
-
-.text-center {
-  text-align: center;
-}
- 
 /* RESPONSIVE */
 @media (max-width: 1200px) {
   .metrics-grid { grid-template-columns: repeat(3, 1fr); }
   .row-grid-3 { grid-template-columns: 1fr; }
   .col-span-2 { grid-column: span 1; }
+  .row-grid-3 > .col-span-2:only-child { grid-column: 1 / -1; }
   .map-grid { grid-template-columns: repeat(2, 1fr); }
 }
- 
+
+@media (max-width: 900px) {
+  .analytics-split-row { flex-direction: column; align-items: stretch; }
+  .analytics-split-right { flex: none; width: 100%; }
+}
+
 @media (max-width: 768px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .row-grid-2 { grid-template-columns: 1fr; }
-  .actions-grid, .col-span-full { grid-template-columns: 1fr; }
   .map-grid { grid-template-columns: 1fr; }
+  .panel-header { flex-direction: column; align-items: stretch; }
+  .panel-header-actions { justify-content: space-between; }
+  .analytics-stat-grid { grid-template-columns: 1fr; }
 }
 </style>
