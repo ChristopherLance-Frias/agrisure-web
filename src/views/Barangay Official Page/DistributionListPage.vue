@@ -223,6 +223,23 @@
                 {{ selectedList.event?.description || 'No description provided.' }}
               </div>
 
+              <div v-if="selectedList.event?.letter_image" class="letter-section">
+                <h4 class="section-title">Distribution Letter</h4>
+                <a
+                  :href="letterUrl(selectedList.event.letter_image)"
+                  target="_blank"
+                  rel="noopener"
+                  class="letter-preview-link"
+                >
+                  <img
+                    :src="letterUrl(selectedList.event.letter_image)"
+                    alt="Distribution Letter"
+                    class="letter-image"
+                  />
+                  <span class="letter-open-hint">Click to view full size</span>
+                </a>
+              </div>
+
               <div class="details-row">
                 <div class="detail-card">
                   <span>Total Recipients</span>
@@ -690,6 +707,11 @@ export default {
       }
       return row.received ? 'Received' : 'Pending'
     },
+    letterUrl(letterImage) {
+      if (!letterImage) return null
+      if (/^https?:\/\//i.test(letterImage)) return letterImage
+      return `${API_BASE}/storage/${letterImage.replace(/^\/?storage\//, '')}`
+    },
     formatDate(date) {
       if (!date) return '—'
       return new Date(date).toLocaleDateString('en-PH', {
@@ -1120,6 +1142,45 @@ export default {
   border: 1px solid #EAF1EC;
   border-radius: 12px;
   padding: 0.9rem 1rem;
+}
+
+.letter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.letter-preview-link {
+  display: block;
+  position: relative;
+  border: 1px solid #EAF1EC;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #F8FAF8;
+  text-decoration: none;
+}
+
+.letter-image {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+  background: #F1F6F2;
+}
+
+.letter-open-hint {
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #5c6b64;
+  padding: 6px 0;
+  background: #FFFFFF;
+  border-top: 1px solid #EAF1EC;
+}
+
+.letter-preview-link:hover .letter-open-hint {
+  color: #116D3E;
 }
 
 .details-row {

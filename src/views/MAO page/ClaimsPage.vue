@@ -484,6 +484,27 @@ export default {
     return {
       claims: [],
       seasons: [],
+
+      /**
+       * FIX: currentSeason is now fetched from the backend
+       * (GET /api/insurance-seasons/current) instead of being guessed
+       * client-side from `seasons[].status === 'application_open'`.
+       *
+       * The old computed version broke as soon as an MAO officer closed
+       * applications for a season: its status flips to something like
+       * 'application_closed', no season matches 'application_open' anymore,
+       * currentSeason becomes null, and activeClaims('current') returns []
+       * — every in-flight claim (MAO review, PCIC processing, ready for
+       * claiming) disappears from the "Current Season" tab even though the
+       * season is still very much active downstream of applications.
+       *
+       * Damage Reports already solved this correctly by asking the backend
+       * what "current" means instead of re-deriving it from a status
+       * string. Claims now does the same, so both pages agree on what
+       * "current season" means and both survive closing applications.
+       */
+      currentSeason: null,
+
       activeTab: 'current',
       activeStatusTab: 'under_mao_review',
       historySeasonId: '',
@@ -521,12 +542,6 @@ export default {
   },
 
   computed: {
-    currentSeason() {
-      return this.seasons.find(function(s) {
-        return s.status === 'application_open'
-      }) || null
-    },
-
     previousSeasons() {
       const currentId = this.currentSeason ? String(this.currentSeason.id) : null;
       return this.seasons.filter((season) => {
@@ -536,21 +551,6 @@ export default {
       });
     },
 
-    /**
-     * NOTE ON THE FIX:
-     * Previously this filtered by `season.status` ('application_open' /
-     * 'application_closed' for current, 'completed' for previous). That is
-     * inconsistent with `previousSeasons` above, which classifies seasons by
-     * ID (anything that isn't the current season's ID and isn't the default
-     * season) — not by status. A season sitting at 'application_closed'
-     * (closed, but not yet flagged 'completed') would pass the "current"
-     * status check above AND fail the "previous" status check, so it landed
-     * permanently under Current and could never be reached from the
-     * Previous Seasons dropdown, no matter which season you picked.
-     *
-     * Fix: classify claims by the SAME rule used to build the dropdown —
-     * season ID vs. currentSeason.id — not by status string.
-     */
     activeClaims() {
       const list = this.claims || []
       const currentId = this.currentSeason ? String(this.currentSeason.id) : null
@@ -646,8 +646,7 @@ export default {
   },
 
   mounted() {
-    this.fetchSeasons()
-    this.fetchClaims()
+    this.fetchCurrentSeason()
   },
 
   methods: {
@@ -658,6 +657,28 @@ export default {
           Authorization: 'Bearer ' + token,
           Accept: 'application/json',
         },
+      }
+    },
+
+    /**
+     * FIX: fetch the backend's notion of "current season" — the same
+     * endpoint Damage Reports uses — instead of deriving it from
+     * seasons[].status on the client. See the comment on `currentSeason`
+     * in data() for why the old approach broke.
+     */
+    async fetchCurrentSeason() {
+      try {
+        const response = await axios.get(
+          API_BASE + '/api/insurance-seasons/current',
+          this.authHeaders()
+        )
+        this.currentSeason = response.data?.season || null
+      } catch (err) {
+        console.error('Error fetching current season:', err)
+        this.currentSeason = null
+      } finally {
+        await this.fetchSeasons()
+        await this.fetchClaims()
       }
     },
 
