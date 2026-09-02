@@ -628,31 +628,7 @@ const palette = {
   amberDark: '#AC7A2F',
   blue: '#2E6F8E',
   red: '#C1473D',
-  purple: '#6B5B95',
-  teal: '#0E8A7D'
-}
-
-// Cycling palette used for distributed/categorical bar charts (damage causes,
-// inventory items, etc.) so each bar reads as its own category at a glance
-// instead of a wall of one color.
-const categoricalColors = [
-  palette.green, palette.blue, palette.amber, palette.purple, palette.teal, palette.red
-]
-
-// Shared visual defaults so every chart in this dashboard reads as one
-// family — same font, same grid treatment, same tooltip chrome — instead of
-// each chart carrying its own one-off styling.
-const baseChartTheme = {
-  fontFamily: 'DM Sans, sans-serif',
-  grid: {
-    borderColor: '#EAF1EC',
-    strokeDashArray: 4,
-    padding: { left: 8, right: 8 }
-  },
-  tooltip: {
-    theme: 'light',
-    style: { fontFamily: 'DM Sans, sans-serif', fontSize: '12px' }
-  }
+  purple: '#6B5B95'
 }
 
 const currentUser = ref({ name: 'Christopher', role: 'MAO Officer', initials: 'CP' })
@@ -755,58 +731,27 @@ const chartConfigs = reactive({
   applicationTrend: {
     series: [{ name: 'Applications', data: [] }],
     options: {
-      chart: {
-        toolbar: { show: false },
-        fontFamily: baseChartTheme.fontFamily,
-        animations: { easing: 'easeinout', speed: 400 },
-        dropShadow: { enabled: true, top: 3, left: 0, blur: 4, color: palette.green, opacity: 0.15 }
-      },
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
       colors: [palette.green],
-      fill: {
-        type: 'gradient',
-        gradient: {
-          shade: 'light',
-          type: 'vertical',
-          shadeIntensity: 0.35,
-          gradientToColors: [palette.greenDark],
-          opacityFrom: 0.95,
-          opacityTo: 0.75,
-          stops: [0, 100]
-        }
-      },
-      plotOptions: {
-        bar: { borderRadius: 8, borderRadiusApplication: 'end', columnWidth: '42%' }
-      },
+      plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
       dataLabels: { enabled: false },
       xaxis: {
         categories: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
       },
       yaxis: { labels: { style: { colors: '#5c6b64', fontSize: '11px' } } },
-      grid: baseChartTheme.grid,
-      tooltip: baseChartTheme.tooltip
+      grid: { borderColor: '#EAF1EC' }
     }
   },
   damageAnalytics: {
     series: [{ name: 'Incidents', data: [] }],
     options: {
-      chart: { toolbar: { show: false }, fontFamily: baseChartTheme.fontFamily },
-      colors: categoricalColors,
-      plotOptions: {
-        bar: {
-          horizontal: true,
-          borderRadius: 6,
-          borderRadiusApplication: 'end',
-          distributed: true,
-          barHeight: '65%'
-        }
-      },
-      legend: { show: false },
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      colors: [palette.red],
+      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
       dataLabels: {
         enabled: true,
-        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 },
+        style: { colors: ['#3a3a3a'], fontSize: '11px', fontWeight: 600 },
         formatter: (val, opts) => {
           const total = opts.w.globals.series[opts.seriesIndex].reduce((a, b) => a + b, 0)
           const pct = total ? Math.round((val / total) * 100) : 0
@@ -815,81 +760,52 @@ const chartConfigs = reactive({
       },
       xaxis: {
         categories: [],
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
       },
-      grid: baseChartTheme.grid,
-      tooltip: baseChartTheme.tooltip
+      grid: { borderColor: '#EAF1EC' }
     }
   },
   insuranceStatus: {
     series: [],
     options: {
-      chart: { fontFamily: baseChartTheme.fontFamily },
+      chart: { fontFamily: 'DM Sans, sans-serif' },
       labels: [],
       colors: [palette.green, palette.amber, palette.blue, palette.purple, palette.red],
-      fill: {
-        type: 'gradient',
-        gradient: { shade: 'light', type: 'diagonal1', shadeIntensity: 0.25, opacityFrom: 1, opacityTo: 0.85, stops: [0, 100] }
-      },
-      stroke: { width: 2, colors: ['#FFFFFF'] },
-      legend: {
-        position: 'bottom',
-        labels: { colors: '#5c6b64' },
-        fontSize: '12px',
-        markers: { size: 6, shape: 'circle', offsetX: -2 },
-        itemMargin: { horizontal: 8, vertical: 4 }
-      },
+      legend: { position: 'bottom', labels: { colors: '#5c6b64' }, fontSize: '12px' },
       dataLabels: {
         enabled: true,
-        style: { fontSize: '11px', fontWeight: 700 },
-        dropShadow: { enabled: false },
         formatter: (val) => `${Math.round(val)}%`
       },
+      stroke: { width: 0 },
       plotOptions: {
         pie: {
           donut: {
-            size: '68%',
             labels: {
               show: true,
-              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
               total: {
                 show: true,
                 label: 'Total',
-                color: '#5c6b64',
-                fontSize: '12px',
                 formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
               }
             }
           }
         }
-      },
-      tooltip: baseChartTheme.tooltip
+      }
     }
   },
   inventoryStatus: {
     series: [{ name: 'Stock', data: [] }],
     options: {
-      chart: { toolbar: { show: false }, fontFamily: baseChartTheme.fontFamily },
-      colors: categoricalColors,
-      plotOptions: {
-        bar: { horizontal: true, borderRadius: 6, borderRadiusApplication: 'end', distributed: true, barHeight: '65%' }
-      },
-      legend: { show: false },
-      dataLabels: {
-        enabled: true,
-        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 }
-      },
+      chart: { toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif' },
+      colors: [palette.amber],
+      plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
+      dataLabels: { enabled: false },
       xaxis: {
         categories: [],
         max: 100,
-        labels: { style: { colors: '#5c6b64', fontSize: '11px' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false }
+        labels: { style: { colors: '#5c6b64', fontSize: '11px' } }
       },
-      grid: baseChartTheme.grid,
-      tooltip: baseChartTheme.tooltip
+      grid: { borderColor: '#EAF1EC' }
     }
   },
   farmerBarangay: {
@@ -900,25 +816,17 @@ const chartConfigs = reactive({
     options: {
       chart: {
         toolbar: { show: false },
-        fontFamily: baseChartTheme.fontFamily
+        fontFamily: 'DM Sans, sans-serif'
       },
       colors: [palette.green],
-      fill: {
-        type: 'gradient',
-        gradient: { shade: 'light', type: 'horizontal', shadeIntensity: 0.3, gradientToColors: [palette.teal], opacityFrom: 0.95, opacityTo: 0.8, stops: [0, 100] }
-      },
       plotOptions: {
         bar: {
           horizontal: true,
-          borderRadius: 6,
-          borderRadiusApplication: 'end',
-          barHeight: '55%'
+          borderRadius: 6
         }
       },
       dataLabels: {
-        enabled: true,
-        style: { colors: ['#0F212F'], fontSize: '11px', fontWeight: 600 },
-        offsetX: 4
+        enabled: false
       },
       xaxis: {
         categories: [],
@@ -927,19 +835,18 @@ const chartConfigs = reactive({
             colors: '#5c6b64',
             fontSize: '11px'
           }
-        },
-        axisBorder: { show: false },
-        axisTicks: { show: false }
+        }
       },
-      grid: baseChartTheme.grid,
-      tooltip: baseChartTheme.tooltip
+      grid: {
+        borderColor: '#EAF1EC'
+      }
     }
   },
   cropDistribution: {
     series: [],
     options: {
       chart: {
-        fontFamily: baseChartTheme.fontFamily
+        fontFamily: 'DM Sans, sans-serif'
       },
       labels: [],
       colors: [
@@ -949,44 +856,34 @@ const chartConfigs = reactive({
         palette.purple,
         palette.red
       ],
-      fill: {
-        type: 'gradient',
-        gradient: { shade: 'light', type: 'diagonal1', shadeIntensity: 0.25, opacityFrom: 1, opacityTo: 0.85, stops: [0, 100] }
-      },
-      stroke: { width: 2, colors: ['#FFFFFF'] },
       legend: {
         position: 'bottom',
         labels: {
           colors: '#5c6b64'
         },
-        fontSize: '12px',
-        markers: { size: 6, shape: 'circle', offsetX: -2 },
-        itemMargin: { horizontal: 8, vertical: 4 }
+        fontSize: '12px'
       },
       dataLabels: {
         enabled: true,
-        style: { fontSize: '11px', fontWeight: 700 },
         formatter: (val) => `${Math.round(val)}%`
+      },
+      stroke: {
+        width: 0
       },
       plotOptions: {
         pie: {
           donut: {
-            size: '68%',
             labels: {
               show: true,
-              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
               total: {
                 show: true,
                 label: 'Total Farms',
-                color: '#5c6b64',
-                fontSize: '12px',
                 formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
               }
             }
           }
         }
-      },
-      tooltip: baseChartTheme.tooltip
+      }
     }
   },
 })
@@ -1090,7 +987,7 @@ const loadDashboard = async () => {
       },
       claims: {
         count: clm.summary.total_claims, 
-        inspecting: `\u20b1${Number(clm.summary.total_claim_amount || 0).toLocaleString()}`
+        inspecting: `${clm.summary.ready_for_claiming || 0} Ready`
       },
       damage: {
         count: dmg.summary.total_damage_reports,
@@ -1153,15 +1050,11 @@ const loadDashboard = async () => {
       plotOptions: {
         pie: {
           donut: {
-            size: '68%',
             labels: {
               show: true,
-              value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
               total: {
                 show: true,
                 label: 'Total Farms',
-                color: '#5c6b64',
-                fontSize: '12px',
                 formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
               }
             }
@@ -1181,7 +1074,6 @@ const loadDashboard = async () => {
     claimsApprovalRate.value = clm.summary.total_claims
       ? Math.round((Number(clm.summary.claimed || 0) / clm.summary.total_claims) * 100)
       : null
-    averageClaimAmount.value = Number(clm.summary.average_claim_amount || 0)
 
     /* ---- Damage rate normalized per 100 farmers, for cross-barangay comparability ---- */
     damageRatePer100Farmers.value = ov.total_farmers
@@ -1205,7 +1097,7 @@ const damageByBarangay = new Map(
   (exe.top_damage_barangays || []).map(b => [b.name, Number(b.total || 0)])
 )
 const claimsByBarangay = new Map(
-  (exe.top_claim_barangays || []).map(b => [b.name, Number(b.amount || 0)])
+  (exe.top_claim_barangays || []).map(b => [b.name, Number(b.total || 0)])
 )
 
 barangayData.value = exe.top_barangays_by_farmers
@@ -1220,7 +1112,7 @@ barangayData.value = exe.top_barangays_by_farmers
       totalArea,
       avgFarmSize: totalFarms ? totalArea / totalFarms : 0,
       damageReports: damageByBarangay.get(i.name) ?? 0,
-      claimAmount: claimsByBarangay.get(i.name) ?? 0,
+      claimsCount: claimsByBarangay.get(i.name) ?? 0,
       statusBg: 'status-green'
     }
   })
@@ -1239,15 +1131,11 @@ barangayData.value = exe.top_barangays_by_farmers
         plotOptions: {
           pie: {
             donut: {
-              size: '68%',
               labels: {
                 show: true,
-                value: { fontSize: '20px', fontWeight: 700, color: '#0F212F' },
                 total: {
                   show: true,
                   label: 'Total Farmers',
-                  color: '#5c6b64',
-                  fontSize: '12px',
                   formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
                 }
               }
@@ -1310,7 +1198,7 @@ barangayData.value = exe.top_barangays_by_farmers
       { id: 1, colorClass: 'dot-green', text: `${ov.insurance_applications} insurance applications recorded.`, time: 'Today' },
       { id: 2, colorClass: 'dot-red', text: `${ov.damage_reports} damage reports submitted.`, time: 'Today' },
       { id: 3, colorClass: 'dot-amber', text: `${inv.summary.low_stock_items} supplies are low on stock.`, time: 'Today' },
-      { id: 4, colorClass: 'dot-blue', text: `\u20b1${Number(exe.kpis.claims_released_amount).toLocaleString()} claims released.`, time: 'Today' }
+      { id: 4, colorClass: 'dot-blue', text: `${exe.kpis.claims_processed} claims processed.`, time: 'Today' }
     ]
 
   } catch (e) {
